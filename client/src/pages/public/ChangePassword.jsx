@@ -162,7 +162,7 @@ const ChangePassword = () => {
                                 fullWidth
                                 variant="contained"
                                 size="large"
-                                disabled={loading || strength < 3 || formData.newPassword !== formData.confirmPassword}
+                                disabled={loading}
                                 sx={{
                                     mt: 3,
                                     py: 1.5,
