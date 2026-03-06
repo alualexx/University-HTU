@@ -161,7 +161,6 @@ const AuthProvider = ({ children }) => {
 
     try {
       setError(null);
-      setLoading(true);
 
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -194,7 +193,6 @@ const AuthProvider = ({ children }) => {
         errorMessage = "Too many failed attempts. Please try again later.";
       }
       setError(errorMessage);
-      setLoading(false);
       return { success: false, error: errorMessage };
     }
   };
@@ -202,7 +200,6 @@ const AuthProvider = ({ children }) => {
   // Public registration function for initial account setup
   const register = async (userData) => {
     try {
-      setLoading(true);
       setError(null);
 
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
@@ -238,15 +235,12 @@ const AuthProvider = ({ children }) => {
       }
       setError(errorMessage);
       return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
     }
   };
 
   // Admin-only registration function
   const registerUserByAdmin = async (userData) => {
     try {
-      setLoading(true);
       setError(null);
 
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
@@ -276,8 +270,6 @@ const AuthProvider = ({ children }) => {
       }
       setError(errorMessage);
       return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -292,7 +284,6 @@ const AuthProvider = ({ children }) => {
 
   const changeUserPassword = async (newPassword) => {
     try {
-      setLoading(true);
       setError(null);
       if (!auth.currentUser) throw new Error("No user logged in to change password.");
 
@@ -309,8 +300,6 @@ const AuthProvider = ({ children }) => {
       console.error("Change password error:", err);
       setError(err.message || "Failed to change password. Please try again.");
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 

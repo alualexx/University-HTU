@@ -69,6 +69,7 @@ const CreateAccount = () => {
                 });
             } catch (err) {
                 console.error("Error updating application status:", err);
+                setError("Account created, but failed to update status: " + err.message);
             }
         } else {
             setError(result.error || "Failed to generate account.");
