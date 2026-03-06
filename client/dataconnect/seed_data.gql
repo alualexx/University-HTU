@@ -1,0 +1,150 @@
+mutation CreateSeedData @transaction @auth(level: USER, insecureReason: "This is a seed data mutation, intended for internal use and not directly exposed to end-users.") {
+  user_insertMany(data: [
+    {
+      id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      username: "john.doe",
+      passwordHash: "hashedpassword1",
+      firstName: "John",
+      lastName: "Doe",
+      userType: "Student",
+      createdAt: "2023-01-15T10:00:00Z",
+      email: "john.doe@example.com",
+      dateOfBirth: "2000-05-10",
+      enrollmentDate: "2023-09-01"
+    },
+    {
+      id: "b1f0e42d-2d8c-4a3b-9a4d-7a5d1b73f8a0",
+      username: "jane.smith",
+      passwordHash: "hashedpassword2",
+      firstName: "Jane",
+      lastName: "Smith",
+      userType: "Instructor",
+      createdAt: "2023-02-20T11:30:00Z",
+      email: "jane.smith@example.com",
+      dateOfBirth: "1985-11-20",
+      hireDate: "2022-08-01"
+    },
+    {
+      id: "c2d1f65e-3e9f-4b0c-9a1f-8b6e2c84d9b1",
+      username: "admin.user",
+      passwordHash: "hashedpassword3",
+      firstName: "Admin",
+      lastName: "User",
+      userType: "Admin",
+      createdAt: "2023-03-01T09:00:00Z",
+      email: "admin.user@example.com"
+    }
+  ])
+  department_insertMany(data: [
+    {
+      id: "d3e2f78a-4f0d-4c1b-a02e-9c7f3d95e0c2",
+      name: "Computer Science",
+      code: "CS",
+      createdAt: "2023-01-01T08:00:00Z",
+      headOfDepartment: {id: "b1f0e42d-2d8c-4a3b-9a4d-7a5d1b73f8a0"}
+    },
+    {
+      id: "e4f3a91b-5g1e-4d2c-b13f-a08g4e06f1d3",
+      name: "Mathematics",
+      code: "MA",
+      createdAt: "2023-01-02T08:30:00Z"
+    }
+  ])
+  semester_insertMany(data: [
+    {
+      id: "f5g4b0c2-6h2f-4e3d-c24g-b19h5f17g2e4",
+      name: "Fall 2023",
+      startDate: "2023-09-01",
+      endDate: "2023-12-15",
+      createdAt: "2023-03-10T14:00:00Z"
+    },
+    {
+      id: "g6h5c1d3-7i3g-4f4e-d35h-c20i6g28h3f5",
+      name: "Spring 2024",
+      startDate: "2024-01-10",
+      endDate: "2024-05-20",
+      createdAt: "2023-09-01T14:00:00Z"
+    }
+  ])
+  course_insertMany(data: [
+    {
+      id: "h7i6d2e4-8j4h-4g5f-e46i-d31j7h39i4g6",
+      title: "Introduction to Programming",
+      courseCode: "CS101",
+      credits: 3,
+      description: "A foundational course in programming concepts.",
+      createdAt: "2023-04-01T10:00:00Z",
+      department: {id: "d3e2f78a-4f0d-4c1b-a02e-9c7f3d95e0c2"},
+      prerequisites: []
+    },
+    {
+      id: "i8j7e3f5-9k5i-4h6g-f57j-e42k8i40j5h7",
+      title: "Calculus I",
+      courseCode: "MA201",
+      credits: 4,
+      description: "First course in differential and integral calculus.",
+      createdAt: "2023-04-05T11:00:00Z",
+      department: {id: "e4f3a91b-5g1e-4d2c-b13f-a08g4e06f1d3"},
+      prerequisites: []
+    },
+    {
+      id: "j9k8f4g6-0l6j-4i7h-g68k-f53l9j51k6i8",
+      title: "Data Structures",
+      courseCode: "CS201",
+      credits: 3,
+      description: "Advanced topics in data organization and algorithms.",
+      createdAt: "2023-05-10T09:00:00Z",
+      department: {id: "d3e2f78a-4f0d-4c1b-a02e-9c7f3d95e0c2"},
+      prerequisites: ["CS101"]
+    }
+  ])
+  courseOffering_insertMany(data: [
+    {
+      id: "k0l9g5h7-1m7k-4j8i-h79l-g64m0k62l7j9",
+      capacity: 50,
+      location: "Building A, Room 101",
+      schedule: "MWF 10:00-10:50 AM",
+      createdAt: "2023-06-01T13:00:00Z",
+      course: {id: "h7i6d2e4-8j4h-4g5f-e46i-d31j7h39i4g6"},
+      semester: {id: "f5g4b0c2-6h2f-4e3d-c24g-b19h5f17g2e4"},
+      instructor: {id: "b1f0e42d-2d8c-4a3b-9a4d-7a5d1b73f8a0"}
+    },
+    {
+      id: "l1m0h6i8-2n8l-4k9j-i80m-h75n1l73m8k0",
+      capacity: 30,
+      location: "Online",
+      schedule: "TR 02:00-03:15 PM",
+      createdAt: "2023-06-05T14:00:00Z",
+      course: {id: "i8j7e3f5-9k5i-4h6g-f57j-e42k8i40j5h7"},
+      semester: {id: "f5g4b0c2-6h2f-4e3d-c24g-b19h5f17g2e4"}
+    },
+    {
+      id: "m2n1i7j9-3o9m-4l0k-j91n-i86o2m84n9l1",
+      capacity: 40,
+      location: "Building B, Room 202",
+      schedule: "MW 03:00-04:15 PM",
+      createdAt: "2023-10-01T10:00:00Z",
+      course: {id: "j9k8f4g6-0l6j-4i7h-g68k-f53l9j51k6i8"},
+      semester: {id: "g6h5c1d3-7i3g-4f4e-d35h-c20i6g28h3f5"},
+      instructor: {id: "b1f0e42d-2d8c-4a3b-9a4d-7a5d1b73f8a0"}
+    }
+  ])
+  enrollment_insertMany(data: [
+    {
+      id: "n3o2j8k0-4p0n-4m1l-k02o-j97p3n95o0m2",
+      enrollmentDate: "2023-09-02",
+      grade: "A",
+      createdAt: "2023-09-02T09:00:00Z",
+      student: {id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"},
+      courseOffering: {id: "k0l9g5h7-1m7k-4j8i-h79l-g64m0k62l7j9"}
+    },
+    {
+      id: "o4p3k9l1-5q1o-4n2m-l13p-k08q4o06p1n3",
+      enrollmentDate: "2023-09-03",
+      grade: "B+",
+      createdAt: "2023-09-03T10:00:00Z",
+      student: {id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"},
+      courseOffering: {id: "l1m0h6i8-2n8l-4k9j-i80m-h75n1l73m8k0"}
+    }
+  ])
+}

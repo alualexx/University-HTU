@@ -1,0 +1,54 @@
+type User @table {
+  username: String!
+  passwordHash: String!
+  firstName: String!
+  lastName: String!
+  userType: String!
+  createdAt: Timestamp!
+  email: String
+  dateOfBirth: Date
+  enrollmentDate: Date
+  hireDate: Date
+}
+
+type Department @table {
+  name: String!
+  code: String!
+  createdAt: Timestamp!
+  headOfDepartment: User
+}
+
+type Course @table {
+  title: String!
+  courseCode: String!
+  credits: Int!
+  description: String!
+  createdAt: Timestamp!
+  department: Department
+  prerequisites: [String]
+}
+
+type Semester @table {
+  name: String!
+  startDate: Date!
+  endDate: Date!
+  createdAt: Timestamp!
+}
+
+type CourseOffering @table {
+  capacity: Int!
+  location: String!
+  schedule: String!
+  createdAt: Timestamp!
+  course: Course
+  semester: Semester
+  instructor: User
+}
+
+type Enrollment @table {
+  enrollmentDate: Date!
+  grade: String
+  createdAt: Timestamp!
+  student: User
+  courseOffering: CourseOffering
+}

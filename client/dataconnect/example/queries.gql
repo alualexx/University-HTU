@@ -1,0 +1,52 @@
+query ListAllCourses @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public as it only lists general course information.") {
+  courses {
+    id
+    title
+    courseCode
+    credits
+    description
+  }
+}
+
+query GetCourseDetails($id: UUID!) @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public as it only provides details for a specific course by ID.") {
+  course(id: $id) {
+    id
+    title
+    courseCode
+    credits
+    description
+    department {
+      name
+      code
+    }
+    prerequisites
+  }
+}
+
+query GetInstructorCourseOfferings($instructorId: UUID!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users as it fetches course offerings by a specific instructor ID.") {
+  courseOfferings(where: {instructorId: {eq: $instructorId}}) {
+    id
+    location
+    schedule
+    capacity
+    course {
+      title
+      courseCode
+    }
+    semester {
+      name
+      startDate
+      endDate
+    }
+  }
+}
+
+mutation EnrollStudentInCourse($courseOfferingId: UUID!) @auth(level: USER) {
+  enrollment_insert(data: {
+    studentId_expr: "auth.uid",
+    courseOfferingId: $courseOfferingId,
+    enrollmentDate_expr: "request.time.date()"
+  }) {
+    id
+  }
+}

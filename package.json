@@ -1,0 +1,15 @@
+{
+  "name": "university-system",
+  "version": "1.0.0",
+  "description": "University Management System - Full Stack Application",
+  "scripts": {
+    "client": "cd client && npm run dev",
+    "server": "cd server && node server/server.js",
+    "dev": "npm run client",
+    "install:all": "cd client && npm install && cd ../server && npm install",
+    "build": "cd client && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
