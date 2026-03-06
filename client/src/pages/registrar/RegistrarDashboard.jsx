@@ -88,6 +88,7 @@ const RegistrarDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [applications, setApplications] = useState([]);
+  const [pendingIds, setPendingIds] = useState([]);
 
   // Fetch pending applications
   useEffect(() => {
@@ -99,7 +100,20 @@ const RegistrarDashboard = () => {
       });
       setApplications(apps);
     });
-    return () => unsubscribe();
+
+    const idQuery = query(collection(db, "applications"), where("status", "==", "setup_completed"));
+    const unsubscribeIds = onSnapshot(idQuery, (snapshot) => {
+      const ids = [];
+      snapshot.forEach((doc) => {
+        ids.push({ id: doc.id, ...doc.data() });
+      });
+      setPendingIds(ids);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeIds();
+    };
   }, []);
 
   const handleApproveApplication = async (app) => {
@@ -158,6 +172,19 @@ const RegistrarDashboard = () => {
       console.error("Error rejecting application:", err);
     }
   };
+  const handleGenerateIdCard = async (appId) => {
+    try {
+      await updateDoc(doc(db, "applications", appId), {
+        status: "id_issued",
+        idIssuedAt: serverTimestamp(),
+        issuedBy: user?.name,
+      });
+      // At this point, you could also window.print() or generate a PDF.
+    } catch (err) {
+      console.error("Error issuing ID Card:", err);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -617,6 +644,104 @@ const RegistrarDashboard = () => {
     </Box>
   );
 
+  const PendingIdsTab = () => (
+    <Box sx={{ mt: 3 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card sx={{ ...glassStyle, borderRadius: 4 }}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Box>
+                  <Typography variant="h5" fontWeight={800} gutterBottom>ID Card Generation Queue</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Students here have completed password setup and are ready for their official Digital ID Cards.
+                  </Typography>
+                </Box>
+                <Chip label={`${pendingIds.length} Ready`} color="primary" sx={{ fontWeight: 800 }} />
+              </Box>
+
+              <Grid container spacing={3}>
+                {pendingIds.length === 0 ? (
+                  <Grid item xs={12}>
+                    <Box sx={{ textAlign: 'center', py: 8 }}>
+                      <CheckCircleOutline sx={{ fontSize: 64, color: 'success.main', mb: 2, opacity: 0.5 }} />
+                      <Typography variant="h6" color="text.secondary">All ID Cards have been generated!</Typography>
+                    </Box>
+                  </Grid>
+                ) : (
+                  pendingIds.map((student) => (
+                    <Grid item xs={12} sm={6} md={4} key={student.id}>
+                      {/* Visual ID Card Preview */}
+                      <Card sx={{
+                        borderRadius: 4, overflow: 'hidden', boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
+                        border: '1px solid', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                        position: 'relative'
+                      }}>
+                        {/* ID Card Header */}
+                        <Box sx={{ bgcolor: '#0d47a1', color: 'white', p: 3, pb: 6, textAlign: 'center' }}>
+                          <Typography variant="subtitle2" fontWeight={800} letterSpacing={2}>HTU UNIVERSITY</Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8 }}>STUDENT IDENTIFICATION</Typography>
+                        </Box>
+
+                        {/* Avatar / Photo Placeholder */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: -5 }}>
+                          <Avatar sx={{ width: 80, height: 80, border: '4px solid white', bgcolor: 'primary.light', color: 'primary.dark', fontSize: '2rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                            {student.name?.[0]}
+                          </Avatar>
+                        </Box>
+
+                        {/* ID Details */}
+                        <Box sx={{ p: 3, pt: 2, textAlign: 'center' }}>
+                          <Typography variant="h6" fontWeight={800} gutterBottom>{student.name}</Typography>
+
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" fontWeight={700}>ID Number</Typography>
+                              <Typography variant="caption" fontWeight={800} color="primary.main">{student.studentId || "PENDING"}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" fontWeight={700}>Department</Typography>
+                              <Typography variant="caption" fontWeight={700}>{student.intendedMajor || "Undeclared"}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" fontWeight={700}>Email</Typography>
+                              <Typography variant="caption" fontWeight={700}>{student.email}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', pb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" fontWeight={700}>Issued</Typography>
+                              <Typography variant="caption" fontWeight={700}>{new Date().toLocaleDateString()}</Typography>
+                            </Box>
+                          </Box>
+
+                          {/* Placeholder Barcode */}
+                          <Box sx={{ width: '100%', height: 40, bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderRadius: 1, mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', letterSpacing: 4, opacity: 0.5 }}>|| ||| | || ||| || |</Typography>
+                          </Box>
+
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            onClick={() => {
+                              // Ideally this would trigger a print styled view, but for now we issue it.
+                              handleGenerateIdCard(student.id);
+                            }}
+                            sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+                          >
+                            Generate & Issue Card
+                          </Button>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  ))
+                )}
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
   const AnalyticsTab = () => (
     <Box sx={{ mt: 3 }}>
       <Grid container spacing={3}>
@@ -767,6 +892,11 @@ const RegistrarDashboard = () => {
             <Tab icon={<People sx={{ mr: 1, fontSize: 20 }} />} iconPosition="start" label="Students" />
             <Tab icon={<LibraryBooks sx={{ mr: 1, fontSize: 20 }} />} iconPosition="start" label="Courses" />
             <Tab icon={<SwapHoriz sx={{ mr: 1, fontSize: 20 }} />} iconPosition="start" label="Applications" />
+            <Tab icon={<AssignmentInd sx={{ mr: 1, fontSize: 20 }} />} iconPosition="start" label={
+              <Badge badgeContent={pendingIds.length} color="error" sx={{ '& .MuiBadge-badge': { right: -15, top: 5 } }}>
+                Pending IDs
+              </Badge>
+            } />
             <Tab icon={<Assessment sx={{ mr: 1, fontSize: 20 }} />} iconPosition="start" label="Analytics" />
           </Tabs>
         </Paper>
@@ -776,7 +906,8 @@ const RegistrarDashboard = () => {
           {activeTab === 1 && <StudentsTab />}
           {activeTab === 2 && <CoursesTab />}
           {activeTab === 3 && <ApplicationsTab />}
-          {activeTab === 4 && <AnalyticsTab />}
+          {activeTab === 4 && <PendingIdsTab />}
+          {activeTab === 5 && <AnalyticsTab />}
         </Box>
       </Container>
     </Box>

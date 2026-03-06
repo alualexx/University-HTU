@@ -3,6 +3,8 @@ import { Box, Card, Typography, TextField, Button, CircularProgress, Alert, Inpu
 import { Lock, Visibility, VisibilityOff, CheckCircle } from "@mui/icons-material";
 import { useAuth, ROLE_DASHBOARD_ROUTES } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../services/Firebase";
 
 const ChangePassword = () => {
     const { user, changeUserPassword } = useAuth();
@@ -60,6 +62,20 @@ const ChangePassword = () => {
         const result = await changeUserPassword(formData.newPassword);
 
         if (result.success) {
+            try {
+                // Find the user's application by email to update status
+                const q = query(collection(db, "applications"), where("email", "==", user.email));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const appDoc = querySnapshot.docs[0];
+                    await updateDoc(doc(db, "applications", appDoc.id), {
+                        status: "setup_completed"
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to update application status:", err);
+            }
+
             setSuccess(true);
             setTimeout(() => {
                 navigate(ROLE_DASHBOARD_ROUTES[user.role] || "/dashboard");
