@@ -34,6 +34,9 @@ import {
   addDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit, setDoc
 } from "firebase/firestore";
 
+import CollegesTab from "./tabs/CollegesTab";
+import DepartmentsTab from "./tabs/DepartmentsTab";
+
 // --- Custom Hooks & Constants ---
 const useCountUp = (target, duration = 1500) => {
   const [count, setCount] = useState(0);
@@ -118,42 +121,11 @@ const RegistrarDashboard = () => {
     readTime: "3 min read"
   });
 
-  // Colleges State
+  // Colleges State - Shared but UI state moved to CollegesTab
   const [colleges, setColleges] = useState([]);
-  const [openCollegeDialog, setOpenCollegeDialog] = useState(false);
-  const [editingCollege, setEditingCollege] = useState(null);
-  const [collegeForm, setCollegeForm] = useState({
-    name: "",
-    description: "",
-    deanName: "",
-    deanEmail: "",
-    code: "",
-    color: "#4f46e5",
-    icon: "Business"
-  });
-  const [collegeOtp, setCollegeOtp] = useState("");
-  const [collegeLoading, setCollegeLoading] = useState(false);
 
-  // Departments State
+  // Departments State - Shared but UI state moved to DepartmentsTab
   const [departments, setDepartments] = useState([]);
-  const [openDeptDialog, setOpenDeptDialog] = useState(false);
-  const [editingDept, setEditingDept] = useState(null);
-  const [deptForm, setDeptForm] = useState({
-    name: "", 
-    code: "", 
-    description: "", 
-    faculty: "", 
-    collegeId: "",
-    duration: "4 Years", 
-    seats: 100, 
-    requirements: "", 
-    iconUrl: "", 
-    color: "#1976d2",
-    isPublished: true,
-    admissionOpen: true,
-    requiredDocuments: "Transcript, ID/Passport, Photo"
-  });
-  const [deptOtp, setDeptOtp] = useState("");
 
   // Vulnerability Assessment State
   const [assessmentLoading, setAssessmentLoading] = useState(false);
@@ -325,74 +297,7 @@ const RegistrarDashboard = () => {
   };
 
   // --- College Handlers ---
-  const handleOpenCollegeDialog = (college = null) => {
-    if (college) {
-      setEditingCollege(college);
-      setCollegeForm({ ...college });
-      setCollegeOtp("");
-    } else {
-      setEditingCollege(null);
-      setCollegeForm({ name: "", description: "", deanName: "", deanEmail: "", code: "", color: "#4f46e5", icon: "Business" });
-      setCollegeOtp("");
-    }
-    setOpenCollegeDialog(true);
-  };
-
-  const handleSaveCollege = async (e) => {
-    e.preventDefault();
-    setCollegeLoading(true);
-    console.log("Saving college...", collegeForm);
-    try {
-      if (!editingCollege) {
-        // Verify OTP for new colleges
-        const otpResult = await verifyOTP(collegeOtp, "COLLEGE_CREATE");
-        if (!otpResult.success) {
-          alert(otpResult.message);
-          setCollegeLoading(false);
-          return;
-        }
-        
-        // Double check target name matches (optional but safer)
-        if (otpResult.data.targetName.toLowerCase() !== collegeForm.name.toLowerCase()) {
-          if (!window.confirm(`Warning: This OTP was issued for "${otpResult.data.targetName}", but you are creating "${collegeForm.name}". Proceed?`)) {
-            setCollegeLoading(false);
-            return;
-          }
-        }
-
-        await addDoc(collection(db, "colleges"), {
-          ...collegeForm,
-          status: "pending_credentials",
-          createdAt: serverTimestamp(),
-          createdBy: user?.name
-        });
-        
-        await markOTPUsed(otpResult.otpId);
-        logAuditActivity("College Creation", `Created new college: ${collegeForm.name}`);
-        alert("College created successfully! It is now pending Administrator provisioning for credentials.");
-      } else {
-        await updateDoc(doc(db, "colleges", editingCollege.id), collegeForm);
-        logAuditActivity("College Update", `Updated college: ${collegeForm.name}`);
-      }
-      setOpenCollegeDialog(false);
-    } catch (err) {
-      console.error("Error saving college:", err);
-      alert(`Conflict/Error: ${err.message || "Failed to save college."}`);
-    } finally {
-      setCollegeLoading(false);
-    }
-  };
-
-  const handleDeleteCollege = async (id) => {
-    if (window.confirm("Are you sure you want to delete this college? This will NOT delete departments, but they will be orphaned.")) {
-      try {
-        await deleteDoc(doc(db, "colleges", id));
-        logAuditActivity("College Deletion", `Deleted college ID: ${id}`);
-      } catch (err) {
-        console.error("Error deleting college:", err);
-      }
-    }
-  };
+  // News & Media Management Handlers
 
   const handleOpenNewsDialog = (news = null) => {
     if (news) {
@@ -454,7 +359,6 @@ const RegistrarDashboard = () => {
         reviewedBy: user?.name,
       });
 
-      // Write notification
       await addDoc(collection(db, "notifications"), {
         applicantEmail: appData.email,
         applicantPhone: appData.phone || "",
@@ -468,6 +372,7 @@ const RegistrarDashboard = () => {
       console.error("Error rejecting application:", err);
     }
   };
+
   const handleGenerateIdCard = async (appId) => {
     try {
       await updateDoc(doc(db, "applications", appId), {
@@ -506,76 +411,7 @@ const RegistrarDashboard = () => {
     }
   };
 
-  // --- Department Handlers ---
-  const handleOpenDeptDialog = (dept = null) => {
-    if (dept) {
-      setEditingDept(dept);
-      setDeptForm({ 
-        ...dept, 
-        requirements: Array.isArray(dept.requirements) ? dept.requirements.join(", ") : (dept.requirements || ""),
-        requiredDocuments: Array.isArray(dept.requiredDocuments) ? dept.requiredDocuments.join(", ") : (dept.requiredDocuments || "Transcript, ID/Passport, Photo")
-      });
-    } else {
-      setEditingDept(null);
-      setDeptForm({ 
-        name: "", code: "", description: "", faculty: "", duration: "4 Years", seats: 100, requirements: "", iconUrl: "", color: "#1976d2",
-        isPublished: true, admissionOpen: true, requiredDocuments: "Transcript, ID/Passport, Photo"
-      });
-    }
-    setOpenDeptDialog(true);
-  };
-
-  const handleSaveDept = async (e) => {
-    e.preventDefault();
-    console.log("Saving department...", deptForm);
-    try {
-      if (!editingDept) {
-        // Verify OTP for new department creation
-        const otpResult = await verifyOTP(deptOtp, "DEPARTMENT_CREATE");
-        if (!otpResult.success) {
-          alert(otpResult.message || "Invalid or expired OTP. Please contact Administrator.");
-          return;
-        }
-
-        // Check target name matches the intended department name
-        if (otpResult.data.targetName.toLowerCase() !== deptForm.name.toLowerCase()) {
-          if (!window.confirm(`Warning: This OTP was issued for "${otpResult.data.targetName}", but you are creating "${deptForm.name}". Proceed?`)) {
-            return;
-          }
-        }
-
-        await markOTPUsed(otpResult.otpId);
-      }
-
-      if (!deptForm.collegeId) {
-        alert("Please select a parent College.");
-        return;
-      }
-
-      const data = {
-        ...deptForm,
-        requirements: typeof deptForm.requirements === 'string' ? deptForm.requirements.split(",").map(r => r.trim()).filter(Boolean) : deptForm.requirements,
-        requiredDocuments: typeof deptForm.requiredDocuments === 'string' ? deptForm.requiredDocuments.split(",").map(d => d.trim()).filter(Boolean) : deptForm.requiredDocuments,
-        updatedAt: serverTimestamp(),
-      };
-
-      if (editingDept) {
-        await updateDoc(doc(db, "departments", editingDept.id), data);
-      } else {
-        await addDoc(collection(db, "departments"), { 
-          ...data, 
-          status: "pending_credentials",
-          createdAt: serverTimestamp() 
-        });
-        alert("Academic Sector initialized successfully! Awaiting Administrator provisioning.");
-      }
-      setOpenDeptDialog(false);
-      setDeptOtp(""); // Reset OTP
-    } catch (error) {
-      console.error("Department error:", error);
-      alert(`Critical Error: ${error.message || "Unable to save department"}`);
-    }
-  };
+  // Department initialization and management moved to DepartmentsTab
 
   const handleManualCredentialReset = async (email, name) => {
     const tempPass = `PASS-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -611,11 +447,7 @@ const RegistrarDashboard = () => {
     }
   };
 
-  const handleDeleteDept = async (id) => {
-    if (window.confirm("Are you sure you want to retire this department?")) {
-      await deleteDoc(doc(db, "departments", id));
-    }
-  };
+  // handleDeleteDept moved to DepartmentsTab
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -2086,363 +1918,7 @@ const RegistrarDashboard = () => {
   );
 
 
-  const renderCollegesTab = () => (
-    <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>University Colleges</Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, opacity: 0.7 }}>CORE ACADEMIC PILLARS</Typography>
-        </Box>
-        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenCollegeDialog()} 
-          sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)' }}>
-          Initialize new College
-        </Button>
-      </Box>
-
-      <Grid container spacing={3}>
-        {colleges.length === 0 ? (
-          <Grid item xs={12}>
-            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
-              <Business sx={{ fontSize: 80, mb: 2 }} />
-              <Typography variant="h6" fontWeight={1000}>NO COLLEGES REGISTERED</Typography>
-            </Box>
-          </Grid>
-        ) : (
-          colleges.map((college) => (
-            <Grid item xs={12} sm={6} md={4} key={college.id}>
-              <Card sx={{ 
-                ...glassStyle, 
-                borderRadius: 5, 
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: '0.4s',
-                '&:hover': { transform: 'translateY(-8px)', borderColor: college.color || 'primary.main', boxShadow: `0 20px 40px ${alpha(college.color || '#6366f1', 0.15)}` }
-              }}>
-                <Box sx={{ 
-                  p: 3, 
-                  background: `linear-gradient(135deg, ${alpha(college.color || '#6366f1', 0.2)} 0%, transparent 100%)`,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
-                }}>
-                  <Box>
-                    <Chip label={college.code || "COL"} size="small" sx={{ fontWeight: 1000, bgcolor: alpha(college.color || '#6366f1', 0.15), color: college.color || '#6366f1', mb: 1, border: `1px solid ${alpha(college.color || '#6366f1', 0.3)}` }} />
-                    <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>{college.name}</Typography>
-                    {college.status === 'pending_credentials' && (
-                      <Chip label="PENDING PROVISIONING" size="small" color="warning" sx={{ fontWeight: 1000, fontSize: '0.6rem', mt: 1, borderRadius: 1 }} />
-                    )}
-                  </Box>
-                  <Avatar sx={{ bgcolor: alpha(college.color || '#6366f1', 0.1), color: college.color || '#6366f1' }}>
-                    <Business />
-                  </Avatar>
-                </Box>
-                <CardContent sx={{ p: 3, pt: 0, flexGrow: 1 }}>
-                  <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', mb: 3, lineClamp: 3, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 60 }}>
-                    {college.description || "No description provided for this college."}
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Person sx={{ fontSize: 18, opacity: 0.6 }} />
-                      <Typography variant="caption" fontWeight={900}>DEAN: {college.deanName || "NOT ASSIGNED"}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Email sx={{ fontSize: 18, opacity: 0.6 }} />
-                      <Typography variant="caption" fontWeight={900}>{college.deanEmail || "N/A"}</Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-                <Divider sx={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                <Box sx={{ p: 2, px: 3, display: 'flex', justifyContent: 'flex-end', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                  <Tooltip title="Modify College"><IconButton size="small" onClick={() => handleOpenCollegeDialog(college)} sx={{ color: "primary.main", bgcolor: 'rgba(99, 102, 241, 0.05)' }}><Edit fontSize="small" /></IconButton></Tooltip>
-                  <Tooltip title="Delete College"><IconButton size="small" onClick={() => handleDeleteCollege(college.id)} sx={{ color: "error.main", bgcolor: 'rgba(239, 68, 68, 0.05)' }}><Delete fontSize="small" /></IconButton></Tooltip>
-                </Box>
-              </Card>
-            </Grid>
-          ))
-        )}
-      </Grid>
-
-      {/* College Dialog */}
-      <Dialog open={openCollegeDialog} onClose={() => setOpenCollegeDialog(false)} maxWidth="sm" fullWidth 
-        PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none', p: 1 } }}>
-        <DialogTitle sx={{ p: 4, pb: 1 }}>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingCollege ? 'Modify College' : 'Initialize College'}</Typography>
-          <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 2 }}>UNIVERSITY HIERARCHY EXPANSION</Typography>
-        </DialogTitle>
-        <form onSubmit={handleSaveCollege}>
-          <DialogContent sx={{ p: 4 }}>
-            {!editingCollege && (
-               <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                  <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHENTICATION REQUIRED</Typography>
-                  <TextField 
-                    fullWidth 
-                    label="One-Time Password (COLLEGE_CREATE)" 
-                    placeholder="Enter hierarchy expansion key"
-                    value={collegeOtp} 
-                    onChange={e => setCollegeOtp(e.target.value)} 
-                    required 
-                    InputProps={{ 
-                      sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
-                      startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>Creators must provide a valid OTP generated by the System Administrator to initialize new colleges.</Typography>
-               </Box>
-            )}
-            <Stack spacing={3}>
-              <Grid container spacing={2}>
-                <Grid item xs={8}>
-                  <TextField fullWidth label="College Name" value={collegeForm.name} onChange={e => setCollegeForm({ ...collegeForm, name: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-                <Grid item xs={4}>
-                  <TextField fullWidth label="Code" value={collegeForm.code} onChange={e => setCollegeForm({ ...collegeForm, code: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-              </Grid>
-              <TextField fullWidth multiline rows={3} label="Vision & Description" value={collegeForm.description} onChange={e => setCollegeForm({ ...collegeForm, description: e.target.value })} required 
-                InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField fullWidth label="Dean Name" value={collegeForm.deanName} onChange={e => setCollegeForm({ ...collegeForm, deanName: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField fullWidth label="Dean Email" type="email" value={collegeForm.deanEmail} onChange={e => setCollegeForm({ ...collegeForm, deanEmail: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-              </Grid>
-              <TextField fullWidth label="Theme Color (HEX)" value={collegeForm.color} onChange={e => setCollegeForm({ ...collegeForm, color: e.target.value })} 
-                InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ p: 4, pt: 0, gap: 2 }}>
-            <Button onClick={() => setOpenCollegeDialog(false)} sx={{ fontWeight: 1000, color: 'text.secondary', textTransform: 'none', px: 3 }}>Abort</Button>
-            <Button type="submit" variant="contained" className="btn-premium" disabled={collegeLoading} sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none' }}>
-              {collegeLoading ? <CircularProgress size={24} color="inherit" /> : (editingCollege ? 'Update Pillar' : 'Establish College')}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Box>
-  );
-
-  const renderDepartmentCatalogTab = () => (
-    <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Department Catalog</Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, opacity: 0.7 }}>PRIMARY ACADEMIC SECTORS</Typography>
-        </Box>
-        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenDeptDialog()} 
-          sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)' }}>
-          Add Faculty Sector
-        </Button>
-      </Box>
-
-      <Grid container spacing={3}>
-        {departments.length === 0 ? (
-          <Grid item xs={12}>
-            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
-              <School sx={{ fontSize: 80, mb: 2 }} />
-              <Typography variant="h6" fontWeight={1000}>NO DEPARTMENTS REGISTERED</Typography>
-            </Box>
-          </Grid>
-        ) : (
-          departments.map((dept) => (
-            <Grid item xs={12} sm={6} md={4} key={dept.id}>
-              <Card sx={{ 
-                ...glassStyle, 
-                borderRadius: 5, 
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: '0.4s',
-                '&:hover': { transform: 'translateY(-8px)', borderColor: dept.color || 'primary.main', boxShadow: `0 20px 40px ${alpha(dept.color || '#6366f1', 0.15)}` }
-              }}>
-                <Box sx={{ 
-                  p: 3, 
-                  background: `linear-gradient(135deg, ${alpha(dept.color || '#6366f1', 0.2)} 0%, transparent 100%)`,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
-                }}>
-                  <Box>
-                    <Chip label={dept.code} size="small" sx={{ fontWeight: 1000, bgcolor: alpha(dept.color || '#6366f1', 0.15), color: dept.color || '#6366f1', mb: 1, border: `1px solid ${alpha(dept.color || '#6366f1', 0.3)}` }} />
-                    <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>{dept.name}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                      <Business sx={{ fontSize: 14, opacity: 0.7 }} />
-                      <Typography variant="caption" color="primary.main" fontWeight={900}>
-                        {colleges.find(c => c.id === dept.collegeId)?.name || "NO COLLEGE ASSIGNED"}
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'block', mt: 0.5 }}>{dept.faculty?.toUpperCase() || "GENERAL"}</Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: alpha(dept.color || '#6366f1', 0.1), color: dept.color || '#6366f1' }}>
-                    <Book />
-                  </Avatar>
-                </Box>
-                <Box sx={{ px: 3, display: 'flex', gap: 1, mb: 1 }}>
-                  <Chip 
-                    label={dept.isPublished ? "PUBLISHED" : "DRAFT"} 
-                    size="small" 
-                    variant="outlined"
-                    color={dept.isPublished ? "success" : "warning"}
-                    sx={{ fontWeight: 1000, fontSize: '0.6rem' }} 
-                  />
-                  <Chip 
-                    label={dept.admissionOpen ? "ADMISSION OPEN" : "ADMISSION CLOSED"} 
-                    size="small" 
-                    variant="outlined"
-                    color={dept.admissionOpen ? "primary" : "error"}
-                    sx={{ fontWeight: 1000, fontSize: '0.6rem' }} 
-                  />
-                  {dept.status === 'pending_credentials' && (
-                    <Chip label="PENDING PROVISIONING" size="small" color="warning" sx={{ fontWeight: 1000, fontSize: '0.6rem' }} />
-                  )}
-                </Box>
-                <CardContent sx={{ p: 3, pt: 0, flexGrow: 1 }}>
-                  <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', mb: 3, lineClamp: 3, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 60 }}>
-                    {dept.description || "No description provided for this academic sector."}
-                  </Typography>
-                  <Stack direction="row" spacing={3} sx={{ mb: 3 }}>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight={900} display="block">DURATION</Typography>
-                      <Typography variant="body2" fontWeight={1000}>{dept.duration}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight={900} display="block">CAPACITY</Typography>
-                      <Typography variant="body2" fontWeight={1000}>{dept.seats} SEATS</Typography>
-                    </Box>
-                  </Stack>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-                    {(Array.isArray(dept.requirements) ? dept.requirements : (dept.requirements || "").split(',')).slice(0, 3).map((r, i) => (
-                      <Chip key={i} label={String(r).trim()} size="small" sx={{ fontSize: '0.65rem', fontWeight: 800, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }} />
-                    ))}
-                  </Box>
-                </CardContent>
-                <Divider sx={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                <Box sx={{ p: 2, px: 3, display: 'flex', justifyContent: 'flex-end', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                  <Tooltip title="Modify Sector"><IconButton size="small" onClick={() => handleOpenDeptDialog(dept)} sx={{ color: "primary.main", bgcolor: 'rgba(99, 102, 241, 0.05)' }}><Edit fontSize="small" /></IconButton></Tooltip>
-                  <Tooltip title="Delete Sector"><IconButton size="small" onClick={() => handleDeleteDept(dept.id)} sx={{ color: "error.main", bgcolor: 'rgba(239, 68, 68, 0.05)' }}><Delete fontSize="small" /></IconButton></Tooltip>
-                </Box>
-              </Card>
-            </Grid>
-          ))
-        )}
-      </Grid>
-
-      <Dialog open={openDeptDialog} onClose={() => setOpenDeptDialog(false)} maxWidth="sm" fullWidth 
-        PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none', p: 1 } }}>
-        <DialogTitle sx={{ p: 4, pb: 1 }}>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingDept ? 'Modify Academic Sector' : 'Initialize Sector'}</Typography>
-          <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 2 }}>DEPARTMENTAL HIERARCHY UPDATE</Typography>
-        </DialogTitle>
-        <form onSubmit={handleSaveDept}>
-          <DialogContent sx={{ p: 4 }}>
-            {!editingDept && (
-               <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#10b981', 0.05), border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                  <Typography variant="caption" color="success.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>SECTOR INITIALIZATION AUTH</Typography>
-                  <TextField 
-                    fullWidth 
-                    label="One-Time Password (DEPARTMENT_CREATE)" 
-                    placeholder="Enter sector authorization key"
-                    value={deptOtp} 
-                    onChange={e => setDeptOtp(e.target.value)} 
-                    required 
-                    InputProps={{ 
-                      sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
-                      startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>A valid OTP is required to establish new academic sectors within the university hierarchy.</Typography>
-               </Box>
-            )}
-            <Stack spacing={3}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField 
-                    fullWidth 
-                    select 
-                    label="Parent College" 
-                    value={deptForm.collegeId} 
-                    onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })} 
-                    required
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  >
-                    {colleges.map(college => (
-                      <MenuItem key={college.id} value={college.id}>
-                        {college.name} ({college.code})
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={8}>
-                  <TextField fullWidth label="Department Name" value={deptForm.name} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-                <Grid item xs={4}>
-                  <TextField fullWidth label="Code" value={deptForm.code} onChange={e => setDeptForm({ ...deptForm, code: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-              </Grid>
-              <TextField fullWidth label="Faculty/School Name" value={deptForm.faculty} onChange={e => setDeptForm({ ...deptForm, faculty: e.target.value })} required 
-                InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <TextField fullWidth multiline rows={3} label="Program Description" value={deptForm.description} onChange={e => setDeptForm({ ...deptForm, description: e.target.value })} required 
-                InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField fullWidth label="Duration (e.g. 4 Years)" value={deptForm.duration} onChange={e => setDeptForm({ ...deptForm, duration: e.target.value })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField fullWidth type="number" label="Max Enrollment" value={deptForm.seats} onChange={e => setDeptForm({ ...deptForm, seats: Number(e.target.value) })} required 
-                    InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-                  />
-                </Grid>
-              </Grid>
-              <TextField fullWidth label="Entry Requirements (Comma Separated)" value={deptForm.requirements} onChange={e => setDeptForm({ ...deptForm, requirements: e.target.value })} 
-                InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <TextField fullWidth label="Brand Identity Color (HEX)" value={deptForm.color} onChange={e => setDeptForm({ ...deptForm, color: e.target.value })} 
-                InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <TextField fullWidth label="Required Documents (Comma Separated)" value={deptForm.requiredDocuments} onChange={e => setDeptForm({ ...deptForm, requiredDocuments: e.target.value })} 
-                placeholder="e.g. Transcript, ID/Passport, High School Diploma"
-                InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
-              />
-              <Stack direction="row" spacing={4}>
-                <FormControlLabel
-                  control={<Switch checked={deptForm.isPublished} onChange={e => setDeptForm({ ...deptForm, isPublished: e.target.checked })} />}
-                  label={<Typography variant="body2" fontWeight={800}>Publish to Portal</Typography>}
-                />
-                <FormControlLabel
-                  control={<Switch checked={deptForm.admissionOpen} onChange={e => setDeptForm({ ...deptForm, admissionOpen: e.target.checked })} />}
-                  label={<Typography variant="body2" fontWeight={800}>Open Admission</Typography>}
-                />
-              </Stack>
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ p: 4, pt: 0, gap: 2 }}>
-            <Button onClick={() => setOpenDeptDialog(false)} sx={{ fontWeight: 1000, color: 'text.secondary', textTransform: 'none', px: 3 }}>Abort Operation</Button>
-            <Button type="submit" variant="contained" className="btn-premium" sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none' }}>
-              {editingDept ? 'Commit Changes' : 'Initialize Sector'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Box>
-  );
+  // Tab components used in return block
 
   const renderCoursesTab = () => (
     <Box sx={{ mt: 4 }}>
@@ -3237,13 +2713,13 @@ const RegistrarDashboard = () => {
           <Box sx={{ transition: '0.3s' }}>
             {activeTab === 0 && renderOverviewTab()}
             {activeTab === 1 && renderStudentsTab()}
-            {activeTab === 2 && renderCollegesTab()}
+            {activeTab === 2 && <CollegesTab colleges={colleges} isDark={isDark} glassStyle={glassStyle} />}
             {activeTab === 3 && renderCoursesTab()}
             {activeTab === 4 && renderSchedulesTab()}
             {activeTab === 5 && renderApplicationsTab()}
             {activeTab === 6 && renderPendingIdsTab()}
             {activeTab === 7 && renderIdRequestsTab()}
-            {activeTab === 8 && renderDepartmentCatalogTab()}
+            {activeTab === 8 && <DepartmentsTab departments={departments} colleges={colleges} isDark={isDark} glassStyle={glassStyle} />}
             {activeTab === 9 && renderAdmissionsPostsTab()}
             {activeTab === 10 && renderAnalyticsTab()}
             {activeTab === 11 && renderNewsManagementTab()}

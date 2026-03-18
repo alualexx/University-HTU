@@ -4,32 +4,53 @@ import { Box } from "@mui/material";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Unauthorized from "./pages/Unauthorized";
-import Courses from "./pages/public/Courses";
-import Faculty from "./pages/public/Faculty";
-import News from "./pages/public/News";
-import Apply from "./pages/public/Apply";
-import ApplicationForm from "./pages/public/ApplicationForm";
-import TrackApplication from "./pages/public/TrackApplication";
-import Departments from "./pages/public/Departments";
-import AboutUs from "./pages/public/AboutUs";
-import Dashboard from "./pages/Dashboard";
-import StudentDashboard from "./pages/student/StudentDashboard";
-import RegistrarDashboard from "./pages/registrar/RegistrarDashboard";
-import DepartmentDashboard from "./pages/faculty/DepartmentDashboard";
-import TeacherDashboard from "./pages/faculty/TeacherDashboard";
-import FacultyDashboard from "./pages/faculty/FacultyDashboard";
-import CollegeAdminDashboard from "./pages/faculty/CollegeAdminDashboard";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import CreateAccount from "./pages/admin/CreateAccount";
-import MaintenancePage from "./pages/MaintenancePage";
-import ChangePassword from "./pages/public/ChangePassword";
 import { useAuth, ROLES, ROLE_DASHBOARD_ROUTES } from "./context/AuthContext";
-import ChatBot from "./components/common/ChatBot";
 import "./App.css";
+
+// Lazy-loaded components for performance optimization
+const Home = React.lazy(() => import("./pages/Home"));
+const Login = React.lazy(() => import("./pages/Login"));
+const Register = React.lazy(() => import("./pages/Register"));
+const Unauthorized = React.lazy(() => import("./pages/Unauthorized"));
+const Courses = React.lazy(() => import("./pages/public/Courses"));
+const Faculty = React.lazy(() => import("./pages/public/Faculty"));
+const News = React.lazy(() => import("./pages/public/News"));
+const Apply = React.lazy(() => import("./pages/public/Apply"));
+const ApplicationForm = React.lazy(() => import("./pages/public/ApplicationForm"));
+const TrackApplication = React.lazy(() => import("./pages/public/TrackApplication"));
+const Departments = React.lazy(() => import("./pages/public/Departments"));
+const AboutUs = React.lazy(() => import("./pages/public/AboutUs"));
+const StudentDashboard = React.lazy(() => import("./pages/student/StudentDashboard"));
+const RegistrarDashboard = React.lazy(() => import("./pages/registrar/RegistrarDashboard"));
+const DepartmentDashboard = React.lazy(() => import("./pages/faculty/DepartmentDashboard"));
+const TeacherDashboard = React.lazy(() => import("./pages/faculty/TeacherDashboard"));
+const FacultyDashboard = React.lazy(() => import("./pages/faculty/FacultyDashboard"));
+const CollegeAdminDashboard = React.lazy(() => import("./pages/faculty/CollegeAdminDashboard"));
+const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const CreateAccount = React.lazy(() => import("./pages/admin/CreateAccount"));
+const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
+const ChangePassword = React.lazy(() => import("./pages/public/ChangePassword"));
+const ChatBot = React.lazy(() => import("./components/common/ChatBot"));
+
+// Loading fallback component
+const PageLoader = () => (
+  <Box sx={{ 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    height: '60vh',
+    gap: 2 
+  }}>
+    <div className="loader-ripple"><div></div><div></div></div>
+    <div style={{ 
+      fontFamily: 'Outfit, sans-serif', 
+      color: '#4f46e5', 
+      fontWeight: 600,
+      letterSpacing: '1px'
+    }}>LOADING UNIVERSITY PORTAL...</div>
+  </Box>
+);
 
 function App() {
   const { maintenanceMode, user, isAuthenticated } = useAuth();
@@ -48,7 +69,8 @@ function App() {
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {!isDashboard && <Navbar />}
       <Box component="main" sx={{ flexGrow: 1, mt: (isHomePage || isDashboard) ? 0 : { xs: 8, sm: 9, md: 10 }, mb: isDashboard ? 0 : 4 }}>
-        <Routes>
+        <React.Suspense fallback={<PageLoader />}>
+          <Routes>
           {/* Public Routes - Affected by Maintenance Mode */}
           <Route path="/" element={
             maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : 
@@ -108,13 +130,13 @@ function App() {
             }
           />
 
-          {/* Protected Routes */}
+          {/* Generic /dashboard — redirect to role-specific dashboard */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
+              isAuthenticated
+                ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/"} replace />
+                : <Navigate to="/login" replace />
             }
           />
 
@@ -194,6 +216,7 @@ function App() {
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </React.Suspense>
       </Box>
       {!isDashboard && <Footer />}
       {/* Global ChatBot — visible on every page and dashboard */}
