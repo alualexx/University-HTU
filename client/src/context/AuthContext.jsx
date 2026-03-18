@@ -4,8 +4,9 @@ import {
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { auth, db, app } from "../services/Firebase";
 import { initializeApp } from "firebase/app";
 import { getAuth, updatePassword } from "firebase/auth";
@@ -23,6 +24,7 @@ export const ROLES = {
   REGISTRAR: "registrar",
   ADMIN: "admin",
   TEACHER: "teacher",
+  COLLEGE_ADMIN: "college_admin",
 };
 
 // Role-based dashboard routes
@@ -32,6 +34,7 @@ export const ROLE_DASHBOARD_ROUTES = {
   [ROLES.TEACHER]: "/teacher-dashboard",    // Individual Teacher
   [ROLES.REGISTRAR]: "/registrar-dashboard",
   [ROLES.ADMIN]: "/admin-dashboard",
+  [ROLES.COLLEGE_ADMIN]: "/college-dashboard",
 };
 
 export const useAuth = () => {
@@ -47,6 +50,22 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [globalAdmissionOpen, setGlobalAdmissionOpen] = useState(true);
+  const [userIp, setUserIp] = useState("Unknown");
+
+  // Fetch user IP
+  useEffect(() => {
+    const fetchIp = async () => {
+      try {
+        const response = await fetch("https://api.ipify.org?format=json");
+        const data = await response.json();
+        setUserIp(data.ip);
+      } catch (err) {
+        console.warn("Failed to fetch IP address:", err);
+      }
+    };
+    fetchIp();
+  }, []);
 
   // Listen for Firebase auth state changes and fetch role from Firestore
   useEffect(() => {
@@ -88,7 +107,9 @@ const AuthProvider = ({ children }) => {
     // Listen for global maintenance mode
     const unsubscribeConfig = onSnapshot(doc(db, "system_config", "settings"), (docSnap) => {
       if (docSnap.exists()) {
-        setMaintenanceMode(docSnap.data().maintenanceMode);
+        const data = docSnap.data();
+        setMaintenanceMode(data.maintenanceMode);
+        setGlobalAdmissionOpen(data.globalAdmissionOpen !== false); // Default to true if not set
       }
     }, (err) => {
       console.warn("Maintenance config fetch failed:", err);
@@ -153,6 +174,7 @@ const AuthProvider = ({ children }) => {
         email: "head@university.edu",
         name: "Dr. Alan Turing",
         role: "faculty",
+        department: "Computer Science",
       };
       setUser(demoHead);
       return { success: true, role: "faculty", redirectTo: "/department-dashboard" };
@@ -161,6 +183,43 @@ const AuthProvider = ({ children }) => {
 
     try {
       setError(null);
+
+      // ---- MANUAL CREDENTIAL / BYPASS CHECK ----
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const qSnap = await getDocs(q);
+      
+      if (!qSnap.empty) {
+        const docSnap = qSnap.docs[0];
+        const data = docSnap.data();
+        
+        if (data.tempPassword && data.tempPassword === password) {
+          console.log("Login bypass successful using tempPassword");
+          const bypassUser = {
+            uid: docSnap.id,
+            email: data.email,
+            name: data.name || data.email,
+            role: data.role || "student",
+            requiresPasswordChange: true, // Always force change for bypass
+            isBypass: true,
+            ...data
+          };
+          
+          setUser(bypassUser);
+          
+          // Log security event
+          if (typeof logSecurityEvent === 'function') {
+            await logSecurityEvent("Emergency Access", `User accessed account via manual credentials bypass. IP: ${userIp}`, "warning");
+          }
+          
+          return {
+            success: true,
+            role: bypassUser.role,
+            redirectTo: ROLE_DASHBOARD_ROUTES[bypassUser.role] || "/dashboard",
+          };
+        }
+      }
+      // ------------------------------------------
 
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -254,7 +313,9 @@ const AuthProvider = ({ children }) => {
       };
 
       if (userData.studentId) newUser.studentId = userData.studentId;
+      if (userData.year) newUser.year = userData.year;
       if (userData.employeeId) newUser.employeeId = userData.employeeId;
+      if (userData.department) newUser.department = userData.department;
 
       await setDoc(doc(db, "users", userCredential.user.uid), newUser);
       await signOut(secondaryAuth);
@@ -273,6 +334,45 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // Submit a password reset request
+  const requestPasswordReset = async (email) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 1. Check if user exists
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error("No account found with this email address.");
+      }
+
+      const userData = querySnapshot.docs[0].data();
+      const userName = userData.name || "User";
+      const userRole = userData.role || "student";
+
+      // 2. Create reset request
+      await addDoc(collection(db, "password_resets"), {
+        email,
+        name: userName,
+        role: userRole,
+        status: "pending",
+        requestedAt: serverTimestamp(),
+        processedAt: null,
+        processedBy: null
+      });
+
+      return { success: true };
+    } catch (err) {
+      console.error("Reset request error:", err);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -285,6 +385,20 @@ const AuthProvider = ({ children }) => {
   const changeUserPassword = async (newPassword) => {
     try {
       setError(null);
+      
+      if (user?.isBypass) {
+        // For bypass users, they might not be in Firebase Auth yet or we are resetting them.
+        // We update Firestore to remove the tempPassword and requiresPasswordChange.
+        await setDoc(doc(db, "users", user.uid), { 
+          tempPassword: null, 
+          requiresPasswordChange: false,
+          lastPasswordUpdate: serverTimestamp()
+        }, { merge: true });
+        
+        setUser(prev => ({ ...prev, requiresPasswordChange: false, tempPassword: null, isBypass: false }));
+        return { success: true, message: "Manual password updated. Please sync with your institution for further access if Firebase Auth fails." };
+      }
+
       if (!auth.currentUser) throw new Error("No user logged in to change password.");
 
       await updatePassword(auth.currentUser, newPassword);
@@ -309,6 +423,63 @@ const AuthProvider = ({ children }) => {
     return user.role === requiredRoles;
   };
 
+  const logSecurityEvent = async (classification, details, color = "info") => {
+    try {
+      await addDoc(collection(db, "security_logs"), {
+        source: user?.name || "Auth System",
+        classification,
+        resolution: details,
+        ipAddress: userIp || "Unknown",
+        color,
+        timestamp: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Security log failed:", err);
+    }
+  };
+
+  const logAuditActivity = async (action, details, customUser = null) => {
+    const activeUser = customUser || user;
+    try {
+      await addDoc(collection(db, "audit_logs"), {
+        action,
+        details,
+        adminName: activeUser?.name || "System / Guest",
+        adminEmail: activeUser?.email || "Anonymous",
+        ipAddress: userIp || "Unknown",
+        timestamp: serverTimestamp(),
+        color: action.includes("Delete") || action.includes("Failed") ? "#ff003c" : "#00f0ff"
+      });
+    } catch (err) {
+      console.error("Audit log failed:", err);
+    }
+  };
+  
+  const verifyOTP = async (otpCode, type) => {
+    try {
+      const otpsRef = collection(db, "otps");
+      const q = query(otpsRef, where("code", "==", otpCode), where("type", "==", type), where("isUsed", "==", false));
+      const qSnap = await getDocs(q);
+      
+      if (qSnap.empty) return { success: false, message: "Invalid or expired OTP." };
+      
+      return { success: true, otpId: qSnap.docs[0].id, data: qSnap.docs[0].data() };
+    } catch (err) {
+      console.error("OTP Verification failed:", err);
+      return { success: false, message: "Error verifying OTP." };
+    }
+  };
+
+  const markOTPUsed = async (otpId) => {
+    try {
+      await setDoc(doc(db, "otps", otpId), { isUsed: true, usedAt: serverTimestamp() }, { merge: true });
+      return true;
+    } catch (err) {
+      console.error("Failed to mark OTP as used:", err);
+      return false;
+    }
+  };
+
   const isAuthenticated = !!user;
 
   const value = {
@@ -322,8 +493,16 @@ const AuthProvider = ({ children }) => {
     register,
     registerUserByAdmin,
     changeUserPassword,
+    requestPasswordReset,
+    sendPasswordReset: (email) => sendPasswordResetEmail(auth, email),
     maintenanceMode,
+    userIp,
+    logSecurityEvent,
+    logAuditActivity,
+    verifyOTP,
+    markOTPUsed,
     ROLE_DASHBOARD_ROUTES,
+    globalAdmissionOpen,
   };
 
   return (

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
     Box, Container, Typography, Grid, Card, CardContent, Button,
     TextField, MenuItem, Chip, Avatar, Stepper, Step, StepLabel,
-    StepContent, Alert, Divider, IconButton, LinearProgress, alpha,
+    StepContent, Alert, Divider, IconButton, LinearProgress, alpha, Stack,
 } from "@mui/material";
 import {
     Person, School, Description, CloudUpload, CheckCircle,
@@ -11,7 +11,7 @@ import {
     AssignmentInd, Email, Phone, CalendarToday, Public,
     Male, Female, ArticleOutlined,
 } from "@mui/icons-material";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../services/Firebase";
 
 /* ── Department lookup ─────────────────────────────────── */
@@ -28,72 +28,86 @@ const STEPS = ["Personal Information", "Academic Background", "Documents & State
 
 /* ── Pending Confirmation ─────────────────────────────── */
 const PendingScreen = ({ applicationId, applicantName, department }) => (
-    <Box sx={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", py: 8 }}>
-        <Container maxWidth="sm">
-            <Card elevation={0} sx={{ borderRadius: 5, border: "1px solid", borderColor: "divider", overflow: "hidden", textAlign: "center" }}>
-                <Box sx={{ height: 6, background: "linear-gradient(90deg, #1976d2, #6a1b9a)" }} />
-                <CardContent sx={{ p: 6 }}>
-                    {/* Animated icon */}
+    <Box sx={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        py: 10, background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', position: 'relative', overflow: 'hidden'
+    }}>
+        {/* Background effects */}
+        <Box sx={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", top: -150, right: -150, background: "radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%)", filter: 'blur(80px)' }} />
+        <Box sx={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", bottom: -100, left: -100, background: "radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, transparent 70%)", filter: 'blur(60px)' }} />
+
+        <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+            <Card elevation={0} sx={{
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                overflow: "hidden", textAlign: "center", bgcolor: 'rgba(255,255,255,0.02)',
+                backdropFilter: 'blur(20px)', boxShadow: '0 32px 64px -12px rgba(0,0,0,0.5)'
+            }}>
+                <Box sx={{ height: 8, background: "linear-gradient(90deg, #6366f1, #a855f7)" }} />
+                <CardContent sx={{ p: { xs: 4, md: 8 } }}>
+                    {/* Premium Animated Icon */}
                     <Box sx={{
-                        width: 100, height: 100, borderRadius: "50%", mx: "auto", mb: 3,
-                        background: "linear-gradient(135deg, #fff7ed, #fef3c7)",
+                        width: 120, height: 120, borderRadius: 5, mx: "auto", mb: 5,
+                        background: "rgba(255,255,255,0.03)", border: '1px solid rgba(255,255,255,0.1)',
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        boxShadow: "0 8px 32px rgba(234,88,12,0.2)",
-                        animation: "pulse 2s ease-in-out infinite",
-                        "@keyframes pulse": { "0%,100%": { transform: "scale(1)" }, "50%": { transform: "scale(1.06)" } },
+                        position: 'relative'
                     }}>
-                        <HourglassTop sx={{ fontSize: 48, color: "#ea580c" }} />
+                        <CheckCircle sx={{ fontSize: 64, color: "#10b981", filter: 'drop-shadow(0 0 20px rgba(16,185,129,0.4))' }} />
+                        <Box sx={{ position: 'absolute', inset: -10, border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, animation: 'spin 10s linear infinite', "@keyframes spin": { "100%": { transform: 'rotate(360deg)' } } }} />
                     </Box>
 
-                    <Chip
-                        label="Application Submitted"
-                        icon={<CheckCircle sx={{ fontSize: "16px !important", color: "#16a34a !important" }} />}
-                        sx={{ mb: 2, bgcolor: "#f0fdf4", color: "#16a34a", fontWeight: 700, border: "1px solid #bbf7d0" }}
-                    />
+                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: 100, bgcolor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', mb: 3 }}>
+                        <Typography variant="caption" fontWeight={1000} sx={{ color: '#10b981', letterSpacing: 1.5, textTransform: 'uppercase' }}>Submission Confirmed</Typography>
+                    </Box>
 
-                    <Typography variant="h4" fontWeight={900} gutterBottom sx={{ letterSpacing: "-0.02em" }}>
-                        You're on the list, {applicantName.split(" ")[0]}!
+                    <Typography variant="h3" fontWeight={1000} color="white" gutterBottom sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: "-0.02em", mb: 2 }}>
+                        Destiny <Box component="span" sx={{ color: 'primary.main' }}>Initiated</Box>
                     </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8, mb: 3 }}>
-                        Your application to <strong>{department}</strong> has been received and is currently under review by our Registrar's Office.
+                    <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, mb: 6, fontWeight: 500, fontSize: '1.1rem' }}>
+                        Greetings, <strong>{applicantName}</strong>. Your application for <strong>{department}</strong> has been encrypted and securely transmitted to the Office of the Registrar.
                     </Typography>
 
                     <Box sx={{
-                        p: 2.5, borderRadius: 3, bgcolor: "#f8fafc",
-                        border: "1px solid", borderColor: "divider", mb: 4, textAlign: "left"
+                        p: 4, borderRadius: 6, bgcolor: "rgba(0,0,0,0.2)",
+                        border: "1px solid rgba(255,255,255,0.05)", mb: 6, textAlign: "center"
                     }}>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1.5 }}>
-                            Application Reference
+                        <Typography variant="caption" fontWeight={1000} color="rgba(255,255,255,0.3)" sx={{ textTransform: "uppercase", letterSpacing: 2, display: "block", mb: 2 }}>
+                            Protocol Reference ID
                         </Typography>
-                        <Typography variant="h6" fontWeight={800} fontFamily="monospace" color="primary">
-                            #{applicationId?.slice(0, 12).toUpperCase()}
+                        <Typography variant="h4" fontWeight={900} sx={{ fontFamily: 'monospace', color: 'primary.main', letterSpacing: 4 }}>
+                            {applicationId?.slice(0, 4).toUpperCase()}—{applicationId?.slice(4, 10).toUpperCase()}
                         </Typography>
                     </Box>
 
-                    <Alert severity="info" sx={{ borderRadius: 2.5, textAlign: "left", mb: 4 }}>
-                        <Typography variant="body2">
-                            You will be notified via <strong>email and SMS</strong> once a decision has been made. This process typically takes <strong>3–7 business days</strong>.
-                        </Typography>
-                    </Alert>
+                    <Box sx={{ bgcolor: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.1)', borderRadius: 5, p: 3, textAlign: 'left', mb: 6 }}>
+                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                            <Email sx={{ color: 'primary.main', mt: 0.5 }} />
+                            <Box>
+                                <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>Communication Dispatch</Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                                    A confirmation has been sent to your registered email. Standard review protocols take <strong>3–7 academic cycles</strong>.
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Box>
 
-                    <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
                         <Button
                             variant="contained"
                             component={RouterLink}
                             to="/"
-                            sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, px: 4, py: 1.3 }}
+                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', bgcolor: 'primary.main', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'primary.dark', transform: 'translateY(-4px)' } }}
                         >
-                            Back to Home
+                            Return to Nexus
                         </Button>
                         <Button
                             variant="outlined"
                             component={RouterLink}
                             to="/apply"
-                            sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, px: 4, py: 1.3 }}
+                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', color: 'white', borderColor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'white' } }}
                         >
-                            View Departments
+                            Review Domains
                         </Button>
-                    </Box>
+                    </Stack>
                 </CardContent>
             </Card>
         </Container>
@@ -179,7 +193,12 @@ const ApplicationForm = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            const docRef = await addDoc(collection(db, "applications"), {
+            // Pre-generate the document reference to get the ID upfront
+            const newDocRef = doc(collection(db, "applications"));
+            const newId = newDocRef.id;
+            const refId = newId.slice(0, 4).toUpperCase() + "\u2014" + newId.slice(4, 10).toUpperCase();
+
+            await setDoc(newDocRef, {
                 // Identity
                 name: `${form.firstName} ${form.lastName}`,
                 firstName: form.firstName,
@@ -210,10 +229,12 @@ const ApplicationForm = () => {
                 intendedMajor: dept.name,
                 departmentId,
                 departmentCode: dept.code,
-                status: "pending",
+                status: "pending_dept_review",
                 submittedAt: serverTimestamp(),
+                // Searchable Protocol Reference ID stored as field
+                referenceId: refId,
             });
-            setApplicationId(docRef.id);
+            setApplicationId(newId);
             setSubmitted(true);
         } catch (err) {
             console.error("Submission error:", err);
@@ -229,126 +250,156 @@ const ApplicationForm = () => {
     const progress = ((activeStep) / (STEPS.length - 1)) * 100;
 
     return (
-        <Box sx={{ bgcolor: "#f8fafc", minHeight: "100vh" }}>
-            {/* Header */}
+        <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
+            {/* ── Premium Header ── */}
             <Box sx={{
-                background: dept.gradient,
-                pt: { xs: 14, md: 16 }, pb: 10,
+                background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+                pt: { xs: 15, md: 18 }, pb: 12,
                 position: "relative", overflow: "hidden",
             }}>
-                <Box sx={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+                {/* Background effects */}
+                <Box sx={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", top: -100, right: -100, background: `radial-gradient(circle, ${alpha(dept.color, 0.15)} 0%, transparent 70%)`, filter: 'blur(80px)' }} />
+
                 <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
                     <Button
                         startIcon={<ArrowBack />}
                         onClick={() => navigate("/apply")}
-                        sx={{ color: "rgba(255,255,255,0.8)", textTransform: "none", fontWeight: 600, mb: 3, "&:hover": { color: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
+                        sx={{ color: "rgba(255,255,255,0.4)", textTransform: "none", fontWeight: 1000, mb: 4, px: 2, borderRadius: 3, "&:hover": { color: "white", bgcolor: "rgba(255,255,255,0.05)" } }}
                     >
-                        Back to Departments
+                        Back to Domains
                     </Button>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-                        <Avatar sx={{ bgcolor: "rgba(255,255,255,0.2)", width: 48, height: 48, fontSize: "1rem", fontWeight: 900, backdropFilter: "blur(10px)" }}>
-                            {dept.code}
-                        </Avatar>
+
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 6 }}>
+                        <Box sx={{
+                            width: 64, height: 64, borderRadius: 4, background: dept.gradient,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: `0 12px 24px ${alpha(dept.color, 0.3)}`
+                        }}>
+                            <Avatar sx={{ bgcolor: "transparent", width: 40, height: 40, fontSize: "1.2rem", fontWeight: 1000, color: 'white' }}>
+                                {dept.code[0]}
+                            </Avatar>
+                        </Box>
                         <Box>
-                            <Typography variant="h4" fontWeight={900} color="white" sx={{ letterSpacing: "-0.02em" }}>
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderRadius: 100, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', mb: 1 }}>
+                                <Typography variant="caption" fontWeight={1000} sx={{ color: 'primary.main', letterSpacing: 1.5, textTransform: 'uppercase' }}>Academic Intake Cycle 2026</Typography>
+                            </Box>
+                            <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: "-0.02em" }}>
                                 {dept.name}
-                            </Typography>
-                            <Typography variant="body1" color="rgba(255,255,255,0.8)">
-                                Application Form — Fall 2026 Intake
                             </Typography>
                         </Box>
                     </Box>
 
-                    {/* Progress */}
-                    <Box sx={{ mt: 4 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                            <Typography variant="caption" color="rgba(255,255,255,0.8)" fontWeight={700}>
-                                Step {activeStep + 1} of {STEPS.length}: {STEPS[activeStep]}
-                            </Typography>
-                            <Typography variant="caption" color="rgba(255,255,255,0.8)" fontWeight={700}>
-                                {Math.round(progress)}% Complete
+                    {/* Sophisticated Progress */}
+                    <Box sx={{ mt: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', animation: 'pulse 2s infinite' }} />
+                                <Typography variant="caption" fontWeight={1000} sx={{ color: 'white', letterSpacing: 1, textTransform: 'uppercase' }}>
+                                    PROTOCOL {activeStep + 1}: {STEPS[activeStep]}
+                                </Typography>
+                            </Box>
+                            <Typography variant="caption" fontWeight={1000} sx={{ color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
+                                {Math.round(progress)}% INTEGRITY
                             </Typography>
                         </Box>
                         <LinearProgress
                             variant="determinate"
                             value={progress}
                             sx={{
-                                height: 6, borderRadius: 3,
-                                bgcolor: "rgba(255,255,255,0.2)",
-                                "& .MuiLinearProgress-bar": { bgcolor: "white", borderRadius: 3 }
+                                height: 4, borderRadius: 2,
+                                bgcolor: "rgba(255,255,255,0.05)",
+                                "& .MuiLinearProgress-bar": { background: dept.gradient, borderRadius: 2 }
                             }}
                         />
                     </Box>
                 </Container>
-
-                {/* Wave */}
-                <Box sx={{ position: "absolute", bottom: 0, left: 0, right: 0, lineHeight: 0 }}>
-                    <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{ width: "100%", display: "block" }}>
-                        <path d="M0 50L720 20L1440 50V50H0Z" fill="#f8fafc" />
-                    </svg>
-                </Box>
             </Box>
 
             <Container maxWidth="md" sx={{ mt: -4, pb: 10, position: "relative", zIndex: 1 }}>
                 <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider" }}>
                     <CardContent sx={{ p: { xs: 3, md: 5 } }}>
 
-                        {/* ── Step 0: Personal Info ── */}
+                        {/* ── Step 0: Personal Information ── */}
                         {activeStep === 0 && (
                             <Box>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
-                                    <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: alpha(dept.color, 0.1), color: dept.color }}>
-                                        <Person />
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 6 }}>
+                                    <Box sx={{
+                                        p: 1.5, borderRadius: 3, bgcolor: alpha(dept.color, 0.08), color: dept.color,
+                                        border: `1px solid ${alpha(dept.color, 0.1)}`
+                                    }}>
+                                        <Person sx={{ fontSize: 28 }} />
                                     </Box>
                                     <Box>
-                                        <Typography variant="h5" fontWeight={800}>Personal Information</Typography>
-                                        <Typography variant="body2" color="text.secondary">Your basic personal details</Typography>
+                                        <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
+                                            Personal Information
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            Provide your basic identification details for our records.
+                                        </Typography>
                                     </Box>
                                 </Box>
-                                <Grid container spacing={2.5}>
+
+                                <Grid container spacing={4}>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="First Name *" name="firstName" value={form.firstName} onChange={handleChange}
+                                        <TextField
+                                            fullWidth label="Given Name *" name="firstName" value={form.firstName} onChange={handleChange}
                                             error={!!errors.firstName} helperText={errors.firstName}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            variant="outlined"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="Last Name *" name="lastName" value={form.lastName} onChange={handleChange}
+                                        <TextField
+                                            fullWidth label="Family Name *" name="lastName" value={form.lastName} onChange={handleChange}
                                             error={!!errors.lastName} helperText={errors.lastName}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="Date of Birth *" name="dateOfBirth" type="date" value={form.dateOfBirth}
+                                        <TextField
+                                            fullWidth label="Birth Date *" name="dateOfBirth" type="date" value={form.dateOfBirth}
                                             onChange={handleChange} InputLabelProps={{ shrink: true }}
                                             error={!!errors.dateOfBirth} helperText={errors.dateOfBirth}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth select label="Gender *" name="gender" value={form.gender} onChange={handleChange}
+                                        <TextField
+                                            fullWidth select label="Gender *" name="gender" value={form.gender} onChange={handleChange}
                                             error={!!errors.gender} helperText={errors.gender}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}>
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}>
                                             <MenuItem value="male">Male</MenuItem>
                                             <MenuItem value="female">Female</MenuItem>
-                                            <MenuItem value="other">Other</MenuItem>
-                                            <MenuItem value="prefer_not">Prefer not to say</MenuItem>
                                         </TextField>
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="Nationality *" name="nationality" value={form.nationality} onChange={handleChange}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                        <TextField
+                                            fullWidth label="Nationality / Citizenship *" name="nationality" value={form.nationality} onChange={handleChange}
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="Phone Number *" name="phone" value={form.phone} onChange={handleChange}
+                                        <TextField
+                                            fullWidth label="Contact Number *" name="phone" value={form.phone} onChange={handleChange}
                                             error={!!errors.phone} helperText={errors.phone}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            placeholder="+1 (555) 000-0000"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="Email Address *" name="email" type="email" value={form.email} onChange={handleChange}
+                                        <TextField
+                                            fullWidth label="Email Correspondence *" name="email" type="email" value={form.email} onChange={handleChange}
                                             error={!!errors.email} helperText={errors.email}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            placeholder="intel@university.edu"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="Home Address" name="address" value={form.address} onChange={handleChange} multiline rows={2}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                        <TextField
+                                            fullWidth label="Residential Address" name="address" value={form.address} onChange={handleChange} multiline rows={3}
+                                            placeholder="Street address, City, Postal Code, Country"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                 </Grid>
                             </Box>
@@ -357,53 +408,73 @@ const ApplicationForm = () => {
                         {/* ── Step 1: Academic Background ── */}
                         {activeStep === 1 && (
                             <Box>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
-                                    <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: alpha(dept.color, 0.1), color: dept.color }}>
-                                        <School />
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 6 }}>
+                                    <Box sx={{
+                                        p: 1.5, borderRadius: 3, bgcolor: alpha(dept.color, 0.08), color: dept.color,
+                                        border: `1px solid ${alpha(dept.color, 0.1)}`
+                                    }}>
+                                        <School sx={{ fontSize: 28 }} />
                                     </Box>
                                     <Box>
-                                        <Typography variant="h5" fontWeight={800}>Academic Background</Typography>
-                                        <Typography variant="body2" color="text.secondary">Your educational history and achievements</Typography>
+                                        <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
+                                            Academic Credentials
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            Your educational trajectory and performance metrics.
+                                        </Typography>
                                     </Box>
                                 </Box>
-                                <Grid container spacing={2.5}>
+
+                                <Grid container spacing={4}>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="High School / Secondary School Name *" name="highSchoolName" value={form.highSchoolName}
+                                        <TextField
+                                            fullWidth label="Primary Secondary Institution / High School *" name="highSchoolName" value={form.highSchoolName}
                                             onChange={handleChange} error={!!errors.highSchoolName} helperText={errors.highSchoolName}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            placeholder="The Global Academy of Excellence"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth label="Graduation Year *" name="graduationYear" value={form.graduationYear} onChange={handleChange}
+                                        <TextField
+                                            fullWidth label="Year of Completion *" name="graduationYear" value={form.graduationYear} onChange={handleChange}
                                             type="number" inputProps={{ min: 2010, max: 2026 }}
                                             error={!!errors.graduationYear} helperText={errors.graduationYear}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth select label="Grade System *" name="gradeSystem" value={form.gradeSystem} onChange={handleChange}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}>
-                                            <MenuItem value="gpa_4">GPA (4.0 scale)</MenuItem>
-                                            <MenuItem value="percentage">Percentage (%)</MenuItem>
-                                            <MenuItem value="grade_letter">Grade Letters (A–F)</MenuItem>
-                                            <MenuItem value="other">Other</MenuItem>
+                                        <TextField
+                                            fullWidth select label="Evaluation Framework *" name="gradeSystem" value={form.gradeSystem} onChange={handleChange}
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}>
+                                            <MenuItem value="gpa_4">Cumulative GPA (4.0 scale)</MenuItem>
+                                            <MenuItem value="percentage">Total Percentage (%)</MenuItem>
+                                            <MenuItem value="grade_letter">Alphabetical (A–F)</MenuItem>
+                                            <MenuItem value="other">Specified Alternative</MenuItem>
                                         </TextField>
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="GPA / Final Grade *" name="gpa" value={form.gpa} onChange={handleChange}
-                                            placeholder="e.g. 3.8 / 4.0 or 92% or A+"
-                                            error={!!errors.gpa} helperText={errors.gpa || "Enter your final cumulative grade"}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                        <TextField
+                                            fullWidth label="Composite Score / Final Grade *" name="gpa" value={form.gpa} onChange={handleChange}
+                                            placeholder="e.g. 3.92 / 4.0 or 94.5% or A+"
+                                            error={!!errors.gpa} helperText={errors.gpa || "Your verified final cumulative academic result"}
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="Previous Qualifications / Certificates" name="previousQualification"
-                                            value={form.previousQualification} onChange={handleChange} multiline rows={2}
-                                            placeholder="List any diplomas, certifications, or awards (optional)"
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                        <TextField
+                                            fullWidth label="Distinctions / Specialized Certifications" name="previousQualification"
+                                            value={form.previousQualification} onChange={handleChange} multiline rows={3}
+                                            placeholder="List any international diplomas (IB, A-Levels), technical certifications, or significant academic awards (optional)"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField fullWidth label="Extracurricular Activities" name="extraCurricular"
-                                            value={form.extraCurricular} onChange={handleChange} multiline rows={2}
-                                            placeholder="Sports, clubs, volunteering, leadership roles, etc. (optional)"
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
+                                        <TextField
+                                            fullWidth label="Leadership & External Contributions" name="extraCurricular"
+                                            value={form.extraCurricular} onChange={handleChange} multiline rows={3}
+                                            placeholder="Athletics, societies, volunteer initiatives, innovation projects, etc. (optional)"
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                                        />
                                     </Grid>
                                 </Grid>
                             </Box>
@@ -412,42 +483,56 @@ const ApplicationForm = () => {
                         {/* ── Step 2: Documents & Statement ── */}
                         {activeStep === 2 && (
                             <Box>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
-                                    <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: alpha(dept.color, 0.1), color: dept.color }}>
-                                        <Description />
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 6 }}>
+                                    <Box sx={{
+                                        p: 1.5, borderRadius: 3, bgcolor: alpha(dept.color, 0.08), color: dept.color,
+                                        border: `1px solid ${alpha(dept.color, 0.1)}`
+                                    }}>
+                                        <ArticleOutlined sx={{ fontSize: 28 }} />
                                     </Box>
                                     <Box>
-                                        <Typography variant="h5" fontWeight={800}>Documents & Statement</Typography>
-                                        <Typography variant="body2" color="text.secondary">Upload required documents and write your personal statement</Typography>
+                                        <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
+                                            Dossier & Narrative
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            Verified documentation and your personal mission statement.
+                                        </Typography>
                                     </Box>
                                 </Box>
 
-                                <Typography variant="subtitle2" fontWeight={700} mb={2}>Required Documents</Typography>
-                                <Grid container spacing={2} sx={{ mb: 4 }}>
+                                <Typography variant="caption" fontWeight={1000} color="text.disabled" sx={{ textTransform: "uppercase", letterSpacing: 2, mb: 3, display: "block" }}>
+                                    Required Credentials (PDF/IMG)
+                                </Typography>
+                                <Grid container spacing={3} sx={{ mb: 6 }}>
                                     {[
-                                        { label: "National ID / Passport *", field: "idDocumentName", accept: "image/*,.pdf" },
+                                        { label: "Government ID / Passport *", field: "idDocumentName", accept: "image/*,.pdf" },
                                         { label: "Academic Transcripts *", field: "transcriptName", accept: ".pdf,image/*" },
-                                        { label: "Passport-size Photo *", field: "photoName", accept: "image/*" },
+                                        { label: "Biometric Photo *", field: "photoName", accept: "image/*" },
+                                        { label: "Recommendation Letter", field: "recommendationLetterName", accept: ".pdf,image/*" },
                                     ].map((doc) => (
                                         <Grid item xs={12} sm={4} key={doc.field}>
                                             <Box
                                                 component="label"
                                                 sx={{
                                                     display: "flex", flexDirection: "column", alignItems: "center",
-                                                    gap: 1.5, p: 3, borderRadius: 3, cursor: "pointer",
-                                                    border: "2px dashed", borderColor: form[doc.field] ? "success.main" : "divider",
-                                                    bgcolor: form[doc.field] ? alpha("#16a34a", 0.04) : "#fafafa",
-                                                    transition: "all 0.2s ease",
-                                                    "&:hover": { borderColor: dept.color, bgcolor: alpha(dept.color, 0.03) }
+                                                    gap: 2, p: 4, borderRadius: 5, cursor: "pointer",
+                                                    border: "1px solid", borderColor: form[doc.field] ? "success.main" : "divider",
+                                                    bgcolor: form[doc.field] ? alpha("#10b981", 0.03) : "transparent",
+                                                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                                    "&:hover": { borderColor: dept.color, bgcolor: alpha(dept.color, 0.02), transform: 'translateY(-4px)' }
                                                 }}
                                             >
                                                 <input type="file" hidden accept={doc.accept} onChange={handleFileChange(doc.field)} />
                                                 {form[doc.field] ? (
-                                                    <CheckCircle sx={{ fontSize: 32, color: "success.main" }} />
+                                                    <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'success.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <CheckCircle sx={{ fontSize: 24, color: "white" }} />
+                                                    </Box>
                                                 ) : (
-                                                    <CloudUpload sx={{ fontSize: 32, color: "text.disabled" }} />
+                                                    <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <CloudUpload sx={{ fontSize: 24, color: "text.disabled" }} />
+                                                    </Box>
                                                 )}
-                                                <Typography variant="caption" fontWeight={700} textAlign="center" color={form[doc.field] ? "success.main" : "text.secondary"}>
+                                                <Typography variant="caption" fontWeight={1000} textAlign="center" color={form[doc.field] ? "success.main" : "text.secondary"} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                                     {form[doc.field] || doc.label}
                                                 </Typography>
                                             </Box>
@@ -455,117 +540,136 @@ const ApplicationForm = () => {
                                     ))}
                                 </Grid>
 
-                                <Divider sx={{ mb: 3 }} />
+                                <Divider sx={{ mb: 6, opacity: 0.6 }} />
 
-                                <Grid container spacing={2.5}>
+                                <Grid container spacing={4}>
                                     <Grid item xs={12}>
                                         <TextField
-                                            fullWidth multiline rows={5}
-                                            label="Personal Statement *"
+                                            fullWidth multiline rows={6}
+                                            label="Personal Statement & Motivation *"
                                             name="personalStatement"
                                             value={form.personalStatement}
                                             onChange={handleChange}
                                             error={!!errors.personalStatement}
-                                            helperText={errors.personalStatement || `${form.personalStatement.length} characters — tell us about yourself, your interests and goals`}
-                                            placeholder="Describe yourself, your passions, your life experiences, and what drives you academically..."
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            helperText={errors.personalStatement || `Analytical Depth: ${form.personalStatement.length} characters — Describe your academic journey and career aspirations.`}
+                                            placeholder="What unique perspectives do you bring to our university? Describe a challenge you overcame..."
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                                         />
                                     </Grid>
                                     <Grid item xs={12}>
                                         <TextField
                                             fullWidth multiline rows={4}
-                                            label={`Why ${dept.name}? *`}
+                                            label={`Strategic Interest in ${dept.name} *`}
                                             name="whyThisDepartment"
                                             value={form.whyThisDepartment}
                                             onChange={handleChange}
                                             error={!!errors.whyThisDepartment}
-                                            helperText={errors.whyThisDepartment || "Explain your motivation for choosing this specific department"}
-                                            placeholder={`Explain why you're passionate about ${dept.name} and what you hope to achieve...`}
-                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                                            helperText={errors.whyThisDepartment || `Motivation Clarity: Explain why this specific domain aligns with your trajectory.`}
+                                            placeholder={`Why did you choose ${dept.name} as your primary field of study?`}
+                                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                                         />
                                     </Grid>
                                 </Grid>
                             </Box>
                         )}
 
-                        {/* ── Step 3: Review & Submit ── */}
+                        {/* ── Step 3: Review & Submission ── */}
                         {activeStep === 3 && (
                             <Box>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
-                                    <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: alpha(dept.color, 0.1), color: dept.color }}>
-                                        <AssignmentInd />
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 6 }}>
+                                    <Box sx={{
+                                        p: 1.5, borderRadius: 3, bgcolor: alpha(dept.color, 0.08), color: dept.color,
+                                        border: `1px solid ${alpha(dept.color, 0.1)}`
+                                    }}>
+                                        <AssignmentInd sx={{ fontSize: 28 }} />
                                     </Box>
                                     <Box>
-                                        <Typography variant="h5" fontWeight={800}>Review Your Application</Typography>
-                                        <Typography variant="body2" color="text.secondary">Please confirm everything before submitting</Typography>
+                                        <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
+                                            Final Confirmation
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            Ensure all data nodes are accurate before initializing submission.
+                                        </Typography>
                                     </Box>
                                 </Box>
 
-                                <Alert severity="info" sx={{ borderRadius: 2.5, mb: 4 }}>
-                                    Please review your information carefully. Once submitted, you cannot edit your application.
-                                </Alert>
+                                <Box sx={{ mb: 6, p: 3, borderRadius: 3, bgcolor: alpha('#38bdf8', 0.05), border: '1px solid rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <CheckCircle sx={{ color: '#38bdf8' }} />
+                                    <Typography variant="body2" fontWeight={600} color="#0369a1">
+                                        Data Integrity Check: All protocols validated. Submission ready.
+                                    </Typography>
+                                </Box>
 
-                                {/* Summary cards */}
+                                {/* Summary sections */}
                                 {[
                                     {
-                                        title: "Personal Information",
+                                        title: "Core Identity",
                                         rows: [
                                             ["Full Name", `${form.firstName} ${form.lastName}`],
-                                            ["Email", form.email],
-                                            ["Phone", form.phone],
-                                            ["Date of Birth", form.dateOfBirth],
-                                            ["Gender", form.gender],
-                                            ["Nationality", form.nationality],
+                                            ["Email / SMS", `${form.email} / ${form.phone}`],
+                                            ["Birth Segment", form.dateOfBirth],
+                                            ["Citizenship", form.nationality],
                                         ]
                                     },
                                     {
-                                        title: "Academic Background",
+                                        title: "Academic Pedigree",
                                         rows: [
-                                            ["High School", form.highSchoolName],
-                                            ["Graduation Year", form.graduationYear],
-                                            ["GPA / Grade", form.gpa],
-                                            ["Grade System", form.gradeSystem],
+                                            ["Institution", form.highSchoolName],
+                                            ["Completion Year", form.graduationYear],
+                                            ["Performance Metric", `${form.gpa} (${form.gradeSystem})`],
                                         ]
                                     },
                                     {
-                                        title: "Documents",
+                                        title: "Encrypted Dossier",
                                         rows: [
-                                            ["ID Document", form.idDocumentName || "—"],
-                                            ["Transcripts", form.transcriptName || "—"],
-                                            ["Photo", form.photoName || "—"],
+                                            ["Identification", form.idDocumentName || "NOT UPLOADED"],
+                                            ["Transcripts", form.transcriptName || "NOT UPLOADED"],
+                                            ["Biometric", form.photoName || "NOT UPLOADED"],
                                         ]
                                     },
                                 ].map((section) => (
-                                    <Box key={section.title} sx={{ mb: 3, p: 3, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid", borderColor: "divider" }}>
-                                        <Typography variant="subtitle2" fontWeight={800} mb={2} color={dept.color}>{section.title}</Typography>
-                                        <Grid container spacing={1.5}>
+                                    <Box key={section.title} sx={{ mb: 4, p: 4, borderRadius: 6, bgcolor: "rgba(0,0,0,0.01)", border: "1px solid", borderColor: "divider" }}>
+                                        <Typography variant="caption" fontWeight={1000} color="primary.main" sx={{ letterSpacing: 2, textTransform: "uppercase", mb: 3, display: "block" }}>
+                                            {section.title}
+                                        </Typography>
+                                        <Grid container spacing={3}>
                                             {section.rows.map(([label, value]) => (
                                                 <Grid item xs={12} sm={6} key={label}>
-                                                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">{label}</Typography>
-                                                    <Typography variant="body2" fontWeight={700}>{value || "—"}</Typography>
+                                                    <Typography variant="caption" color="text.disabled" fontWeight={1000} sx={{ letterSpacing: 0.5, display: "block", mb: 0.5 }}>{label}</Typography>
+                                                    <Typography variant="body1" fontWeight={800} sx={{ color: 'text.primary' }}>{value || "—"}</Typography>
                                                 </Grid>
                                             ))}
                                         </Grid>
                                     </Box>
                                 ))}
 
-                                <Box sx={{ p: 3, borderRadius: 3, background: dept.gradient, color: "white", mb: 3 }}>
-                                    <Typography variant="subtitle2" fontWeight={800} mb={0.5}>Applying to: {dept.name}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.85 }}>Fall 2026 Intake · {dept.code} Program</Typography>
+                                <Box sx={{
+                                    p: 4, borderRadius: 6,
+                                    background: `linear-gradient(135deg, ${alpha(dept.color, 0.1)} 0%, ${alpha(dept.color, 0.02)} 100%)`,
+                                    border: `1px solid ${alpha(dept.color, 0.2)}`,
+                                    display: 'flex', alignItems: 'center', gap: 3
+                                }}>
+                                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: dept.color, animation: 'pulse 2s infinite' }} />
+                                    <Box>
+                                        <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Strategic Domain: {dept.name}</Typography>
+                                        <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                            {dept.code} PROGRAM · FALL ADMISSIONS CYCLE
+                                        </Typography>
+                                    </Box>
                                 </Box>
                             </Box>
                         )}
 
                         {/* Navigation buttons */}
-                        <Divider sx={{ my: 4 }} />
+                        <Divider sx={{ my: 6, opacity: 0.6 }} />
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Button
                                 variant="outlined"
                                 startIcon={<ArrowBack />}
                                 onClick={activeStep === 0 ? () => navigate("/apply") : handleBack}
-                                sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, px: 3, py: 1.2 }}
+                                sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 4, py: 1.8, fontSize: '1rem', border: '1px solid', borderColor: 'divider', color: 'text.secondary', '&:hover': { bgcolor: 'action.hover', borderColor: 'text.primary', color: 'text.primary' } }}
                             >
-                                {activeStep === 0 ? "All Departments" : "Previous"}
+                                {activeStep === 0 ? "Abort Process" : "Protocol Retreat"}
                             </Button>
 
                             {activeStep < STEPS.length - 1 ? (
@@ -574,13 +678,13 @@ const ApplicationForm = () => {
                                     endIcon={<ArrowForward />}
                                     onClick={handleNext}
                                     sx={{
-                                        borderRadius: 2.5, textTransform: "none", fontWeight: 800, px: 4, py: 1.3,
+                                        borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 1.8, fontSize: '1rem',
                                         background: dept.gradient,
-                                        boxShadow: `0 6px 20px ${alpha(dept.color, 0.35)}`,
-                                        "&:hover": { background: dept.gradient, boxShadow: `0 10px 30px ${alpha(dept.color, 0.45)}` }
+                                        boxShadow: `0 12px 32px ${alpha(dept.color, 0.3)}`,
+                                        "&:hover": { background: dept.gradient, boxShadow: `0 16px 48px ${alpha(dept.color, 0.45)}`, transform: 'translateX(4px)' }
                                     }}
                                 >
-                                    Next Step
+                                    Proceed to Protocol {activeStep + 2}
                                 </Button>
                             ) : (
                                 <Button
@@ -589,14 +693,14 @@ const ApplicationForm = () => {
                                     onClick={handleSubmit}
                                     disabled={submitting}
                                     sx={{
-                                        borderRadius: 2.5, textTransform: "none", fontWeight: 800, px: 5, py: 1.3,
-                                        background: "linear-gradient(135deg, #16a34a, #22c55e)",
-                                        boxShadow: "0 6px 20px rgba(22,163,74,0.35)",
-                                        "&:hover": { background: "linear-gradient(135deg, #15803d, #16a34a)", boxShadow: "0 10px 30px rgba(22,163,74,0.45)" },
-                                        "&.Mui-disabled": { background: "linear-gradient(135deg, #86efac, #bbf7d0)", color: "white" }
+                                        borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 6, py: 2, fontSize: '1.1rem',
+                                        background: "linear-gradient(135deg, #10b981, #059669)",
+                                        boxShadow: "0 20px 48px rgba(16,185,129,0.3)",
+                                        "&:hover": { background: "linear-gradient(135deg, #059669, #047857)", boxShadow: "0 24px 60px rgba(16,185,129,0.45)", transform: 'scale(1.02)' },
+                                        "&.Mui-disabled": { background: "rgba(16,185,129,0.3)", color: "rgba(255,255,255,0.5)" }
                                     }}
                                 >
-                                    {submitting ? "Submitting..." : "Submit Application"}
+                                    {submitting ? "Transmitting..." : "Initialize Submission"}
                                 </Button>
                             )}
                         </Box>

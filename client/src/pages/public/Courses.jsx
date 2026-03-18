@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Box, Container, Grid, Card, CardContent, Typography, TextField,
-  InputAdornment, Chip, Button,
+  InputAdornment, Chip, Button, alpha,
 } from "@mui/material";
 import { Search, CalendarToday, AccessTime, Person, ArrowForward, MenuBook } from "@mui/icons-material";
 
@@ -35,89 +35,129 @@ const Courses = () => {
   );
 
   return (
-    <Box>
-      {/* Header Banner */}
-      <Box sx={{ background: "linear-gradient(135deg,#0d2b6e 0%,#1976d2 100%)", py: 6, px: 2 }}>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+      {/* ── Premium Header ── */}
+      <Box sx={{
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        pt: 15, pb: 10, position: 'relative', overflow: 'hidden'
+      }}>
+        {/* Background effects */}
+        <Box sx={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+
         <Container maxWidth="lg">
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <Box sx={{ width: 48, height: 48, borderRadius: 2, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <MenuBook sx={{ color: "white", fontSize: 26 }} />
-            </Box>
+          <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 4 }}>
             <Box>
-              <Typography variant="h4" fontWeight={800} color="white" letterSpacing="-0.02em">Course Catalog</Typography>
-              <Typography color="rgba(255,255,255,0.75)" variant="body2">Browse {courses.length} courses for the current semester</Typography>
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, borderRadius: 100, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', mb: 3 }}>
+                <MenuBook sx={{ color: 'primary.main', fontSize: 18 }} />
+                <Typography variant="caption" fontWeight={900} sx={{ color: 'white', letterSpacing: 1.5, textTransform: 'uppercase' }}>Academic Intelligence</Typography>
+              </Box>
+              <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', mb: 1 }}>
+                Course <Box component="span" sx={{ color: 'primary.main' }}>Catalog</Box>
+              </Typography>
+              <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
+                Explore over {courses.length} specialized modules designed for industry excellence.
+              </Typography>
             </Box>
+
+            <TextField
+              sx={{
+                width: { xs: "100%", md: 450 },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 4,
+                  bgcolor: "rgba(255,255,255,0.03)",
+                  backdropFilter: "blur(20px)",
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  "& fieldset": { border: 'none' },
+                  "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+                  "&.Mui-focused": { bgcolor: "rgba(255,255,255,0.08)", border: '1px solid rgba(99, 102, 241, 0.5)' }
+                },
+                "& input": { color: "white", py: 2.5, fontWeight: 600 },
+                "& input::placeholder": { color: "rgba(255,255,255,0.4)", opacity: 1 }
+              }}
+              placeholder="Search by name, code, or domain…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><Search sx={{ color: "primary.main" }} /></InputAdornment>
+              }}
+            />
           </Box>
-          {/* Search */}
-          <TextField
-            fullWidth placeholder="Search by course name, code, or department…"
-            value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ mt: 2, "& .MuiOutlinedInput-root": { borderRadius: 2.5, bgcolor: "rgba(255,255,255,0.12)", backdropFilter: "blur(10px)", "& fieldset": { borderColor: "rgba(255,255,255,0.2)" }, "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" }, "&.Mui-focused fieldset": { borderColor: "rgba(255,255,255,0.6)" } }, "& input": { color: "white" }, "& input::placeholder": { color: "rgba(255,255,255,0.6)", opacity: 1 } }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search sx={{ color: "rgba(255,255,255,0.7)" }} /></InputAdornment> }}
-          />
+
+          <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+            {depts.map(dept => (
+              <Chip
+                key={dept} label={dept}
+                onClick={() => setSelectedDept(dept)}
+                sx={{
+                  px: 2, py: 2.5, borderRadius: 3, fontWeight: 900, cursor: "pointer", fontSize: '0.85rem',
+                  bgcolor: selectedDept === dept ? "primary.main" : "rgba(255,255,255,0.03)",
+                  color: "white",
+                  border: "1px solid", borderColor: selectedDept === dept ? "primary.main" : "rgba(255,255,255,0.1)",
+                  "&:hover": { bgcolor: selectedDept === dept ? "primary.dark" : "rgba(255,255,255,0.08)" },
+                  transition: 'all 0.3s ease'
+                }}
+              />
+            ))}
+          </Box>
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: 5 }}>
-        {/* Department filter */}
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 4 }}>
-          {depts.map(dept => (
-            <Chip
-              key={dept} label={dept}
-              onClick={() => setSelectedDept(dept)}
-              sx={{
-                fontWeight: 600, cursor: "pointer",
-                bgcolor: selectedDept === dept ? "primary.main" : "white",
-                color: selectedDept === dept ? "white" : "text.primary",
-                border: "1px solid", borderColor: selectedDept === dept ? "primary.main" : "divider",
-                "&:hover": { bgcolor: selectedDept === dept ? "primary.dark" : "grey.100" },
-              }}
-            />
-          ))}
-        </Box>
-
+      <Container maxWidth="lg" sx={{ py: 12 }}>
         {filtered.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 10 }}>
-            <MenuBook sx={{ fontSize: 64, color: "grey.300", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">No courses found for "{searchTerm}"</Typography>
+          <Box sx={{ textAlign: "center", py: 15, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 8, border: '1px dashed', borderColor: 'divider' }}>
+            <MenuBook sx={{ fontSize: 84, color: "divider", mb: 3 }} />
+            <Typography variant="h5" fontWeight={1000} color="text.secondary">No courses matching your criteria</Typography>
+            <Typography variant="body1" color="text.disabled">Try adjusting your search terms or department filter.</Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={4}>
             {filtered.map(course => {
-              const gradient = deptColors[course.department] || "linear-gradient(135deg,#1976d2,#42a5f5)";
+              const gradient = deptColors[course.department] || "linear-gradient(135deg,#6366f1,#a855f7)";
               return (
                 <Grid item xs={12} md={6} key={course.id}>
-                  <Card elevation={0} sx={{ height: "100%", borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden", display: "flex", flexDirection: "column", transition: "all 0.3s ease", "&:hover": { transform: "translateY(-6px)", boxShadow: "0 20px 40px rgba(0,0,0,0.1)", borderColor: "transparent" } }}>
-                    <Box sx={{ height: 4, background: gradient }} />
-                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Box sx={{ px: 2, py: 0.5, borderRadius: 1.5, background: gradient, color: "white", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <Card elevation={0} sx={{
+                    height: "100%", borderRadius: 6, border: "1px solid", borderColor: "divider",
+                    overflow: "hidden", display: "flex", flexDirection: "column",
+                    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "&:hover": { transform: "translateY(-10px)", boxShadow: "0 32px 64px -12px rgba(0,0,0,0.12)", borderColor: 'primary.light' }
+                  }}>
+                    <Box sx={{ height: 6, background: gradient }} />
+                    <CardContent sx={{ flexGrow: 1, p: 5 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 4 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                          <Box sx={{ px: 2, py: 1, borderRadius: 2, background: alpha('#000', 0.03), border: '1px solid rgba(0,0,0,0.05)', color: "text.primary", fontWeight: 1000, fontSize: "0.9rem", fontFamily: 'Outfit, sans-serif' }}>
                             {course.code}
                           </Box>
-                          <Chip label={course.department} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.7rem" }} />
+                          <Chip label={course.department} size="small" variant="outlined" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.65rem' }} />
                         </Box>
-                        <Chip label={`${course.credits} Cr`} size="small" sx={{ fontWeight: 700, bgcolor: "grey.100" }} />
+                        <Typography variant="caption" fontWeight={1000} color="primary.main" sx={{ bgcolor: alpha('#6366f1', 0.08), px: 1.5, py: 0.5, borderRadius: 100 }}>{course.credits} CREDITS</Typography>
                       </Box>
-                      <Typography variant="h6" fontWeight={700} gutterBottom>{course.name}</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2.5 }}>{course.description}</Typography>
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+
+                      <Typography variant="h4" fontWeight={1000} gutterBottom sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em', mb: 2 }}>{course.name}</Typography>
+                      <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.9, mb: 4, fontWeight: 500 }}>{course.description}</Typography>
+
+                      <Grid container spacing={2}>
                         {[
-                          { icon: <Person sx={{ fontSize: 16 }} />, text: course.instructor },
-                          { icon: <CalendarToday sx={{ fontSize: 16 }} />, text: course.semester },
-                          { icon: <AccessTime sx={{ fontSize: 16 }} />, text: course.schedule },
+                          { icon: <Person />, label: 'INSTRUCTOR', val: course.instructor },
+                          { icon: <CalendarToday />, label: 'SEMESTER', val: course.semester },
+                          { icon: <AccessTime />, label: 'SCHEDULE', val: course.schedule },
                         ].map((item, i) => (
-                          <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
-                            {item.icon}
-                            <Typography variant="body2">{item.text}</Typography>
-                          </Box>
+                          <Grid item xs={12} sm={4} key={i}>
+                            <Typography variant="caption" fontWeight={900} color="text.disabled" sx={{ display: 'block', mb: 0.5, letterSpacing: 1 }}>{item.label}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {React.cloneElement(item.icon, { sx: { fontSize: 16, color: 'primary.main' } })}
+                              <Typography variant="body2" fontWeight={800} color="text.primary">{item.val}</Typography>
+                            </Box>
+                          </Grid>
                         ))}
-                      </Box>
+                      </Grid>
                     </CardContent>
-                    <Box sx={{ px: 3, pb: 3 }}>
-                      <Button fullWidth variant="outlined" endIcon={<ArrowForward />}
-                        sx={{ borderRadius: 2, fontWeight: 600, textTransform: "none", borderWidth: 2, "&:hover": { borderWidth: 2 } }}>
-                        View Details
+                    <Box sx={{ px: 5, pb: 5 }}>
+                      <Button
+                        fullWidth variant="contained" endIcon={<ArrowForward />}
+                        sx={{ borderRadius: 4, fontWeight: 1000, textTransform: "none", py: 2, bgcolor: alpha('#000', 0.02), color: 'text.primary', border: '1px solid rgba(0,0,0,0.05)', '&:hover': { bgcolor: 'primary.main', color: 'white' } }}
+                      >
+                        Module Specifications
                       </Button>
                     </Box>
                   </Card>

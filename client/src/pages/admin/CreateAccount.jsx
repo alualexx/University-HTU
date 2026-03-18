@@ -46,12 +46,16 @@ const CreateAccount = () => {
         // Generate a secure one-time password
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
 
+        // Parse year from level (e.g. "Year 1" -> 1)
+        const parsedYear = application.level ? parseInt(application.level.replace(/\D/g, "")) : 1;
+
         const userData = {
             name: application.name,
             email: application.email,
             password: tempPassword,
             role: ROLES.STUDENT,
             studentId: application.studentId, // From registrar
+            year: parsedYear,
             employeeId: ""
         };
 

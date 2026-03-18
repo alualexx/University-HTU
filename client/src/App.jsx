@@ -13,20 +13,26 @@ import Faculty from "./pages/public/Faculty";
 import News from "./pages/public/News";
 import Apply from "./pages/public/Apply";
 import ApplicationForm from "./pages/public/ApplicationForm";
+import TrackApplication from "./pages/public/TrackApplication";
+import Departments from "./pages/public/Departments";
+import AboutUs from "./pages/public/AboutUs";
 import Dashboard from "./pages/Dashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import RegistrarDashboard from "./pages/registrar/RegistrarDashboard";
 import DepartmentDashboard from "./pages/faculty/DepartmentDashboard";
 import TeacherDashboard from "./pages/faculty/TeacherDashboard";
+import FacultyDashboard from "./pages/faculty/FacultyDashboard";
+import CollegeAdminDashboard from "./pages/faculty/CollegeAdminDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CreateAccount from "./pages/admin/CreateAccount";
 import MaintenancePage from "./pages/MaintenancePage";
 import ChangePassword from "./pages/public/ChangePassword";
-import { useAuth, ROLES } from "./context/AuthContext";
+import { useAuth, ROLES, ROLE_DASHBOARD_ROUTES } from "./context/AuthContext";
+import ChatBot from "./components/common/ChatBot";
 import "./App.css";
 
 function App() {
-  const { maintenanceMode, user } = useAuth();
+  const { maintenanceMode, user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
   const location = useLocation();
   const isHomePage = location.pathname === "/";
@@ -36,22 +42,43 @@ function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  const isDashboard = location.pathname.includes("dashboard");
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Navbar />
-      <Box component="main" sx={{ flexGrow: 1, mt: isHomePage ? 0 : { xs: 8, sm: 9, md: 10 }, mb: 4 }}>
+      {!isDashboard && <Navbar />}
+      <Box component="main" sx={{ flexGrow: 1, mt: (isHomePage || isDashboard) ? 0 : { xs: 8, sm: 9, md: 10 }, mb: isDashboard ? 0 : 4 }}>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* Public Routes - Affected by Maintenance Mode */}
+          <Route path="/" element={
+            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : 
+            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Home />)
+          } />
+          
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Login />
+          } />
+
+          <Route path="/register" element={
+            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
+            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Register />)
+          } />
+
           <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="/courses" element={<Courses />} />
-          <Route path="/faculty" element={<Faculty />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/apply" element={<Apply />} />
-          <Route path="/apply/:departmentId" element={<ApplicationForm />} />
+          
+          <Route path="/courses" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Courses />} />
+          <Route path="/departments" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Departments />} />
+          <Route path="/about" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <AboutUs />} />
+          <Route path="/faculty" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Faculty />} />
+          <Route path="/news" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <News />} />
+          
+          <Route path="/apply" element={
+            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
+            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Apply />)
+          } />
+          
+          <Route path="/apply/:departmentId" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <ApplicationForm />} />
 
           {/* Map /admin shortcut to the admin dashboard */}
           <Route
@@ -121,12 +148,32 @@ function App() {
             }
           />
 
-          {/* Department Head Dashboard */}
+          {/* Department Head Dashboard (Legacy) */}
           <Route
             path="/department-dashboard"
             element={
               <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <DepartmentDashboard />}
+                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Faculty College Dashboard */}
+          <Route
+            path="/faculty-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
+                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* College Administrator Dashboard (Dean) */}
+          <Route
+            path="/college-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.COLLEGE_ADMIN]}>
+                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <CollegeAdminDashboard />}
               </ProtectedRoute>
             }
           />
@@ -141,11 +188,16 @@ function App() {
             }
           />
 
+          {/* Track Application - Public */}
+          <Route path="/track" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TrackApplication />} />
+
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Box>
-      <Footer />
+      {!isDashboard && <Footer />}
+      {/* Global ChatBot — visible on every page and dashboard */}
+      <ChatBot />
     </Box>
   );
 }

@@ -1,101 +1,176 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Container, Grid, Card, CardContent, Typography, Box, Button,
-  Avatar, Chip, List, ListItem, ListItemText, Divider, LinearProgress,
-  IconButton, Tab, Tabs, Badge, Tooltip, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow,
+  Avatar, Chip, List, ListItem, ListItemIcon, ListItemText, ListItemButton,
+  Divider, LinearProgress, IconButton, Badge, Tooltip, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField, Stack, alpha, useTheme,
+  Snackbar, Alert, Paper, Checkbox, Drawer
 } from "@mui/material";
 import {
-  School, Book, Grade, Schedule, Logout, EmojiEvents,
+  School, Book, Grade, Schedule, EmojiEvents,
   LightMode, DarkMode, Notifications, Dashboard, Campaign,
-  CheckCircle, AccessTime, Warning, TrendingUp, MenuBook, Star,
-  CalendarMonth, Assignment,
+  CheckCircle, AccessTime, Warning, TrendingUp, MenuBook,
+  AccountBalanceWallet, Receipt, CheckCircleOutline,
+  Close, Download, ShoppingCart, EventNote, Remove
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { useTheme } from "@mui/material";
+import { db } from "../../services/Firebase";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as ChartTooltip, ResponsiveContainer, Cell,
-} from "recharts";
+  collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, doc
+} from "firebase/firestore";
+import jsPDF from "jspdf";
 
-/* ─── Static data ─────────────────────────────────────────────────────── */
+/* ─── Constants ───────────────────────────────────────────────────────── */
+const TUITION_PER_CREDIT = 100;
+const CURRENT_SEMESTER = "Fall 2026";
+const DAY_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const SIDEBAR_WIDTH = 280;
+const gradeToPoints = { A: 4.0, "A-": 3.7, "B+": 3.3, B: 3.0, "B-": 2.7, "C+": 2.3, C: 2.0, "C-": 1.7, "D+": 1.3, D: 1.0, F: 0.0 };
 const gradients = [
-  "linear-gradient(135deg,#1976d2,#42a5f5)",
-  "linear-gradient(135deg,#2e7d32,#66bb6a)",
-  "linear-gradient(135deg,#6a1b9a,#ba68c8)",
-  "linear-gradient(135deg,#e65100,#ffa726)",
+  "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+  "linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)",
+  "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+  "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
 ];
-const courseColors = ["#1976d2", "#2e7d32", "#6a1b9a", "#e65100", "#c62828"];
-const gradeToPoints = { A: 4.0, "A-": 3.7, "B+": 3.3, B: 3.0, "B-": 2.7, "C+": 2.3, C: 2.0 };
+const courseColors = ["#6366f1", "#a855f7", "#10b981", "#3b82f6", "#f59e0b"];
 
-const urgencyColor = (days) =>
-  days <= 3 ? "#ef4444" : days <= 7 ? "#f59e0b" : "#22c55e";
+/* ─── Sidebar Nav Items ───────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  { label: "Dashboard", icon: <Dashboard /> },
+  { label: "My Courses", icon: <MenuBook /> },
+  { label: "My Schedules", icon: <EventNote /> },
+  { label: "Grades & Transcripts", icon: <TrendingUp /> },
+  { label: "Semester Registration", icon: <ShoppingCart /> },
+  { label: "News Feed", icon: <Campaign /> },
+];
 
 /* ─── useCountUp ──────────────────────────────────────────────────────── */
-function useCountUp(target, duration = 1600) {
-  const [count, setCount] = useState(0);
+function useCountUp(target, dur = 1600) {
+  const [c, setC] = useState(0);
   useEffect(() => {
-    let raf;
-    let startTime = null;
-    const step = (ts) => {
-      if (!startTime) startTime = ts;
-      const p = Math.min((ts - startTime) / duration, 1);
-      setCount(Math.floor(p * target));
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return count;
+    let r, s = null;
+    const f = t => { if (!s) s = t; const p = Math.min((t - s) / dur, 1); setC(Math.floor(p * target)); if (p < 1) r = requestAnimationFrame(f); };
+    r = requestAnimationFrame(f); return () => cancelAnimationFrame(r);
+  }, [target, dur]);
+  return c;
 }
 
-/* ─── StatCard ────────────────────────────────────────────────────────── */
-function StatCard({ stat }) {
-  const animated = useCountUp(stat.raw);
-  const display = stat.isGpa ? (animated / 100).toFixed(2) : animated;
-
+function StatCard({ stat, mode }) {
+  const a = useCountUp(stat.raw);
+  const d = stat.isGpa ? (a / 100).toFixed(2) : a;
+  const isDark = mode === 'dark';
   return (
-    <Card
-      elevation={0}
-      sx={{
-        borderRadius: 4,
-        border: "1px solid",
-        borderColor: "divider",
-        overflow: "hidden",
-        transition: "all 0.3s",
-        bgcolor: "background.paper",
-        "&:hover": { transform: "translateY(-6px)", boxShadow: "0 20px 48px rgba(0,0,0,0.12)" },
-      }}
-    >
-      <Box sx={{ height: 5, background: stat.gradient }} />
-      <CardContent sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2.5 }}>
-        <Box>
-          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {stat.label}
-          </Typography>
-          <Typography variant="h3" fontWeight={800} sx={{ mt: 0.4, lineHeight: 1 }}>
-            {display}
-            {stat.suffix && (
-              <Typography component="span" variant="h6" color="text.secondary" fontWeight={400} sx={{ ml: 0.5 }}>
-                {stat.suffix}
-              </Typography>
-            )}
-          </Typography>
+    <Card sx={{ background: isDark ? "rgba(255,255,255,0.04)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 4, overflow: "hidden", position: 'relative', transition: "all 0.3s", "&:hover": { transform: "translateY(-6px)", boxShadow: isDark ? "0 16px 32px rgba(0,0,0,0.4)" : "0 16px 32px rgba(0,0,0,0.07)" } }}>
+      <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: stat.gradient }} />
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: 3, background: stat.gradient, display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+            {React.cloneElement(stat.icon, { sx: { fontSize: 24 } })}
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 1.5, fontSize: '0.6rem' }}>{stat.label}</Typography>
+            <Typography variant="h4" color="text.primary" fontWeight={900} sx={{ letterSpacing: -1 }}>{d}<Typography component="span" variant="caption" color="text.secondary" fontWeight={800} sx={{ ml: 0.5, fontSize: '0.65rem' }}>{stat.suffix}</Typography></Typography>
+          </Box>
         </Box>
-        <Box
-          sx={{
-            width: 56, height: 56, borderRadius: 3,
-            background: stat.gradient,
-            display: "flex", alignItems: "center", justifyContent: "center", color: "white",
-          }}
-        >
-          {stat.icon}
-        </Box>
+        <LinearProgress variant="determinate" value={stat.progress || 0} sx={{ height: 4, borderRadius: 2, bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", '& .MuiLinearProgress-bar': { background: stat.gradient, borderRadius: 2 } }} />
       </CardContent>
     </Card>
   );
+}
+
+/* ─── PDF Helpers ──────────────────────────────────────────────────────── */
+function drawPDFHeader(pdf, title, subtitle) {
+  pdf.setFillColor(37, 99, 235);
+  pdf.rect(0, 0, 210, 38, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(20); pdf.setFont(undefined, 'bold');
+  pdf.text("HTU UNIVERSITY", 105, 16, { align: 'center' });
+  pdf.setFontSize(10); pdf.setFont(undefined, 'normal');
+  pdf.text(title, 105, 25, { align: 'center' });
+  if (subtitle) { pdf.setFontSize(8); pdf.text(subtitle, 105, 32, { align: 'center' }); }
+}
+
+function drawPDFTable(pdf, headers, rows, startY) {
+  const colWidths = headers.map(() => Math.floor(160 / headers.length));
+  const startX = 25;
+  let y = startY;
+
+  // Header row
+  pdf.setFillColor(240, 242, 245);
+  pdf.rect(startX, y - 5, 160, 8, 'F');
+  pdf.setFontSize(7); pdf.setFont(undefined, 'bold'); pdf.setTextColor(80, 80, 80);
+  let x = startX;
+  headers.forEach((h, i) => { pdf.text(h.toUpperCase(), x + 2, y); x += colWidths[i]; });
+  y += 6;
+  pdf.setDrawColor(220, 220, 220); pdf.line(startX, y, startX + 160, y); y += 5;
+
+  // Data rows
+  pdf.setFont(undefined, 'normal'); pdf.setTextColor(50, 50, 50); pdf.setFontSize(9);
+  rows.forEach((row, ri) => {
+    if (ri % 2 === 0) { pdf.setFillColor(250, 250, 252); pdf.rect(startX, y - 4, 160, 7, 'F'); }
+    x = startX;
+    row.forEach((cell, ci) => { pdf.text(String(cell), x + 2, y); x += colWidths[ci]; });
+    y += 7;
+  });
+  return y;
+}
+
+function drawPDFFooter(pdf, y) {
+  y += 8;
+  pdf.setDrawColor(200, 200, 200); pdf.line(25, y, 185, y); y += 8;
+  pdf.setFontSize(8); pdf.setTextColor(140, 140, 140);
+  pdf.text(`Document generated: ${new Date().toLocaleString()}`, 25, y);
+  pdf.text("HTU University — Official Document", 185, y, { align: 'right' });
+}
+
+function generateSemesterSlipPDF(user, courses) {
+  const pdf = new jsPDF();
+  drawPDFHeader(pdf, "Course Registration Slip", CURRENT_SEMESTER);
+  let y = 50;
+  pdf.setTextColor(50, 50, 50); pdf.setFontSize(10);
+  const info = [["Student Name", user?.name || 'N/A'], ["Student ID", user?.studentId || 'N/A'], ["Email", user?.email || 'N/A'], ["Semester", CURRENT_SEMESTER]];
+  info.forEach(([l, v]) => { pdf.setFont(undefined, 'bold'); pdf.text(`${l}:`, 25, y); pdf.setFont(undefined, 'normal'); pdf.text(v, 75, y); y += 8; });
+  y += 5;
+  pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.setTextColor(37, 99, 235); pdf.text("Registered Courses", 25, y); y += 10;
+  const rows = myActiveCourses.map((c, i) => [
+    (i + 1).toString(),
+    c.name,
+    c.code || "—",
+    (c.credits || 3).toString(),
+    `$${(Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT).toLocaleString()}`
+  ]);
+  y = drawPDFTable(pdf, ["#", "Course", "Code", "Credits", "Tuition"], rows, y);
+  y += 5;
+  const totalCredits = myActiveCourses.reduce((s, c) => s + (Number(c.credits) || 3), 0);
+  const totalTuition = myActiveCourses.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0);
+  pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(50, 50, 50);
+  pdf.text(`Total Credits: ${totalCredits}`, 25, y);
+  pdf.text(`Total Tuition: $${totalTuition.toLocaleString()}`, 120, y);
+  drawPDFFooter(pdf, y);
+  pdf.save(`SemesterSlip_${CURRENT_SEMESTER.replace(/\s+/g, '_')}.pdf`);
+}
+
+function generateReceiptPDF(user, payment) {
+  const pdf = new jsPDF();
+  drawPDFHeader(pdf, "Payment Receipt", `Transaction: TXN-${(payment.id || '').slice(0, 8).toUpperCase()}`);
+  let y = 50;
+  pdf.setTextColor(50, 50, 50); pdf.setFontSize(10);
+  const info = [["Student Name", user?.name || 'N/A'], ["Student ID", user?.studentId || 'N/A'], ["Semester", CURRENT_SEMESTER]];
+  info.forEach(([l, v]) => { pdf.setFont(undefined, 'bold'); pdf.text(`${l}:`, 25, y); pdf.setFont(undefined, 'normal'); pdf.text(v, 75, y); y += 8; });
+  y += 5;
+  pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.setTextColor(16, 185, 129); pdf.text("Payment Details", 25, y); y += 10;
+  const headers = ["Description", "Amount", "Status"];
+  const rows = [[payment.courseName || 'Course(s)', `$${(payment.amount || 0).toLocaleString()}`, "PAID ✓"]];
+  y = drawPDFTable(pdf, headers, rows, y);
+  y += 5;
+  pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(50, 50, 50);
+  pdf.text(`Total Paid: $${(payment.amount || 0).toLocaleString()}`, 25, y);
+  pdf.text("Status: APPROVED", 120, y);
+  drawPDFFooter(pdf, y);
+  pdf.save(`Receipt_${(payment.courseName || 'payment').replace(/\s+/g, '_')}.pdf`);
 }
 
 /* ─── Main Component ──────────────────────────────────────────────────── */
@@ -103,556 +178,490 @@ export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
+  const isDark = mode === 'dark';
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
 
-  /* ── Course & event data ─────────────────────────────────────────────── */
-  const courses = [
-    { code: "CS301", name: "Data Structures & Algorithms", credits: 4, grade: "A", progress: 88, instructor: "Dr. Sarah Mills", days: "Mon/Wed", time: "10:00–11:30", room: "CS-204", color: courseColors[0] },
-    { code: "MATH301", name: "Linear Algebra", credits: 3, grade: "B+", progress: 74, instructor: "Prof. James Lee", days: "Tue/Thu", time: "14:00–15:30", room: "MATH-102", color: courseColors[1] },
-    { code: "ENG201", name: "Technical Writing", credits: 3, grade: "A-", progress: 92, instructor: "Dr. Olivia Chen", days: "Mon/Wed/Fri", time: "09:00–10:00", room: "ENG-301", color: courseColors[2] },
-    { code: "CS401", name: "Operating Systems", credits: 4, grade: "B+", progress: 68, instructor: "Prof. Michael Ray", days: "Tue/Thu", time: "10:00–11:30", room: "CS-105", color: courseColors[3] },
-    { code: "STAT201", name: "Probability & Statistics", credits: 3, grade: "A", progress: 81, instructor: "Dr. Fatima Hassan", days: "Mon/Wed", time: "13:00–14:30", room: "STAT-201", color: courseColors[4] },
-  ];
+  const [notifications, setNotifications] = useState([]);
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
+  const prevNotifCount = useRef(0);
 
-  const deadlines = [
-    { title: "DS&A — Assignment 4", course: "CS301", date: "Mar 8", daysLeft: 2 },
-    { title: "Linear Algebra — Midterm", course: "MATH301", date: "Mar 12", daysLeft: 6 },
-    { title: "OS — Lab Report 3", course: "CS401", date: "Mar 15", daysLeft: 9 },
-    { title: "Technical Writing — Final Draft", course: "ENG201", date: "Mar 22", daysLeft: 16 },
-  ];
+  const [enrollments, setEnrollments] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [newsList, setNewsList] = useState([]);
+  const [tuitionPayments, setTuitionPayments] = useState([]);
+  const [schedules, setSchedules] = useState([]);
 
-  const recentActivity = [
-    { text: "CS301 Assignment 3 graded: A", time: "2 hours ago", color: "#22c55e", icon: <CheckCircle sx={{ fontSize: 18 }} /> },
-    { text: "New announcement from Prof. James Lee", time: "Yesterday", color: "#1976d2", icon: <Campaign sx={{ fontSize: 18 }} /> },
-    { text: "MATH301 Quiz 2 due in 3 days", time: "2 days ago", color: "#f59e0b", icon: <Warning sx={{ fontSize: 18 }} /> },
-    { text: "Successfully enrolled in STAT201", time: "3 days ago", color: "#22c55e", icon: <CheckCircle sx={{ fontSize: 18 }} /> },
-  ];
+  const [cart, setCart] = useState([]);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ cardNumber: "", expiry: "", cvv: "" });
+  const [processingPayment, setProcessingPayment] = useState(false);
+   const [systemConfig, setSystemConfig] = useState({ registrationLock: false, admissionWindow: true, globalMaintenance: false, targetYear: 1, targetSemester: 1 });
 
-  const gpaData = [
-    { semester: "Spr '23", gpa: 3.2 },
-    { semester: "Fall '23", gpa: 3.5 },
-    { semester: "Spr '24", gpa: 3.6 },
-    { semester: "Fall '24", gpa: 3.8 },
-    { semester: "Spr '25", gpa: 3.74 },
-  ];
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsubs = [];
+    unsubs.push(onSnapshot(query(collection(db, "enrollments"), where("studentId", "==", user.uid)), s => setEnrollments(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(collection(db, "courses"), s => setAvailableCourses(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(query(collection(db, "news"), orderBy("date", "desc")), s => setNewsList(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(query(collection(db, "tuition_payments"), where("studentId", "==", user.uid)), s => setTuitionPayments(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(collection(db, "schedules"), s => setSchedules(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(query(collection(db, "notifications"), where("toStudentId", "==", user.uid), orderBy("timestamp", "desc")), s => {
+      const n = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (n.length > prevNotifCount.current && prevNotifCount.current > 0) setSnackbar({ open: true, message: n[0].message || "New notification", severity: "info" });
+      prevNotifCount.current = n.length; setNotifications(n);
+    }, () => {}));
 
-  const totalCredits = courses.reduce((a, c) => a + c.credits, 0);
-  const earnedCredits = 86;
-  const requiredCredits = 128;
+    // Phase 18: System Integrity Bridge
+    unsubs.push(onSnapshot(doc(db, "system_settings", "registrar"), (snap) => {
+      if (snap.exists()) setSystemConfig(prev => ({ ...prev, ...snap.data() }));
+    }));
+    
+    // Global Maintenance Bridge (from Admin)
+    unsubs.push(onSnapshot(doc(db, "system_config", "settings"), (snap) => {
+      if (snap.exists()) setSystemConfig(prev => ({ ...prev, globalMaintenance: snap.data().maintenanceMode || false }));
+    }));
 
-  const gradesData = courses.map((c) => ({
-    ...c,
-    points: gradeToPoints[c.grade] ?? 3.0,
-    status: c.progress >= 80 ? "On Track" : c.progress >= 60 ? "Needs Attention" : "At Risk",
-  }));
+    return () => unsubs.forEach(u => u());
+  }, [user?.uid]);
 
-  const statusColor = (s) => s === "On Track" ? "#22c55e" : s === "Needs Attention" ? "#f59e0b" : "#ef4444";
+  // Derived
+  const myActiveCourses = enrollments.filter(e => e.status === "approved" || e.status === "enrolled").map((e, i) => {
+    const c = availableCourses.find(c => c.id === e.courseId) || {};
+    return { ...c, enrollmentId: e.id, grade: e.grade || "N/A", color: courseColors[i % courseColors.length] };
+  }).filter(c => c.name);
+  const totalCredits = myActiveCourses.reduce((s, c) => s + (Number(c.credits) || 3), 0);
+  const earnedCredits = enrollments.filter(e => e.grade && e.grade !== "F" && e.grade !== "N/A").reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 0); }, 0);
+  const requiredCredits = 120;
+  const gradedE = enrollments.filter(e => e.grade && gradeToPoints[e.grade] !== undefined);
+  const gpa = gradedE.length > 0
+    ? gradedE.reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (gradeToPoints[e.grade] || 0) * (c ? (Number(c.credits) || 3) : 3); }, 0) / gradedE.reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 3); }, 0)
+    : 3.80;
+   const mySchedules = schedules.filter(s => myActiveCourses.some(c => c.id === s.courseId || c.name === s.courseName)).sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+  
+  // Year/Semester Filtering Logic
+  const isMyWindow = !systemConfig.registrationLock && Number(user?.year) === Number(systemConfig.targetYear);
+  const filteredAvailableCourses = availableCourses.filter(c => {
+    // Only show courses for the student's academic year AND the currently active semester window
+    return Number(c.year) === Number(user?.year) && Number(c.semester) === Number(systemConfig.targetSemester);
+  });
 
+  const alreadyEnrolledIds = enrollments.map(e => e.courseId);
+  const cartCredits = cart.reduce((s, c) => s + (Number(c.credits) || 3), 0);
+  const cartTotal = cart.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0);
+  const unreadNotifs = notifications.filter(n => !n.read).length;
+
+  const toggleCart = (course) => setCart(prev => prev.find(c => c.id === course.id) ? prev.filter(c => c.id !== course.id) : [...prev, course]);
+
+  const handleSemesterCheckout = async () => {
+    if (cart.length === 0) return;
+    setProcessingPayment(true);
+    try {
+      const courseNames = cart.map(c => c.name).join(", ");
+      const paymentRef = await addDoc(collection(db, "tuition_payments"), {
+        studentId: user.uid, studentName: user.name, courseIds: cart.map(c => c.id),
+        courseName: courseNames, amount: cartTotal, status: "pending_approval",
+        semester: CURRENT_SEMESTER, timestamp: serverTimestamp()
+      });
+      for (const course of cart) {
+        await addDoc(collection(db, "enrollments"), {
+          studentId: user.uid, studentName: user.name, courseId: course.id,
+          courseName: course.name, status: "pending_payment_approval",
+          paymentId: paymentRef.id, semester: CURRENT_SEMESTER, timestamp: serverTimestamp()
+        });
+      }
+      await addDoc(collection(db, "notifications"), {
+        toRole: "registrar", title: "New Semester Registration",
+        message: `${user.name} submitted $${cartTotal.toLocaleString()} for ${cart.length} course(s): ${courseNames}`,
+        type: "finance", timestamp: serverTimestamp(), read: false
+      });
+      setPaymentModalOpen(false); setPaymentForm({ cardNumber: "", expiry: "", cvv: "" }); setCart([]);
+      setSnackbar({ open: true, message: "Registration submitted! Waiting for approval.", severity: "success" });
+    } catch (err) {
+      setSnackbar({ open: true, message: "Payment failed.", severity: "error" });
+    } finally { setProcessingPayment(false); }
+  };
+
+  const gpaRaw = Math.round(gpa * 100);
   const stats = [
-    { label: "Current GPA", raw: 374, isGpa: true, suffix: "/ 4.0", gradient: gradients[1], icon: <EmojiEvents sx={{ fontSize: 30 }} /> },
-    { label: "Courses Enrolled", raw: courses.length, isGpa: false, suffix: "courses", gradient: gradients[0], icon: <School sx={{ fontSize: 30 }} /> },
-    { label: "Credit Hours", raw: totalCredits, isGpa: false, suffix: "hrs", gradient: gradients[2], icon: <Book sx={{ fontSize: 30 }} /> },
-    { label: "Deadlines Soon", raw: deadlines.filter((d) => d.daysLeft <= 7).length, isGpa: false, suffix: "due soon", gradient: gradients[3], icon: <AccessTime sx={{ fontSize: 30 }} /> },
+    { label: "GPA", raw: gpaRaw, isGpa: true, suffix: "/ 4.00", gradient: gradients[0], icon: <EmojiEvents />, progress: (gpa / 4.0) * 100 },
+    { label: "Courses", raw: myActiveCourses.length, isGpa: false, suffix: "Active", gradient: gradients[1], icon: <School />, progress: myActiveCourses.length > 0 ? Math.min(myActiveCourses.length / 6 * 100, 100) : 0 },
+    { label: "Credits", raw: totalCredits, isGpa: false, suffix: `/ ${requiredCredits}`, gradient: gradients[2], icon: <Book />, progress: Math.min((totalCredits / requiredCredits) * 100, 100) },
+    { label: "News", raw: newsList.length, isGpa: false, suffix: "Updates", gradient: gradients[3], icon: <Campaign />, progress: newsList.length > 0 ? 100 : 0 },
   ];
 
-  const announcements = [
-    { title: "Registration for Fall 2025 Opens March 20", body: "Course registration for the upcoming Fall 2025 semester will open on March 20. Please ensure your advisor has cleared you before this date.", source: "University Registrar", date: "Mar 5", tag: "IMPORTANT", tagColor: "#ef4444", isNew: true },
-    { title: "CS301 — Office Hours Rescheduled", body: "Dr. Sarah Mills' office hours on March 8 are moved to March 9, 2:00–4:00 PM in CS-210.", source: "CS301 · Dr. Sarah Mills", date: "Mar 4", tag: "COURSE", tagColor: courseColors[0], isNew: true },
-    { title: "Library Extended Hours During Midterms", body: "The main campus library will be open 24/7 from March 10–16 to support students during midterms.", source: "University Library", date: "Mar 3", tag: "INFO", tagColor: "#1976d2", isNew: false },
-    { title: "MATH301 — Quiz 2 Practice Problems Posted", body: "Practice problems for Quiz 2 (Linear Transformations) have been posted. Quiz is on March 14.", source: "MATH301 · Prof. James Lee", date: "Mar 2", tag: "COURSE", tagColor: courseColors[1], isNew: false },
-    { title: "Merit Scholarship Applications Open", body: "Applications for the 2025–2026 merit scholarship are now open for students with a GPA of 3.5+. Deadline: April 1.", source: "Financial Aid Office", date: "Mar 1", tag: "OPPORTUNITY", tagColor: "#6a1b9a", isNew: false },
-  ];
+  const tH = { fontWeight: 900, color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 2, borderBottom: `2px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` };
+  const tC = { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`, py: 2 };
+  const cardSx = { background: isDark ? "rgba(15,23,42,0.6)" : "#fff", backdropFilter: "blur(20px)", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.03)" };
 
-  // Schedule timetable
-  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-  const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-  const scheduleBlocks = [
-    { day: "Mon", start: 10, end: 12, code: "CS301", room: "CS-204", color: courseColors[0] },
-    { day: "Mon", start: 9, end: 10, code: "ENG201", room: "ENG-301", color: courseColors[2] },
-    { day: "Mon", start: 13, end: 14.5, code: "STAT201", room: "STAT-201", color: courseColors[4] },
-    { day: "Tue", start: 14, end: 15.5, code: "MATH301", room: "MATH-102", color: courseColors[1] },
-    { day: "Tue", start: 10, end: 12, code: "CS401", room: "CS-105", color: courseColors[3] },
-    { day: "Wed", start: 10, end: 12, code: "CS301", room: "CS-204", color: courseColors[0] },
-    { day: "Wed", start: 9, end: 10, code: "ENG201", room: "ENG-301", color: courseColors[2] },
-    { day: "Wed", start: 13, end: 14.5, code: "STAT201", room: "STAT-201", color: courseColors[4] },
-    { day: "Thu", start: 14, end: 15.5, code: "MATH301", room: "MATH-102", color: courseColors[1] },
-    { day: "Thu", start: 10, end: 12, code: "CS401", room: "CS-105", color: courseColors[3] },
-    { day: "Fri", start: 9, end: 10, code: "ENG201", room: "ENG-301", color: courseColors[2] },
-  ];
-
-  const handleLogout = async () => { await logout(); navigate("/"); };
-  const todayDay = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()];
-  const newAnnCount = announcements.filter((a) => a.isNew).length;
-
-  /* ─────────────────────────────────────────────────────────────────────── */
+  /* ─── RENDER ────────────────────────────────────────────────────────── */
   return (
-    <Box sx={{ bgcolor: "background.default", minHeight: "100vh", pb: 8 }}>
-      {/* ── HERO HEADER ─────────────────────────────────────────────────── */}
-      <Box
-        sx={{
-          background: mode === "dark"
-            ? "linear-gradient(135deg,#0d47a1 0%,#1565c0 50%,#283593 100%)"
-            : "linear-gradient(135deg,#1565c0 0%,#1976d2 50%,#42a5f5 100%)",
-          py: 4.5,
-          px: { xs: 2, sm: 4 },
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* decorative blobs */}
-        <Box sx={{ position: "absolute", top: -50, right: -50, width: 220, height: 220, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
-        <Box sx={{ position: "absolute", bottom: -70, left: 80, width: 170, height: 170, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+    <Box sx={{ display: 'flex', bgcolor: "background.default", minHeight: "100vh", color: "text.primary" }}>
 
-        <Container maxWidth="lg">
-          {/* Profile row */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-              <Avatar sx={{ width: 68, height: 68, fontSize: 26, fontWeight: 800, background: "rgba(255,255,255,0.25)", border: "3px solid rgba(255,255,255,0.4)" }}>
-                {(user?.name || "A")[0].toUpperCase()}
-              </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight={800} color="white" letterSpacing="-0.02em">
-                  {user?.name || "Alex Johnson"}
-                </Typography>
-                <Typography color="rgba(255,255,255,0.85)" variant="body2" sx={{ mt: 0.2 }}>
-                  Computer Science · Spring 2025 · Year 3
-                </Typography>
-                <Box sx={{ display: "flex", gap: 1, mt: 0.8, flexWrap: "wrap" }}>
-                  <Chip label={`ID: ${user?.studentId || "STU-2024-0142"}`} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 600, fontSize: "0.7rem" }} />
-                  <Chip icon={<Star sx={{ fontSize: "14px !important", color: "#fbbf24 !important" }} />} label="Good Standing" size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 600, fontSize: "0.7rem" }} />
-                </Box>
-              </Box>
-            </Box>
+      {/* ═══ SIDEBAR ═══ */}
+      <Box sx={{
+        width: SIDEBAR_WIDTH, flexShrink: 0, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 1200,
+        background: isDark
+          ? "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)"
+          : "linear-gradient(180deg, #0369a1 0%, #0284c7 100%)",
+        display: 'flex', flexDirection: 'column',
+        borderRight: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        boxShadow: '4px 0 24px rgba(0,0,0,0.1)',
+      }}>
+        {/* Profile section */}
+        <Box sx={{ p: 3, pt: 4, textAlign: 'center' }}>
+          <Avatar src={user?.profileImage} sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: 'white', color: '#0284c7', fontWeight: 900, fontSize: '1.8rem', border: '3px solid rgba(255,255,255,0.25)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+            {(user?.name || "S")[0].toUpperCase()}
+          </Avatar>
+          <Typography variant="subtitle1" fontWeight={900} color="white" sx={{ lineHeight: 1.2 }}>{user?.name || "Student"}</Typography>
+          <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={700}>{user?.studentId || user?.email}</Typography>
+          <Chip label={CURRENT_SEMESTER} size="small" sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.65rem' }} />
+        </Box>
 
-            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-              <Tooltip title="Notifications">
-                <IconButton sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", "&:hover": { bgcolor: "rgba(255,255,255,0.25)" } }}>
-                  <Badge badgeContent={3} color="error"><Notifications /></Badge>
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={mode === "dark" ? "Light Mode" : "Dark Mode"}>
-                <IconButton onClick={toggleColorMode} sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", "&:hover": { bgcolor: "rgba(255,255,255,0.25)" } }}>
-                  {mode === "dark" ? <LightMode /> : <DarkMode />}
-                </IconButton>
-              </Tooltip>
-              <Button variant="outlined" size="small" startIcon={<Logout />} onClick={handleLogout}
-                sx={{ borderColor: "rgba(255,255,255,0.4)", color: "white", fontWeight: 600, textTransform: "none", borderRadius: 2, "&:hover": { bgcolor: "rgba(255,255,255,0.1)", borderColor: "white" } }}>
-                Sign Out
-              </Button>
-            </Box>
-          </Box>
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
 
-          {/* Tab bar */}
-          <Tabs
-            value={activeTab}
-            onChange={(_, v) => setActiveTab(v)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              "& .MuiTab-root": { color: "rgba(255,255,255,0.65)", fontWeight: 600, textTransform: "none", fontSize: "0.88rem", minHeight: 42 },
-              "& .Mui-selected": { color: "white !important" },
-              "& .MuiTabs-indicator": { bgcolor: "white", height: 3, borderRadius: 2 },
-            }}
-          >
-            <Tab label="Overview" icon={<Dashboard sx={{ fontSize: 17 }} />} iconPosition="start" />
-            <Tab label="My Courses" icon={<MenuBook sx={{ fontSize: 17 }} />} iconPosition="start" />
-            <Tab label="Grades & GPA" icon={<TrendingUp sx={{ fontSize: 17 }} />} iconPosition="start" />
-            <Tab label="Schedule" icon={<CalendarMonth sx={{ fontSize: 17 }} />} iconPosition="start" />
-            <Tab
-              label={`Announcements${newAnnCount > 0 ? ` (${newAnnCount})` : ""}`}
-              icon={<Campaign sx={{ fontSize: 17 }} />}
-              iconPosition="start"
-            />
-          </Tabs>
-        </Container>
+        {/* Navigation */}
+        <List sx={{ px: 1.5, py: 2, flex: 1 }}>
+          {NAV_ITEMS.map((item, i) => (
+            <ListItemButton
+              key={i}
+              selected={activeTab === i}
+              onClick={() => setActiveTab(i)}
+              sx={{
+                borderRadius: 3, mb: 0.5, py: 1.3, px: 2,
+                color: activeTab === i ? 'white' : 'rgba(255,255,255,0.6)',
+                bgcolor: activeTab === i ? 'rgba(255,255,255,0.15)' : 'transparent',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+                transition: '0.2s',
+              }}
+            >
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                {i === 4 ? (
+                  <Badge badgeContent={cart.length} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }}>{item.icon}</Badge>
+                ) : item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === i ? 900 : 700, fontSize: '0.88rem' }} />
+            </ListItemButton>
+          ))}
+        </List>
+
+        {/* Bottom controls */}
+        <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+            {mode === "dark" ? "Light Mode" : "Dark Mode"}
+          </Button>
+          <Button fullWidth onClick={logout} sx={{ color: 'rgba(255,200,200,0.8)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, mt: 0.5, '&:hover': { bgcolor: 'rgba(255,0,0,0.1)', color: '#fca5a5' } }}>
+            Sign Out
+          </Button>
+        </Box>
       </Box>
 
-      {/* ── BODY ────────────────────────────────────────────────────────── */}
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-
-        {/* ━━━━ TAB 0: OVERVIEW ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 0 && (
+      {/* ═══ MAIN CONTENT ═══ */}
+      <Box sx={{ ml: `${SIDEBAR_WIDTH}px`, flex: 1, minHeight: '100vh' }}>
+        {/* Top bar */}
+        <Box sx={{ px: 5, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box>
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              {stats.map((s, i) => (
-                <Grid item xs={6} md={3} key={i}>
-                  <StatCard stat={s} />
-                </Grid>
-              ))}
-            </Grid>
-
-            <Grid container spacing={3}>
-              {/* GPA Chart */}
-              <Grid item xs={12} md={8}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", height: "100%" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-                      <Box>
-                        <Typography variant="h6" fontWeight={700}>GPA Trend</Typography>
-                        <Typography variant="caption" color="text.secondary">Academic performance over semesters</Typography>
-                      </Box>
-                      <Chip label="GPA 3.74" color="success" size="small" sx={{ fontWeight: 700 }} />
-                    </Box>
-                    <Box sx={{ height: 250, mt: 2 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={gpaData}>
-                          <defs>
-                            <linearGradient id="gpaFill" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.35} />
-                              <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-                          <XAxis dataKey="semester" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
-                          <YAxis domain={[2.8, 4.0]} hide />
-                          <ChartTooltip contentStyle={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, borderRadius: 12, border: `1px solid ${theme.palette.divider}` }} />
-                          <Area type="monotone" dataKey="gpa" stroke={theme.palette.primary.main} strokeWidth={3} fillOpacity={1} fill="url(#gpaFill)" dot={{ r: 5, fill: theme.palette.primary.main, strokeWidth: 2, stroke: theme.palette.background.paper }} activeDot={{ r: 7 }} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Upcoming Deadlines */}
-              <Grid item xs={12} md={4}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", height: "100%" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>Upcoming Deadlines</Typography>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1 }}>
-                      {deadlines.map((d, i) => (
-                        <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderRadius: 2, bgcolor: "action.hover", borderLeft: `4px solid ${urgencyColor(d.daysLeft)}` }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight={600} noWrap>{d.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">{d.date}</Typography>
-                          </Box>
-                          <Chip label={`${d.daysLeft}d`} size="small" sx={{ bgcolor: urgencyColor(d.daysLeft), color: "white", fontWeight: 700, fontSize: "0.7rem", minWidth: 34 }} />
-                        </Box>
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Recent Activity */}
-              <Grid item xs={12}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>Recent Activity</Typography>
-                    <List disablePadding>
-                      {recentActivity.map((a, i) => (
-                        <React.Fragment key={i}>
-                          <ListItem sx={{ px: 0, py: 1.2 }}>
-                            <Box sx={{ width: 34, height: 34, borderRadius: 2, bgcolor: a.color + "22", color: a.color, display: "flex", alignItems: "center", justifyContent: "center", mr: 2, flexShrink: 0 }}>
-                              {a.icon}
-                            </Box>
-                            <ListItemText
-                              primary={<Typography variant="body2" fontWeight={600}>{a.text}</Typography>}
-                              secondary={<Typography variant="caption" color="text.secondary">{a.time}</Typography>}
-                            />
-                          </ListItem>
-                          {i < recentActivity.length - 1 && <Divider />}
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+            <Typography variant="h5" fontWeight={900}>{NAV_ITEMS[activeTab]?.label}</Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={700}>{CURRENT_SEMESTER} · Student Portal</Typography>
           </Box>
-        )}
+          <Tooltip title="Notifications">
+            <IconButton onClick={() => setNotifDrawerOpen(true)} sx={{ border: '1px solid', borderColor: 'divider', p: 1.2 }}>
+              <Badge badgeContent={unreadNotifs} color="error"><Notifications /></Badge>
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-        {/* ━━━━ TAB 1: MY COURSES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 1 && (
-          <Box>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-              <Box>
-                <Typography variant="h5" fontWeight={800}>My Courses</Typography>
-                <Typography variant="body2" color="text.secondary">{courses.length} enrolled · Spring 2025</Typography>
-              </Box>
-              <Button variant="contained" startIcon={<School />} sx={{ borderRadius: 3, textTransform: "none", fontWeight: 700, background: gradients[0] }}>
-                Register Course
-              </Button>
-            </Box>
+        {/* Page content */}
+        <Box sx={{ p: 5, pb: 10 }}>
 
-            <Grid container spacing={3}>
-              {courses.map((course, i) => (
-                <Grid item xs={12} md={6} key={i}>
-                  <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", overflow: "hidden", transition: "all 0.3s", "&:hover": { transform: "translateY(-4px)", boxShadow: `0 20px 48px ${course.color}22` } }}>
-                    <Box sx={{ height: 6, bgcolor: course.color }} />
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 2 }}>
-                        <Box>
-                          <Chip label={course.code} size="small" sx={{ bgcolor: course.color + "22", color: course.color, fontWeight: 700, mb: 0.5 }} />
-                          <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.3 }}>{course.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{course.instructor}</Typography>
-                        </Box>
-                        <Chip label={course.grade} sx={{ fontWeight: 800, bgcolor: course.color, color: "white", fontSize: "0.95rem", minWidth: 44, flexShrink: 0 }} />
-                      </Box>
-
-                      <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <Schedule sx={{ fontSize: 13, color: "text.secondary" }} />
-                          <Typography variant="caption" color="text.secondary">{course.days} · {course.time}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <School sx={{ fontSize: 13, color: "text.secondary" }} />
-                          <Typography variant="caption" color="text.secondary">{course.room}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <Book sx={{ fontSize: 13, color: "text.secondary" }} />
-                          <Typography variant="caption" color="text.secondary">{course.credits} Credits</Typography>
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ mb: 0.5 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={600}>Progress</Typography>
-                          <Typography variant="caption" fontWeight={700} sx={{ color: course.color }}>{course.progress}%</Typography>
-                        </Box>
-                        <LinearProgress variant="determinate" value={course.progress} sx={{ height: 8, borderRadius: 4, bgcolor: theme.palette.action.selected, "& .MuiLinearProgress-bar": { borderRadius: 4, bgcolor: course.color } }} />
-                      </Box>
-
-                      <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                        <Button size="small" variant="outlined" sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, borderColor: course.color, color: course.color, "&:hover": { bgcolor: course.color + "11" }, flex: 1 }}>Materials</Button>
-                        <Button size="small" variant="outlined" sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, flex: 1 }}>Assignments</Button>
-                        <Button size="small" variant="contained" sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, bgcolor: course.color, "&:hover": { bgcolor: course.color }, flex: 1 }}>Grades</Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* ━━━━ TAB 2: GRADES & GPA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 2 && (
-          <Box>
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              {[
-                { label: "Semester GPA", value: "3.74", sub: "/ 4.0", color: "#2e7d32" },
-                { label: "Cumulative GPA", value: "3.68", sub: "/ 4.0", color: "#1976d2" },
-                { label: "Credits This Sem", value: String(totalCredits), sub: "hrs", color: "#6a1b9a" },
-                { label: "Total Credits", value: String(earnedCredits), sub: `/ ${requiredCredits}`, color: "#e65100" },
-              ].map((c, i) => (
-                <Grid item xs={6} md={3} key={i}>
-                  <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", textAlign: "center", transition: "all 0.3s", "&:hover": { transform: "translateY(-4px)", boxShadow: "0 16px 40px rgba(0,0,0,0.1)" } }}>
-                    <CardContent sx={{ py: 2.5 }}>
-                      <Typography variant="h3" fontWeight={800} sx={{ color: c.color }}>
-                        {c.value}<Typography component="span" variant="body1" color="text.secondary" sx={{ ml: 0.5 }}>{c.sub}</Typography>
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>{c.label}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* Dean's list banner */}
-            <Card elevation={0} sx={{ borderRadius: 4, mb: 3, bgcolor: mode === "dark" ? "#451a03" : "#fef3c7", border: `1px solid #fbbf24` }}>
-              <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, py: "12px !important" }}>
-                <Star sx={{ color: "#f59e0b", fontSize: 28 }} />
-                <Box>
-                  <Typography fontWeight={700} sx={{ color: mode === "dark" ? "#fbbf24" : "#92400e" }}>🎉 Dean's List Eligible!</Typography>
-                  <Typography variant="caption" sx={{ color: mode === "dark" ? "#fcd34d" : "#92400e" }}>Your GPA of 3.74 qualifies you for the Dean's List for Spring 2025.</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={7}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>Grade Report — Spring 2025</Typography>
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            {["Course", "Credits", "Grade", "GPA Pts", "Status"].map((h) => (
-                              <TableCell key={h} sx={{ fontWeight: 700, color: "text.secondary", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {gradesData.map((row, i) => (
-                            <TableRow key={i} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                              <TableCell>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: row.color, flexShrink: 0 }} />
-                                  <Box>
-                                    <Typography variant="body2" fontWeight={700}>{row.code}</Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 130, display: "block" }}>{row.name}</Typography>
-                                  </Box>
-                                </Box>
-                              </TableCell>
-                              <TableCell><Typography variant="body2">{row.credits}</Typography></TableCell>
-                              <TableCell><Chip label={row.grade} size="small" sx={{ fontWeight: 700, bgcolor: row.color, color: "white", minWidth: 40 }} /></TableCell>
-                              <TableCell><Typography variant="body2" fontWeight={600}>{row.points.toFixed(1)}</Typography></TableCell>
-                              <TableCell>
-                                <Chip label={row.status} size="small" variant="outlined" sx={{ fontSize: "0.68rem", fontWeight: 600, borderColor: statusColor(row.status), color: statusColor(row.status) }} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={5}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", mb: 3 }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>GPA Points by Course</Typography>
-                    <Box sx={{ height: 220, mt: 1 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={gradesData.map((g) => ({ name: g.code, gpa: g.points, color: g.color }))} barSize={28}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
-                          <YAxis domain={[0, 4]} hide />
-                          <ChartTooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 12, border: `1px solid ${theme.palette.divider}` }} />
-                          <Bar dataKey="gpa" radius={[6, 6, 0, 0]}>
-                            {gradesData.map((_, idx) => <Cell key={idx} fill={gradesData[idx].color} />)}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>Graduation Progress</Typography>
-                    <Box sx={{ mt: 1 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                        <Typography variant="body2" fontWeight={600}>Credits Earned</Typography>
-                        <Typography variant="body2" fontWeight={800} color="primary.main">{earnedCredits} / {requiredCredits}</Typography>
-                      </Box>
-                      <LinearProgress variant="determinate" value={(earnedCredits / requiredCredits) * 100} sx={{ height: 12, borderRadius: 6, bgcolor: theme.palette.action.selected, "& .MuiLinearProgress-bar": { borderRadius: 6, background: gradients[1] } }} />
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                        {requiredCredits - earnedCredits} credits remaining · Expected graduation: Dec 2026
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-
-        {/* ━━━━ TAB 3: SCHEDULE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 3 && (
-          <Box>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-              <Box>
-                <Typography variant="h5" fontWeight={800}>Weekly Schedule</Typography>
-                <Typography variant="body2" color="text.secondary">Spring 2025 · Mon – Fri</Typography>
-              </Box>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {courses.slice(0, 4).map((c, i) => (
-                  <Chip key={i} label={c.code} size="small" sx={{ bgcolor: c.color + "22", color: c.color, fontWeight: 700, fontSize: "0.7rem" }} />
-                ))}
-              </Box>
-            </Box>
-
-            <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", bgcolor: "background.paper", overflow: "hidden" }}>
-              <Box sx={{ overflowX: "auto" }}>
-                <Box sx={{ minWidth: 640 }}>
-                  {/* Header */}
-                  <Box sx={{ display: "grid", gridTemplateColumns: "64px repeat(5, 1fr)", borderBottom: "2px solid", borderColor: "divider" }}>
-                    <Box sx={{ p: 1 }} />
-                    {DAYS.map((day) => (
-                      <Box key={day} sx={{ p: 1.5, textAlign: "center", bgcolor: day === todayDay ? "primary.main" : "transparent" }}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ color: day === todayDay ? "white" : "text.primary" }}>{day}</Typography>
-                        {day === todayDay && <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", fontSize: "0.65rem" }}>Today</Typography>}
-                      </Box>
-                    ))}
+          {/* TAB 0: DASHBOARD */}
+          {activeTab === 0 && (
+            <Box>
+              {/* Phase 18: Global Vitals Panel */}
+              <Box sx={{ mb: 4, p: 2, borderRadius: 4, background: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.1) : 'rgba(255,255,255,0.03)', border: '1px solid', borderColor: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.3) : 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: systemConfig.globalMaintenance ? '#f59e0b' : '#10b981', boxShadow: `0 0 10px ${systemConfig.globalMaintenance ? '#f59e0b' : '#10b981'}` }} />
+                  <Box>
+                    <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1.5 }}>SYSTEM INTEGRITY</Typography>
+                    <Typography variant="body2" fontWeight={1000} color={systemConfig.globalMaintenance ? 'warning.main' : 'success.main'}>
+                      {systemConfig.globalMaintenance ? "MAINTENANCE ACTIVE - SOME SERVICES RESTRICTED" : "ALL SYSTEMS NOMINAL"}
+                    </Typography>
                   </Box>
+                </Box>
+                <Stack direction="row" spacing={4} sx={{ mr: 4, display: { xs: 'none', md: 'flex' } }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" fontWeight={900} color="text.secondary">PROTOCOL</Typography>
+                    <Typography variant="body2" fontWeight={1000} color={systemConfig.registrationLock ? 'error.main' : 'primary.main'}>
+                      {systemConfig.registrationLock ? "REG LOCKED" : "REG OPEN"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" fontWeight={900} color="text.secondary">LATENCY</Typography>
+                    <Typography variant="body2" fontWeight={1000}>32ms</Typography>
+                  </Box>
+                </Stack>
+              </Box>
 
-                  {/* Rows */}
-                  {HOURS.map((hour) => (
-                    <Box key={hour} sx={{ display: "grid", gridTemplateColumns: "64px repeat(5, 1fr)", borderBottom: "1px solid", borderColor: "divider", minHeight: 60 }}>
-                      <Box sx={{ p: 1, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", pr: 1.5, pt: 1.2 }}>
-                        <Typography variant="caption" color="text.secondary" fontWeight={600}>{hour}:00</Typography>
+              <Grid container spacing={3} sx={{ mb: 4 }}>{stats.map((s, i) => <Grid item xs={12} sm={6} md={3} key={i}><StatCard stat={s} mode={mode} /></Grid>)}</Grid>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={8}>
+                  <Card sx={{ ...cardSx, borderRadius: 4, p: 4 }}>
+                    <Typography variant="h5" fontWeight={900} sx={{ mb: 1 }}>Welcome back, {user?.name}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.8 }}>Your profile is synced. Use <strong>Semester Registration</strong> to enroll, or check <strong>My Schedules</strong> for your timetable.</Typography>
+                    <Stack direction="row" spacing={2}><Button variant="contained" onClick={() => setActiveTab(4)} sx={{ borderRadius: 3, fontWeight: 900, px: 3.5, textTransform: 'none' }}>Register for Semester</Button><Button variant="outlined" onClick={() => setActiveTab(2)} sx={{ borderRadius: 3, fontWeight: 900, px: 3.5, textTransform: 'none' }}>View Timetable</Button></Stack>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card sx={{ ...cardSx, borderRadius: 4, p: 4, height: '100%' }}>
+                    <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Financial Summary</Typography>
+                    {tuitionPayments.filter(p => p.status === 'approved').length > 0 ? (
+                      <Box sx={{ bgcolor: alpha('#10b981', 0.08), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><CheckCircleOutline sx={{ color: '#10b981', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="success.main">Cleared</Typography><Typography variant="caption" color="text.secondary">No balance</Typography></Box></Box>
+                    ) : tuitionPayments.length > 0 ? (
+                      <Box sx={{ bgcolor: alpha('#f59e0b', 0.08), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><Warning sx={{ color: '#f59e0b', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="warning.main">Pending</Typography><Typography variant="caption" color="text.secondary">Awaiting review</Typography></Box></Box>
+                    ) : (
+                      <Box sx={{ bgcolor: alpha('#3b82f6', 0.06), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><AccountBalanceWallet sx={{ color: '#3b82f6', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="info.main">No Payments</Typography><Typography variant="caption" color="text.secondary">Register to begin</Typography></Box></Box>
+                    )}
+                    <Box sx={{ mt: 3 }}><Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}><Typography variant="caption" color="text.secondary" fontWeight={800}>Degree Progress</Typography><Typography variant="caption" color="text.secondary" fontWeight={800}>{totalCredits}/{requiredCredits}</Typography></Box><LinearProgress variant="determinate" value={Math.min((totalCredits / requiredCredits) * 100, 100)} sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', '& .MuiLinearProgress-bar': { background: gradients[0], borderRadius: 3 } }} /></Box>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* TAB 1: MY COURSES */}
+          {activeTab === 1 && (
+            <Box>
+              {myActiveCourses.length === 0 ? (
+                <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><MenuBook sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.25, mb: 2 }} /><Typography color="text.secondary" fontWeight={800}>No active enrollments.</Typography><Button variant="outlined" sx={{ mt: 2, borderRadius: 3, fontWeight: 900 }} onClick={() => setActiveTab(4)}>Go to Registration</Button></Card>
+              ) : (
+                <Card sx={{ ...cardSx, borderRadius: 4 }}><TableContainer><Table>
+                  <TableHead><TableRow>{["#", "Course Name", "Code", "Credits", "Instructor", "Grade", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
+                  <TableBody>{myActiveCourses.map((c, i) => {
+                    const gc = gradeToPoints[c.grade] >= 3.0 ? 'success.main' : gradeToPoints[c.grade] >= 2.0 ? 'warning.main' : c.grade === "N/A" ? 'text.secondary' : 'error.main';
+                    return (<TableRow key={i} hover><TableCell sx={tC}>{i + 1}</TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code || '—'}</Typography></TableCell><TableCell sx={tC}>{c.credits || 3}</TableCell><TableCell sx={tC}><Typography variant="body2" color="text.secondary">{c.instructor || "TBA"}</Typography></TableCell><TableCell sx={tC}><Chip label={c.grade} size="small" sx={{ fontWeight: 900, color: gc }} /></TableCell><TableCell sx={tC}><Chip label="ENROLLED" size="small" sx={{ fontWeight: 900, fontSize: '0.6rem', height: 22, bgcolor: alpha('#10b981', 0.1), color: '#10b981' }} /></TableCell></TableRow>);
+                  })}</TableBody>
+                </Table></TableContainer></Card>
+              )}
+            </Box>
+          )}
+
+          {/* TAB 2: MY SCHEDULES */}
+          {activeTab === 2 && (
+            <Box>
+              {mySchedules.length === 0 ? (
+                <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><EventNote sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.25, mb: 2 }} /><Typography color="text.secondary" fontWeight={800}>No schedules found.</Typography></Card>
+              ) : (
+                <Card sx={{ ...cardSx, borderRadius: 4 }}><TableContainer><Table>
+                  <TableHead><TableRow>{["Day", "Time", "Course", "Room", "Semester"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
+                  <TableBody>{mySchedules.map((s, i) => (
+                    <TableRow key={i} hover><TableCell sx={tC}><Chip label={s.day} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} /></TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={800}>{s.startTime} — {s.endTime}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{s.courseName}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{s.room || '—'}</Typography></TableCell><TableCell sx={tC}><Typography variant="caption" color="text.secondary">{s.semester || CURRENT_SEMESTER}</Typography></TableCell></TableRow>
+                  ))}</TableBody>
+                </Table></TableContainer></Card>
+              )}
+            </Box>
+          )}
+
+          {/* TAB 3: GRADES */}
+          {activeTab === 3 && (
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={4}>
+                <Card sx={{ ...cardSx, borderRadius: 4, p: 4, textAlign: 'center' }}>
+                  <Box sx={{ width: 100, height: 100, borderRadius: '50%', mx: 'auto', mb: 2, background: gradients[0], display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 28px ${alpha('#6366f1', 0.3)}` }}><Typography variant="h3" fontWeight={900} color="white">{gpa.toFixed(2)}</Typography></Box>
+                  <Typography variant="h6" fontWeight={900}>Cumulative GPA</Typography><Typography variant="caption" color="text.secondary">Out of 4.00</Typography>
+                  <Divider sx={{ my: 2 }} />
+                  <Grid container spacing={2}><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="primary.main">{totalCredits}</Typography><Typography variant="caption" color="text.secondary">Enrolled</Typography></Grid><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="success.main">{earnedCredits}</Typography><Typography variant="caption" color="text.secondary">Earned</Typography></Grid></Grid>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={8}>
+                <Card sx={{ ...cardSx, borderRadius: 4 }}><CardContent sx={{ p: 4 }}>
+                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Course Grades</Typography>
+                  {enrollments.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Grade sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No records.</Typography></Box> : (
+                    <TableContainer><Table>
+                      <TableHead><TableRow>{["Course", "Code", "Credits", "Grade", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
+                      <TableBody>{enrollments.map((e, i) => {
+                        const c = availableCourses.find(c => c.id === e.courseId) || {};
+                        const g = e.grade || "—";
+                        const gc = gradeToPoints[g] >= 3.0 ? 'success.main' : gradeToPoints[g] >= 2.0 ? 'warning.main' : g === "—" ? 'text.secondary' : 'error.main';
+                        return (<TableRow key={i} hover><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{e.courseName || c.name || "?"}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main">{c.code || "—"}</Typography></TableCell><TableCell sx={tC}>{c.credits || 3}</TableCell><TableCell sx={tC}><Chip label={g} size="small" sx={{ fontWeight: 900, color: gc }} /></TableCell><TableCell sx={tC}><Chip label={(e.status || "pending").replace(/_/g, ' ').toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: '0.6rem', height: 22, bgcolor: alpha(e.status === 'approved' || e.status === 'enrolled' ? '#10b981' : '#f59e0b', 0.1), color: e.status === 'approved' || e.status === 'enrolled' ? '#10b981' : '#f59e0b' }} /></TableCell></TableRow>);
+                      })}</TableBody>
+                    </Table></TableContainer>
+                  )}
+                </CardContent></Card>
+              </Grid>
+            </Grid>
+          )}
+
+           {/* TAB 4: SEMESTER REGISTRATION */}
+          {activeTab === 4 && (
+            <Grid container spacing={4}>
+              <Grid item xs={12}>
+                <Card sx={{ 
+                  ...cardSx, p: 3, borderRadius: 4, mb: 1,
+                  background: isMyWindow 
+                    ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)'
+                    : 'linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                  border: `1px solid ${isMyWindow ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2)}`
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ 
+                        width: 12, height: 12, borderRadius: '50%', 
+                        bgcolor: isMyWindow ? '#10b981' : '#ef4444',
+                        boxShadow: `0 0 10px ${isMyWindow ? '#10b981' : '#ef4444'}`
+                      }} />
+                      <Box>
+                        <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1 }}>REGISTRATION INTELLIGENCE</Typography>
+                        <Typography variant="h6" fontWeight={1000}>
+                          {systemConfig.registrationLock 
+                            ? "Registration is Currently Closed" 
+                            : !isMyWindow 
+                              ? `Window Open for Year ${systemConfig.targetYear} Cohort` 
+                              : `Welcome! Window Open for Year ${user?.year || 1} - Semester ${systemConfig.targetSemester}`}
+                        </Typography>
                       </Box>
-                      {DAYS.map((day) => {
-                        const block = scheduleBlocks.find((b) => b.day === day && b.start === hour);
+                    </Box>
+                    {isMyWindow && (
+                      <Chip 
+                        label={`ACTIVE: Y${user?.year || 1} S${systemConfig.targetSemester}`} 
+                        color="success" 
+                        sx={{ fontWeight: 900, borderRadius: 2 }} 
+                      />
+                    )}
+                  </Box>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={8}>
+                <Card sx={{ ...cardSx, borderRadius: 4 }}>
+                  {(!isMyWindow || systemConfig.registrationLock) ? (
+                    <Box sx={{ p: 8, textAlign: 'center' }}>
+                      <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
+                      <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>Registration Locked</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
+                        {systemConfig.registrationLock 
+                          ? "The registrar has paused all enrollment activities. Please check the news feed for updates."
+                          : `Your academic cohort (Year ${user?.year || 1}) is not scheduled for this registration window. Currently serving Year ${systemConfig.targetYear}.`}
+                      </Typography>
+                    </Box>
+                  ) : filteredAvailableCourses.length === 0 ? (
+                    <Box sx={{ p: 8, textAlign: 'center' }}>
+                      <Book sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
+                      <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>No Modules Found</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        There are no courses currently prepared for Year {user?.year || 1} Semester {systemConfig.targetSemester}.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <TableContainer><Table>
+                      <TableHead><TableRow>{["", "Course", "Code", "Credits", "Tuition", "Instructor", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
+                      <TableBody>{filteredAvailableCourses.map((c, i) => {
+                        const enrolled = alreadyEnrolledIds.includes(c.id);
+                        const inCart = cart.find(x => x.id === c.id);
+                        const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
+                        return (<TableRow key={i} sx={{ bgcolor: inCart ? alpha(theme.palette.primary.main, 0.04) : 'transparent' }} hover>
+                          <TableCell sx={tC} padding="checkbox">{!enrolled && <Checkbox checked={!!inCart} onChange={() => toggleCart(c)} color="primary" />}</TableCell>
+                          <TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell>
+                          <TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code}</Typography></TableCell>
+                          <TableCell sx={tC}>{c.credits || 3}</TableCell>
+                          <TableCell sx={tC}><Typography variant="body2" fontWeight={800} color="success.main">${fee.toLocaleString()}</Typography></TableCell>
+                          <TableCell sx={tC}><Typography variant="body2" color="text.secondary">{c.instructor || "TBA"}</Typography></TableCell>
+                          <TableCell sx={tC}>{enrolled ? <Chip label="Registered" size="small" color="success" sx={{ fontWeight: 900 }} /> : inCart ? <Chip label="In Cart" size="small" color="primary" sx={{ fontWeight: 900 }} /> : <Chip label="Available" size="small" variant="outlined" sx={{ fontWeight: 800 }} />}</TableCell>
+                        </TableRow>);
+                      })}</TableBody>
+                    </Table></TableContainer>
+                  )}
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card sx={{ ...cardSx, borderRadius: 4, p: 3.5, mb: 3 }}>
+                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><ShoppingCart fontSize="small" /> Cart ({cart.length})</Typography>
+                  {cart.length === 0 ? <Typography variant="body2" color="text.secondary">Select courses to add to cart.</Typography> : (
+                    <Stack spacing={1.5}>
+                      {cart.map((c, i) => {
+                        const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
                         return (
-                          <Box key={day} sx={{ p: 0.4, bgcolor: day === todayDay ? "rgba(25,118,210,0.04)" : "transparent", position: "relative" }}>
-                            {block && (
-                              <Tooltip title={`${block.code} — ${block.room}`} arrow>
-                                <Box sx={{
-                                  height: `${(block.end - block.start) * 60 - 6}px`,
-                                  bgcolor: block.color + "22",
-                                  border: `2px solid ${block.color}`,
-                                  borderRadius: 2, p: 1, cursor: "pointer",
-                                  transition: "all 0.2s",
-                                  "&:hover": { transform: "scale(1.03)", boxShadow: `0 4px 16px ${block.color}44` },
-                                }}>
-                                  <Typography variant="caption" fontWeight={800} sx={{ color: block.color, display: "block", lineHeight: 1.2, fontSize: "0.72rem" }}>{block.code}</Typography>
-                                  <Typography variant="caption" sx={{ color: block.color, opacity: 0.75, fontSize: "0.62rem" }}>{block.room}</Typography>
-                                </Box>
-                              </Tooltip>
-                            )}
+                          <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2 }}>
+                            <Box>
+                              <Typography variant="subtitle2" fontWeight={900}>{c.name}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {c.credits || 3} Cr · ${fee.toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <IconButton size="small" onClick={() => toggleCart(c)} color="error">
+                              <Remove fontSize="small" />
+                            </IconButton>
                           </Box>
                         );
                       })}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            </Card>
-          </Box>
-        )}
-
-        {/* ━━━━ TAB 4: ANNOUNCEMENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 4 && (
-          <Box>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-              <Box>
-                <Typography variant="h5" fontWeight={800}>Announcements</Typography>
-                <Typography variant="body2" color="text.secondary">{newAnnCount} new · {announcements.length} total</Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {announcements.map((ann, i) => (
-                <Card key={i} elevation={0} sx={{
-                  borderRadius: 4, border: "1px solid",
-                  borderColor: ann.isNew ? ann.tagColor + "55" : "divider",
-                  bgcolor: "background.paper",
-                  transition: "all 0.3s",
-                  "&:hover": { transform: "translateX(4px)", boxShadow: `inset 4px 0 0 ${ann.tagColor}, 0 8px 24px rgba(0,0,0,0.06)` },
-                }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                      <Box sx={{ width: 46, height: 46, borderRadius: 2.5, bgcolor: ann.tagColor + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Campaign sx={{ color: ann.tagColor, fontSize: 22 }} />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
-                          <Typography variant="subtitle1" fontWeight={700}>{ann.title}</Typography>
-                          <Chip label={ann.tag} size="small" sx={{ bgcolor: ann.tagColor, color: "white", fontWeight: 700, fontSize: "0.63rem", height: 18 }} />
-                          {ann.isNew && <Chip label="NEW" size="small" color="error" sx={{ fontWeight: 700, fontSize: "0.63rem", height: 18 }} />}
-                        </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, lineHeight: 1.65 }}>{ann.body}</Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Typography variant="caption" color="text.disabled">{ann.source}</Typography>
-                          <Typography variant="caption" color="text.disabled">·</Typography>
-                          <Typography variant="caption" color="text.disabled">{ann.date}</Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </CardContent>
+                      <Divider />
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="subtitle2" fontWeight={900}>Total</Typography><Typography variant="subtitle2" fontWeight={900} color="primary.main">{cartCredits} Cr · ${cartTotal.toLocaleString()}</Typography></Box>
+                      <Button 
+                        fullWidth variant="contained" 
+                        onClick={() => setPaymentModalOpen(true)} 
+                        disabled={systemConfig.registrationLock || systemConfig.globalMaintenance}
+                        sx={{ 
+                          borderRadius: 3, fontWeight: 900, py: 1.2, textTransform: 'none',
+                          background: (systemConfig.registrationLock || systemConfig.globalMaintenance) ? 'rgba(0,0,0,0.1)' : gradients[0]
+                        }}
+                      >
+                        {systemConfig.globalMaintenance ? "Locked for Maintenance" : systemConfig.registrationLock ? "Registration Window Closed" : "Proceed to Checkout"}
+                      </Button>
+                    </Stack>
+                  )}
                 </Card>
-              ))}
-            </Box>
-          </Box>
-        )}
+                <Card sx={{ ...cardSx, borderRadius: 4, p: 3.5 }}>
+                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>My Documents</Typography>
+                  {myActiveCourses.length > 0 && <Box sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1, mb: 1, display: 'block' }}>SEMESTER SLIP</Typography><Button fullWidth variant="outlined" startIcon={<Download />} onClick={() => generateSemesterSlipPDF(user, myActiveCourses)} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>Download Slip (PDF)</Button></Box>}
+                  {tuitionPayments.filter(p => p.status === "approved").length > 0 && <Box><Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1, mb: 1, display: 'block' }}>RECEIPTS</Typography><List disablePadding>{tuitionPayments.filter(p => p.status === "approved").map((p, i) => (<ListItem key={i} sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', mb: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', pr: 1 }}><ListItemText primary={<Typography variant="subtitle2" fontWeight={800}>${(p.amount || 0).toLocaleString()}</Typography>} secondary="Paid" /><Tooltip title="Download PDF"><IconButton color="success" onClick={() => generateReceiptPDF(user, p)}><Download fontSize="small" /></IconButton></Tooltip></ListItem>))}</List></Box>}
+                  {myActiveCourses.length === 0 && tuitionPayments.filter(p => p.status === "approved").length === 0 && <Box sx={{ textAlign: 'center', py: 3 }}><Receipt sx={{ fontSize: 36, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography variant="body2" color="text.secondary">No documents yet.</Typography></Box>}
+                </Card>
+              </Grid>
+            </Grid>
+          )}
 
-      </Container>
+          {/* TAB 5: NEWS */}
+          {activeTab === 5 && (
+            <Stack spacing={3}>{newsList.map((a, i) => (
+              <Card key={i} sx={{ ...cardSx, borderRadius: 4, p: 4, transition: '0.3s', '&:hover': { transform: 'translateY(-3px)' } }}>
+                <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 1 }}>{a.category?.toUpperCase() || "UPDATE"}</Typography>
+                <Typography variant="h5" fontWeight={900} sx={{ mt: 0.5, mb: 0.5 }}>{a.title}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{a.date?.toDate ? a.date.toDate().toLocaleDateString() : new Date(a.date).toLocaleDateString()}</Typography>
+                <Typography variant="body1">{a.content}</Typography>
+              </Card>
+            ))}{newsList.length === 0 && <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><Campaign sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No news.</Typography></Card>}</Stack>
+          )}
+        </Box>
+      </Box>
+
+      {/* NOTIFICATIONS */}
+      <Dialog open={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+        <DialogTitle sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Box><Typography variant="h6" fontWeight={900}>Notifications</Typography><Typography variant="caption" color="text.secondary">{notifications.length} total</Typography></Box><IconButton onClick={() => setNotifDrawerOpen(false)}><Close /></IconButton></DialogTitle>
+        <DialogContent sx={{ px: 3, py: 1 }}>
+          {notifications.length === 0 ? <Box sx={{ textAlign: 'center', py: 4 }}><Notifications sx={{ fontSize: 40, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No notifications.</Typography></Box> : (
+            <Stack spacing={1.5}>{notifications.map((n, i) => (<Paper key={i} variant="outlined" sx={{ p: 2.5, borderRadius: 3, borderColor: n.read ? 'divider' : 'primary.main' }}><Typography variant="subtitle2" fontWeight={900}>{n.title || "Notification"}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>{n.message}</Typography><Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>{n.timestamp?.toDate ? n.timestamp.toDate().toLocaleString() : "Now"}</Typography></Paper>))}</Stack>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PAYMENT */}
+      <Dialog open={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+        <DialogTitle sx={{ p: 3 }}><Typography variant="h6" fontWeight={900}>Semester Checkout</Typography><Typography variant="caption" color="text.secondary">Single payment for all courses</Typography></DialogTitle>
+        <DialogContent sx={{ px: 3, py: 2 }}>
+          <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.15), p: 2.5, borderRadius: 3, mb: 3 }}>
+            <Typography variant="subtitle2" fontWeight={900} color="primary.main">{cart.length} Course(s) · {cartCredits} Credits</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>{cart.map(c => c.name).join(", ")}</Typography>
+            <Typography variant="h5" fontWeight={900} color="primary.main" sx={{ mt: 1 }}>Total: ${cartTotal.toLocaleString()}</Typography>
+          </Box>
+          <Stack spacing={2.5}>
+            <TextField label="Card Number" fullWidth placeholder="0000 0000 0000 0000" value={paymentForm.cardNumber} onChange={e => setPaymentForm({ ...paymentForm, cardNumber: e.target.value })} InputProps={{ sx: { borderRadius: 3 } }} />
+            <Grid container spacing={2}><Grid item xs={6}><TextField label="Expiry" fullWidth placeholder="MM/YY" value={paymentForm.expiry} onChange={e => setPaymentForm({ ...paymentForm, expiry: e.target.value })} InputProps={{ sx: { borderRadius: 3 } }} /></Grid><Grid item xs={6}><TextField label="CVV" fullWidth placeholder="123" value={paymentForm.cvv} onChange={e => setPaymentForm({ ...paymentForm, cvv: e.target.value })} InputProps={{ sx: { borderRadius: 3 } }} /></Grid></Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}><Button onClick={() => setPaymentModalOpen(false)} sx={{ fontWeight: 900, textTransform: 'none' }}>Cancel</Button><Button variant="contained" onClick={handleSemesterCheckout} disabled={processingPayment || !paymentForm.cardNumber || !paymentForm.expiry || !paymentForm.cvv} sx={{ borderRadius: 3, px: 4, fontWeight: 900, textTransform: 'none' }}>{processingPayment ? "Processing..." : `Pay $${cartTotal.toLocaleString()}`}</Button></DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={() => setSnackbar(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled" sx={{ fontWeight: 800, borderRadius: 3 }}>{snackbar.message}</Alert></Snackbar>
     </Box>
   );
 }

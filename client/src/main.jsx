@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import AuthProvider from './context/AuthContext.jsx';
+import { LanguageProvider } from './context/LanguageContext.jsx';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
       <ThemeContextProvider>
         <CssBaseline />
         <AuthProvider>
-          <App />
+          <LanguageProvider>
+            <App />
+          </LanguageProvider>
         </AuthProvider>
       </ThemeContextProvider>
     </BrowserRouter>

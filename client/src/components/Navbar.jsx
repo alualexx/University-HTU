@@ -37,12 +37,14 @@ import {
   Error as ErrorIcon,
   CheckCircle,
   Close as CloseIcon,
-  NotificationsNone,
   AssignmentInd,
   ArrowForward,
+  DarkMode,
+  LightMode,
 } from "@mui/icons-material";
 import { Alert, Collapse, alpha } from "@mui/material";
 import { useAuth, ROLE_DASHBOARD_ROUTES } from "../context/AuthContext";
+import { useColorMode } from "../context/ThemeContext";
 
 const Navbar = () => {
   const theme = useTheme();
@@ -50,6 +52,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
+  const { toggleColorMode } = useColorMode();
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -78,6 +81,9 @@ const Navbar = () => {
       } else {
         setActiveBroadcast(null);
       }
+    }, (error) => {
+      console.error("Broadcast fetch failed:", error);
+      setActiveBroadcast(null);
     });
 
     return () => unsubscribe();
@@ -98,13 +104,19 @@ const Navbar = () => {
     navigate(route);
   };
 
-  const menuItems = [
+  const publicMenuItems = [
     { label: "Home", path: "/" },
-    { label: "Courses", path: "/courses" },
-    { label: "Faculty", path: "/faculty" },
-    { label: "News", path: "/news" },
+    { label: "Departments", path: "/departments" },
+    { label: "About Us", path: "/about" },
     { label: "Admissions", path: "/apply" },
+    { label: "Track Application", path: "/track" },
   ];
+
+  const portalMenuItems = [
+    { label: "Dashboard", path: ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard" },
+  ];
+
+  const menuItems = isAuthenticated ? portalMenuItems : publicMenuItems;
 
   const isActive = (path) => location.pathname === path || (path === "/apply" && location.pathname.startsWith("/apply"));
 
@@ -343,16 +355,20 @@ const Navbar = () => {
 
             {/* Right side: notifications + auth */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              {!isMobile && (
-                <Tooltip title="Notifications">
-                  <IconButton
-                    color="inherit" size="small"
-                    sx={{ opacity: 0.7, "&:hover": { opacity: 1, bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
-                  >
-                    <NotificationsNone />
-                  </IconButton>
-                </Tooltip>
-              )}
+              {/* Dark Mode Toggle */}
+              <Tooltip title={theme.palette.mode === "dark" ? "Light Mode" : "Dark Mode"}>
+                <IconButton
+                  onClick={toggleColorMode}
+                  color="inherit" size="small"
+                  sx={{
+                    bgcolor: shouldShowGlass ? alpha(theme.palette.primary.main, 0.08) : "rgba(255,255,255,0.1)",
+                    "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.18) },
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {theme.palette.mode === "dark" ? <LightMode sx={{ fontSize: 20 }} /> : <DarkMode sx={{ fontSize: 20 }} />}
+                </IconButton>
+              </Tooltip>
 
               {isAuthenticated ? (
                 <>
