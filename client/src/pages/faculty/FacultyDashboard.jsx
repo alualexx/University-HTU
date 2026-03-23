@@ -5,7 +5,7 @@ import {
   Divider, IconButton, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, LinearProgress, List, ListItem, ListItemText,
   Tooltip, Stack, Badge, TextField, MenuItem, Dialog, DialogTitle,
-  DialogContent, DialogActions, useTheme, alpha,
+  DialogContent, DialogActions, useTheme, alpha, Drawer, useMediaQuery,
 } from "@mui/material";
 import {
   Business, People, School, Assignment, TrendingUp, Assessment,
@@ -87,6 +87,8 @@ export default function FacultyDashboard() {
 
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Data
   const [courses, setCourses]           = useState([]);
@@ -244,8 +246,7 @@ export default function FacultyDashboard() {
     </Box>
   );
 
-  const mainW = `calc(100% - ${sidebarOpen ? 264 : 72}px)`;
-  const mainML = `${sidebarOpen ? 264 : 72}px`;
+  const mainML = isMobile ? 0 : `${sidebarOpen ? 264 : 72}px`;
 
   /* ── Overview Tab Data ──────────────────────────────────────────────── */
   const enrollmentData = [
@@ -273,9 +274,26 @@ export default function FacultyDashboard() {
         <Box sx={{ position: "fixed", bottom: -100, left: 100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.1),transparent 70%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0 }} />
       </>}
 
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <Sidebar />
+      </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, ml: mainML, width: mainW, transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)", position: "relative", zIndex: 1 }}>
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: sidebarOpen ? 264 : 72, boxSizing: 'border-box' }
+        }}
+      >
+        <Sidebar />
+      </Drawer>
+
+      <Box component="main" sx={{ flexGrow: 1, ml: mainML, transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)", position: "relative", zIndex: 1, minWidth: 0 }}>
 
         {/* ── Top Bar ────────────────────────────────────────────────────── */}
         <Box sx={{
@@ -286,7 +304,7 @@ export default function FacultyDashboard() {
           borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(99,102,241,0.1)",
         }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {!sidebarOpen && <IconButton onClick={() => setSidebarOpen(true)} size="small"><MenuIcon /></IconButton>}
+            <IconButton onClick={() => isMobile ? setMobileOpen(true) : setSidebarOpen(p => !p)} size="small"><MenuIcon /></IconButton>
             <Typography variant="h6" fontWeight={900} color={isDark ? "white" : "#1e293b"} sx={{ letterSpacing: -0.5 }}>
               {TABS[activeTab]?.label}
             </Typography>

@@ -7,14 +7,14 @@ import {
   Tabs, Tab, Fade, Paper, LinearProgress, useTheme, Tooltip,
   Stack, Badge, Menu, MenuItem, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Collapse, Slide, Select, FormControl, InputLabel, alpha,
-  Drawer, List, ListItem, ListItemText, CircularProgress
+  Drawer, List, ListItem, ListItemText, CircularProgress, useMediaQuery
 } from "@mui/material";
 import {
   AccountBalance, Description, Assessment, Groups, CalendarMonth, 
   MonetizationOn, Email, MoreVert, ArrowForward, Security, Password,
   Add, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Dashboard, Business, People, School, CalendarToday,
-  MenuBook, Logout, LightMode, DarkMode, AssignmentInd
+  MenuBook, Logout, LightMode, DarkMode, AssignmentInd, Menu as MenuIcon
 } from "@mui/icons-material";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Legend, 
@@ -79,6 +79,7 @@ const CollegeAdminDashboard = () => {
   const { mode, toggleColorMode } = useColorMode();
   const { t } = useLanguage();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState(0);
   const [college, setCollege] = useState(null);
   const [departments, setDepartments] = useState([]);
@@ -90,7 +91,7 @@ const CollegeAdminDashboard = () => {
   const [deptForm, setDeptForm] = useState({ name: "", code: "", faculty: "", color: "#6366f1" });
   const [deptOtp, setDeptOtp] = useState("");
   const [deptLoading, setDeptLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const isDark = mode === 'dark';
 
@@ -254,76 +255,101 @@ const CollegeAdminDashboard = () => {
     { label: t("researchRate"), value: "88%", icon: <Assessment />, color: "#ec4899", trend: "+5.4%" },
   ];
 
+  const sidebarContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Avatar sx={{ bgcolor: college.color || 'primary.main', width: 40, height: 40, borderRadius: 2 }}>
+          <School />
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle2" fontWeight={1000} sx={{ lineHeight: 1.2 }}>{college.name}</Typography>
+          <Typography variant="caption" color="text.secondary">{t("collegeAdminDashboard")}</Typography>
+        </Box>
+      </Box>
+
+      <List sx={{ px: 2, mt: 4, flexGrow: 1 }}>
+        {navItems.map((item) => (
+          <ListItem
+            button
+            key={item.label}
+            onClick={() => { setActiveTab(item.index); setMobileDrawerOpen(false); }}
+            sx={{
+              mb: 1, borderRadius: 3,
+              bgcolor: activeTab === item.index ? alpha(college.color || theme.palette.primary.main, 0.1) : 'transparent',
+              color: activeTab === item.index ? (college.color || 'primary.main') : 'text.secondary',
+              px: 2, py: 1.5,
+              transition: '0.2s',
+              '&:hover': { bgcolor: alpha(college.color || theme.palette.primary.main, 0.05) }
+            }}
+          >
+            <Box sx={{ mr: 2, display: 'flex' }}>{item.icon}</Box>
+            <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === item.index ? 1000 : 700, fontSize: '0.9rem' }} />
+          </ListItem>
+        ))}
+      </List>
+
+      <Box sx={{ p: 3 }}>
+        <Button
+          fullWidth
+          startIcon={<Logout />}
+          variant="outlined"
+          onClick={logout}
+          sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, color: 'error.main', borderColor: alpha(theme.palette.error.main, 0.2) }}
+        >
+          {t("terminateSession")}
+        </Button>
+      </Box>
+    </Box>
+  );
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: isDark ? '#020617' : '#f1f5f9', color: isDark ? '#f8fafc' : '#0f172a', fontFamily: 'Outfit, sans-serif' }}>
-      {/* Sidebar Drawer */}
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box', background: isDark ? 'rgba(15,23,42,0.98)' : '#ffffff' }
+        }}
+      >
+        {sidebarContent}
+      </Drawer>
+
+      {/* Desktop Sidebar */}
       <Drawer
         variant="permanent"
         sx={{
-          width: sidebarOpen ? 280 : 80,
+          display: { xs: 'none', md: 'block' },
+          width: 280,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: sidebarOpen ? 280 : 80,
+            width: 280,
             boxSizing: 'border-box',
             borderRight: 'none',
             background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
-            transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            overflowX: 'hidden'
           },
         }}
       >
-        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: college.color || 'primary.main', width: 40, height: 40, borderRadius: 2 }}>
-            <School />
-          </Avatar>
-          {sidebarOpen && (
-            <Box>
-              <Typography variant="subtitle2" fontWeight={1000} sx={{ lineHeight: 1.2 }}>{college.name}</Typography>
-              <Typography variant="caption" color="text.secondary">{t("collegeAdminDashboard")}</Typography>
-            </Box>
-          )}
-        </Box>
-
-        <List sx={{ px: 2, mt: 4 }}>
-          {navItems.map((item) => (
-            <ListItem
-              button
-              key={item.label}
-              onClick={() => setActiveTab(item.index)}
-              sx={{
-                mb: 1, borderRadius: 3,
-                bgcolor: activeTab === item.index ? alpha(college.color || theme.palette.primary.main, 0.1) : 'transparent',
-                color: activeTab === item.index ? (college.color || 'primary.main') : 'text.secondary',
-                px: 2, py: 1.5,
-                transition: '0.2s',
-                '&:hover': { bgcolor: alpha(college.color || theme.palette.primary.main, 0.05) }
-              }}
-            >
-              <Box sx={{ mr: 2, display: 'flex' }}>{item.icon}</Box>
-              {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === item.index ? 1000 : 700, fontSize: '0.9rem' }} />}
-            </ListItem>
-          ))}
-        </List>
-
-        <Box sx={{ mt: 'auto', p: 3 }}>
-          <Button
-            fullWidth
-            startIcon={<Logout />}
-            variant="outlined"
-            onClick={logout}
-            sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, color: 'error.main', borderColor: alpha(theme.palette.error.main, 0.2) }}
-          >
-            {sidebarOpen ? t("terminateSession") : ""}
-          </Button>
-        </Box>
+        {sidebarContent}
       </Drawer>
 
       {/* Main Content */}
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 5 }, position: 'relative' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 5 }, position: 'relative', minWidth: 0 }}>
         <Box sx={{ position: 'absolute', top: -100, left: '10%', width: 400, height: 400, background: `radial-gradient(circle, ${alpha(college.color || '#6366f1', 0.15)} 0%, transparent 70%)`, filter: 'blur(60px)', zIndex: 0 }} />
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6, position: 'relative', zIndex: 1 }}>
+        {/* Mobile header with hamburger */}
+        {isMobile && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <IconButton onClick={() => setMobileDrawerOpen(true)} sx={{ color: 'text.primary' }}>
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" fontWeight={1000}>{college.name}</Typography>
+          </Box>
+        )}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 3, md: 6 }, position: 'relative', zIndex: 1 }}>
           <Box>
             <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>
               {navItems[activeTab].label}

@@ -5,14 +5,14 @@ import {
   Divider, LinearProgress, IconButton, Badge, Tooltip, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Stack, alpha, useTheme,
-  Snackbar, Alert, Paper, Checkbox, Drawer
+  Snackbar, Alert, Paper, Checkbox, Drawer, useMediaQuery
 } from "@mui/material";
 import {
   School, Book, Grade, Schedule, EmojiEvents,
   LightMode, DarkMode, Notifications, Dashboard, Campaign,
   CheckCircle, AccessTime, Warning, TrendingUp, MenuBook,
   AccountBalanceWallet, Receipt, CheckCircleOutline,
-  Close, Download, ShoppingCart, EventNote, Remove
+  Close, Download, ShoppingCart, EventNote, Remove, Menu as MenuIcon
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
@@ -178,7 +178,9 @@ export default function StudentDashboard() {
   const { mode, toggleColorMode } = useColorMode();
   const isDark = mode === 'dark';
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [notifications, setNotifications] = useState([]);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
@@ -304,72 +306,95 @@ export default function StudentDashboard() {
   const tC = { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`, py: 2 };
   const cardSx = { background: isDark ? "rgba(15,23,42,0.6)" : "#fff", backdropFilter: "blur(20px)", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.03)" };
 
+  const sidebarContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', background: isDark ? 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' : 'linear-gradient(180deg, #0369a1 0%, #0284c7 100%)' }}>
+      <Box sx={{ p: 3, pt: 4, textAlign: 'center' }}>
+        <Avatar src={user?.profileImage} sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: 'white', color: '#0284c7', fontWeight: 900, fontSize: '1.8rem', border: '3px solid rgba(255,255,255,0.25)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          {(user?.name || "S")[0].toUpperCase()}
+        </Avatar>
+        <Typography variant="subtitle1" fontWeight={900} color="white" sx={{ lineHeight: 1.2 }}>{user?.name || "Student"}</Typography>
+        <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={700}>{user?.studentId || user?.email}</Typography>
+        <Chip label={CURRENT_SEMESTER} size="small" sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.65rem' }} />
+      </Box>
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
+      <List sx={{ px: 1.5, py: 2, flex: 1 }}>
+        {NAV_ITEMS.map((item, i) => (
+          <ListItemButton
+            key={i}
+            selected={activeTab === i}
+            onClick={() => { setActiveTab(i); setMobileNavOpen(false); }}
+            sx={{
+              borderRadius: 3, mb: 0.5, py: 1.3, px: 2,
+              color: activeTab === i ? 'white' : 'rgba(255,255,255,0.6)',
+              bgcolor: activeTab === i ? 'rgba(255,255,255,0.15)' : 'transparent',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+              transition: '0.2s',
+            }}
+          >
+            <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+              {i === 4 ? (
+                <Badge badgeContent={cart.length} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }}>{item.icon}</Badge>
+              ) : item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === i ? 900 : 700, fontSize: '0.88rem' }} />
+          </ListItemButton>
+        ))}
+      </List>
+      <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+          {mode === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
+        <Button fullWidth onClick={logout} sx={{ color: 'rgba(255,200,200,0.8)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, mt: 0.5, '&:hover': { bgcolor: 'rgba(255,0,0,0.1)', color: '#fca5a5' } }}>
+          Sign Out
+        </Button>
+      </Box>
+    </Box>
+  );
+
   /* ─── RENDER ────────────────────────────────────────────────────────── */
   return (
     <Box sx={{ display: 'flex', bgcolor: "background.default", minHeight: "100vh", color: "text.primary" }}>
 
-      {/* ═══ SIDEBAR ═══ */}
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: SIDEBAR_WIDTH, boxSizing: 'border-box', border: 'none' }
+        }}
+      >
+        {sidebarContent}
+      </Drawer>
+
+      {/* Desktop Sidebar */}
       <Box sx={{
         width: SIDEBAR_WIDTH, flexShrink: 0, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 1200,
-        background: isDark
-          ? "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)"
-          : "linear-gradient(180deg, #0369a1 0%, #0284c7 100%)",
-        display: 'flex', flexDirection: 'column',
+        display: { xs: 'none', md: 'flex' }, flexDirection: 'column',
         borderRight: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none',
         boxShadow: '4px 0 24px rgba(0,0,0,0.1)',
       }}>
-        {/* Profile section */}
-        <Box sx={{ p: 3, pt: 4, textAlign: 'center' }}>
-          <Avatar src={user?.profileImage} sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: 'white', color: '#0284c7', fontWeight: 900, fontSize: '1.8rem', border: '3px solid rgba(255,255,255,0.25)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-            {(user?.name || "S")[0].toUpperCase()}
-          </Avatar>
-          <Typography variant="subtitle1" fontWeight={900} color="white" sx={{ lineHeight: 1.2 }}>{user?.name || "Student"}</Typography>
-          <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={700}>{user?.studentId || user?.email}</Typography>
-          <Chip label={CURRENT_SEMESTER} size="small" sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.65rem' }} />
-        </Box>
-
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
-
-        {/* Navigation */}
-        <List sx={{ px: 1.5, py: 2, flex: 1 }}>
-          {NAV_ITEMS.map((item, i) => (
-            <ListItemButton
-              key={i}
-              selected={activeTab === i}
-              onClick={() => setActiveTab(i)}
-              sx={{
-                borderRadius: 3, mb: 0.5, py: 1.3, px: 2,
-                color: activeTab === i ? 'white' : 'rgba(255,255,255,0.6)',
-                bgcolor: activeTab === i ? 'rgba(255,255,255,0.15)' : 'transparent',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
-                transition: '0.2s',
-              }}
-            >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-                {i === 4 ? (
-                  <Badge badgeContent={cart.length} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }}>{item.icon}</Badge>
-                ) : item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === i ? 900 : 700, fontSize: '0.88rem' }} />
-            </ListItemButton>
-          ))}
-        </List>
-
-        {/* Bottom controls */}
-        <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
-            {mode === "dark" ? "Light Mode" : "Dark Mode"}
-          </Button>
-          <Button fullWidth onClick={logout} sx={{ color: 'rgba(255,200,200,0.8)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, mt: 0.5, '&:hover': { bgcolor: 'rgba(255,0,0,0.1)', color: '#fca5a5' } }}>
-            Sign Out
-          </Button>
-        </Box>
+        {sidebarContent}
       </Box>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <Box sx={{ ml: `${SIDEBAR_WIDTH}px`, flex: 1, minHeight: '100vh' }}>
-        {/* Top bar */}
-        <Box sx={{ px: 5, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ ml: { xs: 0, md: `${SIDEBAR_WIDTH}px` }, flex: 1, minHeight: '100vh', minWidth: 0 }}>
+        {/* Mobile Top Bar */}
+        {isMobile && (
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? '#0f172a' : '#0284c7', color: 'white' }}>
+            <IconButton onClick={() => setMobileNavOpen(true)} sx={{ color: 'white' }}>
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="subtitle1" fontWeight={900}>{NAV_ITEMS[activeTab]?.label}</Typography>
+            <IconButton onClick={() => setNotifDrawerOpen(true)} sx={{ color: 'white' }}>
+              <Badge badgeContent={unreadNotifs} color="error"><Notifications /></Badge>
+            </IconButton>
+          </Box>
+        )}
+        {/* Top bar (desktop) */}
+        <Box sx={{ px: { xs: 2, md: 5 }, py: 2.5, display: { xs: 'none', md: 'flex' }, justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box>
             <Typography variant="h5" fontWeight={900}>{NAV_ITEMS[activeTab]?.label}</Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={700}>{CURRENT_SEMESTER} · Student Portal</Typography>

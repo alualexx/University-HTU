@@ -4,7 +4,7 @@ import { jsPDF } from "jspdf";
 import {
   Avatar, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
   Alert, CircularProgress, IconButton, InputAdornment, Drawer, ListItemIcon,
-  ListItemButton, Tooltip, Stack, Grid, Typography, Box, Button, List, ListItem, ListItemText, Divider
+  ListItemButton, Tooltip, Stack, Grid, Typography, Box, Button, List, ListItem, ListItemText, Divider, useMediaQuery
 } from "@mui/material";
 import {
   People, School, Book, Assessment, Settings, PersonAdd,
@@ -61,8 +61,10 @@ const AdminDashboard = () => {
   // Navigation and Layout State
   const [activeTab, setActiveTab] = React.useState("overview");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const glassStyle = {
     background: mode === 'dark' ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.6)',
@@ -686,12 +688,66 @@ const AdminDashboard = () => {
     { id: "security", label: t("security"), icon: <Security /> },
   ];
 
+  const adminSidebarContent = (
+    <>
+      <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "primary.main", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><School /></Box>
+        {sidebarOpen && <Typography variant="h6" fontWeight={1000}>{t("adminCore")}</Typography>}
+      </Box>
+      <List sx={{ px: 2, flex: 1 }}>
+        {menuItems.map((item) => (
+          <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+            <ListItemButton
+              onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+              sx={{
+                borderRadius: 3, py: 1.5,
+                bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
+                color: activeTab === item.id 
+                  ? theme.palette.primary.main 
+                  : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 44, color: activeTab === item.id ? "primary.main" : "inherit" }}>{item.icon}</ListItemIcon>
+              {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 800, fontSize: "0.85rem" }} />}
+              {sidebarOpen && item.badge > 0 && <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontWeight: 900, fontSize: '0.6rem' }} />}
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Box sx={{ p: 2 }}>
+        <Button fullWidth variant="contained" color="error" startIcon={<Logout />} onClick={handleLogout} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>
+          {sidebarOpen ? t("terminateSession") : ""}
+        </Button>
+      </Box>
+    </>
+  );
+
   return (
     <Box sx={{ display: "flex", bgcolor: mode === 'dark' ? "#0a0a0f" : "#f8fafc", minHeight: "100vh" }}>
-      {/* Sidebar Component */}
+      {/* Mobile Sidebar Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            width: 280, boxSizing: 'border-box',
+            background: mode === 'dark' ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
+            backdropFilter: 'blur(20px)',
+          }
+        }}
+      >
+        {adminSidebarContent}
+      </Drawer>
+
+      {/* Desktop Sidebar */}
       <Drawer
         variant="permanent"
         sx={{
+          display: { xs: 'none', md: 'block' },
           width: sidebarOpen ? 280 : 88, flexShrink: 0,
           "& .MuiDrawer-paper": {
             width: sidebarOpen ? 280 : 88, boxSizing: "border-box",
@@ -707,42 +763,13 @@ const AdminDashboard = () => {
           }
         }}
       >
-        <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 2 }}>
-          <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "primary.main", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><School /></Box>
-          {sidebarOpen && <Typography variant="h6" fontWeight={1000}>{t("adminCore")}</Typography>}
-        </Box>
-        <List sx={{ px: 2, flex: 1 }}>
-          {menuItems.map((item) => (
-            <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton
-                onClick={() => setActiveTab(item.id)}
-                sx={{
-                  borderRadius: 3, py: 1.5,
-                  bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-                  color: activeTab === item.id 
-                    ? theme.palette.primary.main 
-                    : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 44, color: activeTab === item.id ? "primary.main" : "inherit" }}>{item.icon}</ListItemIcon>
-                {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 800, fontSize: "0.85rem" }} />}
-                {sidebarOpen && item.badge > 0 && <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontWeight: 900, fontSize: '0.6rem' }} />}
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        <Box sx={{ p: 2 }}>
-          <Button fullWidth variant="contained" color="error" startIcon={<Logout />} onClick={handleLogout} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>
-            {sidebarOpen ? t("terminateSession") : ""}
-          </Button>
-        </Box>
+        {adminSidebarContent}
       </Drawer>
 
-      <Box sx={{ flexGrow: 1, p: { xs: 2, md: 5 } }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 6 }}>
+      <Box sx={{ flexGrow: 1, p: { xs: 2, md: 5 }, minWidth: 0 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 3, md: 6 }, flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ bgcolor: alpha(theme.palette.divider, 0.05) }}><MenuIcon /></IconButton>
+            <IconButton onClick={() => isMobile ? setMobileDrawerOpen(true) : setSidebarOpen(!sidebarOpen)} sx={{ bgcolor: alpha(theme.palette.divider, 0.05) }}><MenuIcon /></IconButton>
             <Box>
               <Typography variant="h4" fontWeight={900}>{menuItems.find(i => i.id === activeTab)?.label}</Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={800}>UNIVERSITY OPERATIONAL COMMAND · {new Date().toLocaleDateString()}</Typography>

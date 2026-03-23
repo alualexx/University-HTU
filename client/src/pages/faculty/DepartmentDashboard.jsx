@@ -6,7 +6,7 @@ import {
   TableContainer, TableHead, TableRow, LinearProgress, useTheme,
   List, ListItem, ListItemIcon, ListItemText,
   Tooltip, Stack, Badge, Tabs, Tab, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, MenuItem
+  TextField, MenuItem, Drawer, useMediaQuery
 } from "@mui/material";
 import {
   Business, People, School, Assignment, TrendingUp, Assessment,
@@ -65,6 +65,8 @@ const DepartmentDashboard = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [appSubTab, setAppSubTab] = useState(0); // 0: Pending, 1: History
@@ -416,7 +418,7 @@ const DepartmentDashboard = () => {
             <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
               <Button
                 fullWidth
-                onClick={() => setActiveTab(item.index)}
+        onClick={() => { setActiveTab(item.index); setMobileOpen(false); }}
                 startIcon={item.icon}
                 sx={{
                   justifyContent: sidebarOpen ? "flex-start" : "center",
@@ -490,10 +492,28 @@ const DepartmentDashboard = () => {
 
   return (
     <Box sx={{ display: 'flex', bgcolor: isDark ? "#0f172a" : "#f8fafc", minHeight: "100vh" }}>
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <Sidebar />
+      </Box>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { width: sidebarOpen ? 280 : 80, boxSizing: 'border-box' }
+        }}
+      >
+        <Sidebar />
+      </Drawer>
+
       <Box component="main" sx={{
         flexGrow: 1,
-        ml: `${sidebarOpen ? 280 : 80}px`,
+        ml: { xs: 0, md: `${sidebarOpen ? 280 : 80}px` },
         transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         p: 0,
         minWidth: 0,
@@ -510,7 +530,14 @@ const DepartmentDashboard = () => {
           
           <Container maxWidth="xl">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: { xs: 1, md: 3 }, alignItems: 'center' }}>
+              <IconButton
+                onClick={() => setMobileOpen(true)}
+                sx={{ display: { xs: 'flex', md: 'none' }, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}
+              >
+                <MenuIcon />
+              </IconButton>
+
                 <Avatar sx={{
                   width: 64, height: 64,
                   bgcolor: 'white', color: '#1e293b',
