@@ -45,6 +45,8 @@ import {
 import { Alert, Collapse, alpha } from "@mui/material";
 import { useAuth, ROLE_DASHBOARD_ROUTES } from "../context/AuthContext";
 import { useColorMode } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSwitcher from "./common/LanguageSwitcher";
 
 const Navbar = () => {
   const theme = useTheme();
@@ -53,6 +55,7 @@ const Navbar = () => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { toggleColorMode } = useColorMode();
+  const { t } = useLanguage();
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -71,13 +74,19 @@ const Navbar = () => {
     const broadcastQuery = query(
       collection(db, "system_broadcasts"),
       where("active", "==", true),
-      orderBy("createdAt", "desc"),
-      limit(1)
+      limit(10) // Fetch a few to sort in memory if needed, though limit(1) without order is random-ish
     );
 
     const unsubscribe = onSnapshot(broadcastQuery, (snapshot) => {
       if (!snapshot.empty) {
-        setActiveBroadcast({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+        // Sort by createdAt desc in memory to avoid index requirement
+        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        setActiveBroadcast(docs[0]);
       } else {
         setActiveBroadcast(null);
       }
@@ -105,11 +114,11 @@ const Navbar = () => {
   };
 
   const publicMenuItems = [
-    { label: "Home", path: "/" },
-    { label: "Departments", path: "/departments" },
-    { label: "About Us", path: "/about" },
-    { label: "Admissions", path: "/apply" },
-    { label: "Track Application", path: "/track" },
+    { label: t("home"), path: "/" },
+    { label: t("departments"), path: "/departments" },
+    { label: t("aboutUs"), path: "/about" },
+    { label: t("admissions"), path: "/apply" },
+    { label: t("trackApplication"), path: "/track" },
   ];
 
   const portalMenuItems = [
@@ -138,20 +147,24 @@ const Navbar = () => {
       {/* Logo */}
       <Box sx={{ px: 3, mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
         <Box sx={{
-          p: 1, borderRadius: "12px",
-          background: "linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)",
-          display: "flex", boxShadow: "0 4px 12px rgba(25,118,210,0.35)"
+          width: 40, height: 40, overflow: "hidden", borderRadius: "10px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          bgcolor: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
         }}>
-          <School sx={{ color: "white", fontSize: 24 }} />
+          <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 900, color: "primary.main", lineHeight: 1 }}>
-            UNIVERSITY
+            {t("universityName")}
           </Typography>
           <Typography variant="caption" sx={{ color: "text.secondary", letterSpacing: 1 }}>
             Portal System
           </Typography>
         </Box>
+      </Box>
+
+      <Box sx={{ px: 3, mb: 3 }}>
+        <LanguageSwitcher />
       </Box>
 
       <List sx={{ px: 2, flexGrow: 1 }}>
@@ -196,7 +209,7 @@ const Navbar = () => {
               onClick={() => { handleLogout(); setMobileOpen(false); }}
               sx={{ borderRadius: "12px", textTransform: "none", py: 1.2, fontWeight: 700 }}
             >
-              Sign Out
+              {t("signOut")}
             </Button>
           </Box>
         ) : (
@@ -206,7 +219,7 @@ const Navbar = () => {
               sx={{ borderRadius: "12px", textTransform: "none", py: 1.2, fontWeight: 700 }}
               onClick={() => setMobileOpen(false)}
             >
-              Login
+              {t("portalLogin")}
             </Button>
             <Button
               fullWidth variant="contained" component={RouterLink} to="/apply"
@@ -219,7 +232,7 @@ const Navbar = () => {
                 "&:hover": { background: "linear-gradient(135deg, #c2410c, #ea580c)" }
               }}
             >
-              Apply Now
+              {t("applyNow")}
             </Button>
           </Box>
         )}
@@ -269,16 +282,12 @@ const Navbar = () => {
               }}
             >
               <Box sx={{
-                p: 0.8, borderRadius: "12px",
-                background: shouldShowGlass
-                  ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
-                  : "white",
-                display: "flex", mr: 1.5,
-                boxShadow: shouldShowGlass
-                  ? "0 4px 12px rgba(25,118,210,0.25)"
-                  : "0 4px 12px rgba(0,0,0,0.1)"
+                width: 40, height: 40, overflow: "hidden", borderRadius: "10px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                bgcolor: "white", boxShadow: shouldShowGlass ? "0 4px 12px rgba(0,0,0,0.08)" : "0 4px 12px rgba(0,0,0,0.15)",
+                mr: 1.5, transition: "all 0.3s ease"
               }}>
-                <School sx={{ color: shouldShowGlass ? "white" : "primary.main", fontSize: 24 }} />
+                <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
               </Box>
               <Box sx={{ display: { xs: "none", sm: "block" } }}>
                 <Typography variant="h6" sx={{
@@ -289,7 +298,7 @@ const Navbar = () => {
                   WebkitBackgroundClip: shouldShowGlass ? "text" : "none",
                   WebkitTextFillColor: shouldShowGlass ? "transparent" : "white",
                 }}>
-                  UNIVERSITY
+                  {t("universityName")}
                 </Typography>
                 <Typography variant="caption" sx={{
                   letterSpacing: 1.5, fontWeight: 600, fontSize: "0.6rem",
@@ -355,6 +364,8 @@ const Navbar = () => {
 
             {/* Right side: notifications + auth */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {!isMobile && <LanguageSwitcher variant="icon" />}
+              
               {/* Dark Mode Toggle */}
               <Tooltip title={theme.palette.mode === "dark" ? "Light Mode" : "Dark Mode"}>
                 <IconButton
@@ -427,11 +438,11 @@ const Navbar = () => {
                     <Box sx={{ p: 1.5 }}>
                       <MenuItem onClick={handleDashboardClick} sx={{ borderRadius: "12px", py: 1.6, mb: 0.5 }}>
                         <ListItemIcon><Dashboard fontSize="small" sx={{ color: "primary.main" }} /></ListItemIcon>
-                        <ListItemText primary="Dashboard" primaryTypographyProps={{ fontWeight: 700 }} />
+                        <ListItemText primary={t("dashboard")} primaryTypographyProps={{ fontWeight: 700 }} />
                       </MenuItem>
                       <MenuItem onClick={handleLogout} sx={{ borderRadius: "12px", py: 1.6, color: "error.main" }}>
                         <ListItemIcon><Logout fontSize="small" sx={{ color: "error.main" }} /></ListItemIcon>
-                        <ListItemText primary="Sign Out" primaryTypographyProps={{ fontWeight: 700 }} />
+                        <ListItemText primary={t("signOut")} primaryTypographyProps={{ fontWeight: 700 }} />
                       </MenuItem>
                     </Box>
                   </Menu>
@@ -447,7 +458,7 @@ const Navbar = () => {
                         "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.06) }
                       }}
                     >
-                      Login
+                      {t("portalLogin")}
                     </Button>
                     <Button
                       component={RouterLink} to="/apply"
@@ -467,7 +478,7 @@ const Navbar = () => {
                         transition: "all 0.25s ease",
                       }}
                     >
-                      Apply Now
+                      {t("applyNow")}
                     </Button>
                   </Box>
                 )

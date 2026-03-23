@@ -1,8 +1,9 @@
 import React from "react";
 import {
   Box, Typography, Button, Grid, Card, CardContent, Chip, Stack, IconButton, Tooltip,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, alpha, useTheme
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Campaign, Add, Edit, Delete, AccessTime, Public, School, Group, Newspaper
 } from "@mui/icons-material";

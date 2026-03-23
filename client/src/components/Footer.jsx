@@ -9,10 +9,12 @@ import {
   ArrowForward, AssignmentInd, AccessTime, CheckCircle,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext";
 
 const Footer = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const { t } = useLanguage();
 
   const quickLinks = [
     { label: "Home", path: "/" },
@@ -76,15 +78,15 @@ const Footer = () => {
             <Stack spacing={3}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <Box sx={{
-                  p: 1, borderRadius: "12px",
-                  background: "linear-gradient(135deg, #1976d2, #0d47a1)",
-                  display: "flex", boxShadow: "0 4px 16px rgba(25,118,210,0.4)"
+                  width: 44, height: 44, overflow: "hidden", borderRadius: "10px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  bgcolor: "white", boxShadow: "0 4px 16px rgba(0,0,0,0.1)"
                 }}>
-                  <School sx={{ color: "white", fontSize: 24 }} />
+                  <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 </Box>
                 <Box>
-                  <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.5px", lineHeight: 1 }}>
-                    UNIVERSITY
+                  <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.5px", lineHeight: 1, color: textColorPrimary }}>
+                    {t("universityName")}
                   </Typography>
                   <Typography variant="caption" sx={{ color: textColorSecondary, letterSpacing: 2, fontWeight: 700 }}>
                     PORTAL SYSTEM

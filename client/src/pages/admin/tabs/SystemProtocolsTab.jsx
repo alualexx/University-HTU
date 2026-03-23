@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Box, Card, Typography, Stack, Switch, Button, CircularProgress, alpha, useTheme
+  Box, Card, Typography, Stack, Switch, Button, CircularProgress, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Security, Settings
 } from "@mui/icons-material";

@@ -129,6 +129,7 @@ export default function TeacherDashboard() {
     const navigate = useNavigate();
     const { mode, toggleColorMode } = useColorMode();
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [activeTab, setActiveTab] = useState(0);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState("CS301");

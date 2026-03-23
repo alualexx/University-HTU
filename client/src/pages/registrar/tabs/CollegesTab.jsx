@@ -122,7 +122,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
       </Box>
 
       <Grid container spacing={3}>
-        {colleges.length === 0 ? (
+        {colleges?.length === 0 ? (
           <Grid item xs={12}>
             <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
               <Business sx={{ fontSize: 80, mb: 2 }} />
@@ -130,7 +130,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
             </Box>
           </Grid>
         ) : (
-          colleges.map((college) => (
+          colleges?.map((college) => (
             <Grid item xs={12} sm={6} md={4} key={college.id}>
               <Card sx={{ 
                 ...glassStyle, 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Container, Grid, Card, CardContent, Typography, Box, Button,
   Avatar, Chip, List, ListItem, ListItemIcon, ListItemText, ListItemButton,
@@ -87,7 +86,7 @@ function drawPDFHeader(pdf, title, subtitle) {
   pdf.rect(0, 0, 210, 38, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(20); pdf.setFont(undefined, 'bold');
-  pdf.text("HTU UNIVERSITY", 105, 16, { align: 'center' });
+  pdf.text("ALEX UNIVERSITY", 105, 16, { align: 'center' });
   pdf.setFontSize(10); pdf.setFont(undefined, 'normal');
   pdf.text(title, 105, 25, { align: 'center' });
   if (subtitle) { pdf.setFontSize(8); pdf.text(subtitle, 105, 32, { align: 'center' }); }
@@ -123,7 +122,7 @@ function drawPDFFooter(pdf, y) {
   pdf.setDrawColor(200, 200, 200); pdf.line(25, y, 185, y); y += 8;
   pdf.setFontSize(8); pdf.setTextColor(140, 140, 140);
   pdf.text(`Document generated: ${new Date().toLocaleString()}`, 25, y);
-  pdf.text("HTU University — Official Document", 185, y, { align: 'right' });
+  pdf.text("Alex University — Official Document", 185, y, { align: 'right' });
 }
 
 function generateSemesterSlipPDF(user, courses) {
@@ -135,17 +134,17 @@ function generateSemesterSlipPDF(user, courses) {
   info.forEach(([l, v]) => { pdf.setFont(undefined, 'bold'); pdf.text(`${l}:`, 25, y); pdf.setFont(undefined, 'normal'); pdf.text(v, 75, y); y += 8; });
   y += 5;
   pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.setTextColor(37, 99, 235); pdf.text("Registered Courses", 25, y); y += 10;
-  const rows = myActiveCourses.map((c, i) => [
+  const rows = courses?.map((c, i) => [
     (i + 1).toString(),
     c.name,
     c.code || "—",
     (c.credits || 3).toString(),
     `$${(Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT).toLocaleString()}`
-  ]);
+  ]) || [];
   y = drawPDFTable(pdf, ["#", "Course", "Code", "Credits", "Tuition"], rows, y);
   y += 5;
-  const totalCredits = myActiveCourses.reduce((s, c) => s + (Number(c.credits) || 3), 0);
-  const totalTuition = myActiveCourses.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0);
+  const totalCredits = courses?.reduce((s, c) => s + (Number(c.credits) || 3), 0) || 0;
+  const totalTuition = courses?.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0) || 0;
   pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(50, 50, 50);
   pdf.text(`Total Credits: ${totalCredits}`, 25, y);
   pdf.text(`Total Tuition: $${totalTuition.toLocaleString()}`, 120, y);
@@ -176,7 +175,6 @@ function generateReceiptPDF(user, payment) {
 /* ─── Main Component ──────────────────────────────────────────────────── */
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
   const isDark = mode === 'dark';
   const theme = useTheme();
@@ -192,6 +190,7 @@ export default function StudentDashboard() {
   const [newsList, setNewsList] = useState([]);
   const [tuitionPayments, setTuitionPayments] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [transcriptData, setTranscriptData] = useState(null);
 
   const [cart, setCart] = useState([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -212,6 +211,13 @@ export default function StudentDashboard() {
       if (n.length > prevNotifCount.current && prevNotifCount.current > 0) setSnackbar({ open: true, message: n[0].message || "New notification", severity: "info" });
       prevNotifCount.current = n.length; setNotifications(n);
     }, () => {}));
+    unsubs.push(onSnapshot(query(collection(db, "transcripts"), where("studentUid", "==", user.uid)), s => {
+      if (!s.empty) {
+        setTranscriptData({ id: s.docs[0].id, ...s.docs[0].data() });
+      } else {
+        setTranscriptData(null);
+      }
+    }));
 
     // Phase 18: System Integrity Bridge
     unsubs.push(onSnapshot(doc(db, "system_settings", "registrar"), (snap) => {
@@ -227,18 +233,18 @@ export default function StudentDashboard() {
   }, [user?.uid]);
 
   // Derived
-  const myActiveCourses = enrollments.filter(e => e.status === "approved" || e.status === "enrolled").map((e, i) => {
-    const c = availableCourses.find(c => c.id === e.courseId) || {};
+  const myActiveCourses = enrollments?.filter(e => e.status === "approved" || e.status === "enrolled")?.map((e, i) => {
+    const c = availableCourses?.find(c => c.id === e.courseId) || {};
     return { ...c, enrollmentId: e.id, grade: e.grade || "N/A", color: courseColors[i % courseColors.length] };
-  }).filter(c => c.name);
-  const totalCredits = myActiveCourses.reduce((s, c) => s + (Number(c.credits) || 3), 0);
-  const earnedCredits = enrollments.filter(e => e.grade && e.grade !== "F" && e.grade !== "N/A").reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 0); }, 0);
+  })?.filter(c => c.name) || [];
+  const totalCredits = myActiveCourses?.reduce((s, c) => s + (Number(c.credits) || 3), 0) || 0;
+  const earnedCredits = enrollments?.filter(e => e.grade && e.grade !== "F" && e.grade !== "N/A")?.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 0); }, 0) || 0;
   const requiredCredits = 120;
-  const gradedE = enrollments.filter(e => e.grade && gradeToPoints[e.grade] !== undefined);
+  const gradedE = enrollments?.filter(e => e.grade && gradeToPoints[e.grade] !== undefined) || [];
   const gpa = gradedE.length > 0
-    ? gradedE.reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (gradeToPoints[e.grade] || 0) * (c ? (Number(c.credits) || 3) : 3); }, 0) / gradedE.reduce((s, e) => { const c = availableCourses.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 3); }, 0)
+    ? gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (gradeToPoints[e.grade] || 0) * (c ? (Number(c.credits) || 3) : 3); }, 0) / gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 3); }, 0)
     : 3.80;
-   const mySchedules = schedules.filter(s => myActiveCourses.some(c => c.id === s.courseId || c.name === s.courseName)).sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+   const mySchedules = schedules?.filter(s => myActiveCourses?.some(c => c.id === s.courseId || c.name === s.courseName))?.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)) || [];
   
   // Year/Semester Filtering Logic
   const isMyWindow = !systemConfig.registrationLock && Number(user?.year) === Number(systemConfig.targetYear);
@@ -247,10 +253,10 @@ export default function StudentDashboard() {
     return Number(c.year) === Number(user?.year) && Number(c.semester) === Number(systemConfig.targetSemester);
   });
 
-  const alreadyEnrolledIds = enrollments.map(e => e.courseId);
+  const alreadyEnrolledIds = enrollments?.map(e => e.courseId) || [];
   const cartCredits = cart.reduce((s, c) => s + (Number(c.credits) || 3), 0);
   const cartTotal = cart.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0);
-  const unreadNotifs = notifications.filter(n => !n.read).length;
+  const unreadNotifs = notifications?.filter(n => !n.read)?.length || 0;
 
   const toggleCart = (course) => setCart(prev => prev.find(c => c.id === course.id) ? prev.filter(c => c.id !== course.id) : [...prev, course]);
 
@@ -279,13 +285,16 @@ export default function StudentDashboard() {
       setPaymentModalOpen(false); setPaymentForm({ cardNumber: "", expiry: "", cvv: "" }); setCart([]);
       setSnackbar({ open: true, message: "Registration submitted! Waiting for approval.", severity: "success" });
     } catch (err) {
+      console.error(err);
       setSnackbar({ open: true, message: "Payment failed.", severity: "error" });
     } finally { setProcessingPayment(false); }
   };
 
-  const gpaRaw = Math.round(gpa * 100);
+  const gpaRaw = transcriptData?.cumulativeGPA 
+    ? Math.round(transcriptData.cumulativeGPA * 100) 
+    : Math.round(gpa * 100);
   const stats = [
-    { label: "GPA", raw: gpaRaw, isGpa: true, suffix: "/ 4.00", gradient: gradients[0], icon: <EmojiEvents />, progress: (gpa / 4.0) * 100 },
+    { label: "GPA", raw: gpaRaw, isGpa: true, suffix: "/ 4.00", gradient: gradients[0], icon: <EmojiEvents />, progress: (gpaRaw / 400) * 100 },
     { label: "Courses", raw: myActiveCourses.length, isGpa: false, suffix: "Active", gradient: gradients[1], icon: <School />, progress: myActiveCourses.length > 0 ? Math.min(myActiveCourses.length / 6 * 100, 100) : 0 },
     { label: "Credits", raw: totalCredits, isGpa: false, suffix: `/ ${requiredCredits}`, gradient: gradients[2], icon: <Book />, progress: Math.min((totalCredits / requiredCredits) * 100, 100) },
     { label: "News", raw: newsList.length, isGpa: false, suffix: "Updates", gradient: gradients[3], icon: <Campaign />, progress: newsList.length > 0 ? 100 : 0 },
@@ -462,12 +471,12 @@ export default function StudentDashboard() {
             </Box>
           )}
 
-          {/* TAB 3: GRADES */}
+          {/* TAB 3: GRADES & TRANSCRIPTS */}
           {activeTab === 3 && (
             <Grid container spacing={4}>
               <Grid item xs={12} md={4}>
                 <Card sx={{ ...cardSx, borderRadius: 4, p: 4, textAlign: 'center' }}>
-                  <Box sx={{ width: 100, height: 100, borderRadius: '50%', mx: 'auto', mb: 2, background: gradients[0], display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 28px ${alpha('#6366f1', 0.3)}` }}><Typography variant="h3" fontWeight={900} color="white">{gpa.toFixed(2)}</Typography></Box>
+                  <Box sx={{ width: 100, height: 100, borderRadius: '50%', mx: 'auto', mb: 2, background: gradients[0], display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 28px ${alpha('#6366f1', 0.3)}` }}><Typography variant="h3" fontWeight={900} color="white">{transcriptData?.cumulativeGPA?.toFixed(2) || gpa.toFixed(2)}</Typography></Box>
                   <Typography variant="h6" fontWeight={900}>Cumulative GPA</Typography><Typography variant="caption" color="text.secondary">Out of 4.00</Typography>
                   <Divider sx={{ my: 2 }} />
                   <Grid container spacing={2}><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="primary.main">{totalCredits}</Typography><Typography variant="caption" color="text.secondary">Enrolled</Typography></Grid><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="success.main">{earnedCredits}</Typography><Typography variant="caption" color="text.secondary">Earned</Typography></Grid></Grid>
@@ -475,17 +484,64 @@ export default function StudentDashboard() {
               </Grid>
               <Grid item xs={12} md={8}>
                 <Card sx={{ ...cardSx, borderRadius: 4 }}><CardContent sx={{ p: 4 }}>
-                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Course Grades</Typography>
-                  {enrollments.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Grade sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No records.</Typography></Box> : (
-                    <TableContainer><Table>
-                      <TableHead><TableRow>{["Course", "Code", "Credits", "Grade", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                      <TableBody>{enrollments.map((e, i) => {
-                        const c = availableCourses.find(c => c.id === e.courseId) || {};
-                        const g = e.grade || "—";
-                        const gc = gradeToPoints[g] >= 3.0 ? 'success.main' : gradeToPoints[g] >= 2.0 ? 'warning.main' : g === "—" ? 'text.secondary' : 'error.main';
-                        return (<TableRow key={i} hover><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{e.courseName || c.name || "?"}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main">{c.code || "—"}</Typography></TableCell><TableCell sx={tC}>{c.credits || 3}</TableCell><TableCell sx={tC}><Chip label={g} size="small" sx={{ fontWeight: 900, color: gc }} /></TableCell><TableCell sx={tC}><Chip label={(e.status || "pending").replace(/_/g, ' ').toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: '0.6rem', height: 22, bgcolor: alpha(e.status === 'approved' || e.status === 'enrolled' ? '#10b981' : '#f59e0b', 0.1), color: e.status === 'approved' || e.status === 'enrolled' ? '#10b981' : '#f59e0b' }} /></TableCell></TableRow>);
-                      })}</TableBody>
-                    </Table></TableContainer>
+                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Official Transcript Records</Typography>
+                  {!transcriptData || !transcriptData.termRecords || transcriptData.termRecords.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 5 }}>
+                      <Grade sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} />
+                      <Typography color="text.secondary" fontWeight={800}>No official transcript records yet.</Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={4}>
+                      {transcriptData.termRecords.map((term, tIndex) => (
+                        <Paper key={tIndex} sx={{ p: 3, borderRadius: 4, bgcolor: isDark ? 'rgba(0,0,0,0.2)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="subtitle1" fontWeight={900}>{term.term}</Typography>
+                          </Box>
+                          <TableContainer sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Code</TableCell>
+                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Title</TableCell>
+                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Credits</TableCell>
+                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Grade</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {term.courses.length === 0 ? (
+                                  <TableRow>
+                                    <TableCell colSpan={4} sx={{ textAlign: 'center', py: 3, fontStyle: 'italic', color: 'text.secondary', border: 'none' }}>No courses added for this semester.</TableCell>
+                                  </TableRow>
+                                ) : (
+                                    term.courses.map((course, cIndex) => (
+                                    <TableRow key={cIndex} sx={{ 
+                                      '& td': { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}` },
+                                      opacity: course.status === 'Dropped' ? 0.5 : 1,
+                                      textDecoration: course.status === 'Dropped' ? 'line-through' : 'none'
+                                    }}>
+                                      <TableCell sx={{ fontWeight: 800 }}>{course.code}</TableCell>
+                                      <TableCell fontWeight={700}>{course.title}</TableCell>
+                                      <TableCell>{course.credits}</TableCell>
+                                      <TableCell>
+                                        <Chip 
+                                          label={course.status === 'Dropped' ? 'W/D' : course.grade} 
+                                          size="small" 
+                                          sx={{ 
+                                            fontWeight: 900, 
+                                            bgcolor: course.status === 'Dropped' ? alpha('#94a3b8', 0.1) : alpha('#10b981', 0.1), 
+                                            color: course.status === 'Dropped' ? '#64748b' : '#10b981' 
+                                          }} 
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))
+                                )}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Paper>
+                      ))}
+                    </Stack>
                   )}
                 </CardContent></Card>
               </Grid>

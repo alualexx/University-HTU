@@ -47,7 +47,7 @@ export default function AboutUs() {
             }}>
                 <Box sx={{ position: "absolute", top: -100, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", filter: "blur(60px)" }} />
                 <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1, textAlign: "center" }}>
-                    <Chip label="About HTU" sx={{ mb: 3, bgcolor: "rgba(255,255,255,0.1)", color: "white", fontWeight: 800, border: "1px solid rgba(255,255,255,0.2)" }} />
+                    <Chip label="About Alex University" sx={{ mb: 3, bgcolor: "rgba(255,255,255,0.1)", color: "white", fontWeight: 800, border: "1px solid rgba(255,255,255,0.2)" }} />
                     <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em", mb: 2, fontSize: { xs: "2.2rem", md: "3.5rem" } }}>
                         Building the <Box component="span" sx={{ color: "#60a5fa" }}>Leaders</Box> of Tomorrow
                     </Typography>

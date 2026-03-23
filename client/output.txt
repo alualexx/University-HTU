@@ -1,0 +1,13 @@
+
+D:\Alex_File\university-system\client\src\pages\faculty\CollegeAdminDashboard.jsx
+  30:41  error    'doc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                   no-unused-vars
+  30:46  error    'updateDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                             no-unused-vars
+  31:28  error    'getDocs' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                               no-unused-vars
+  31:37  error    'deleteDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                             no-unused-vars
+  31:48  error    'orderBy' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                               no-unused-vars
+  31:57  error    'limit' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                 no-unused-vars
+  49:6   warning  React Hook useEffect has a missing dependency: 'duration'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  93:23  error    'setSidebarOpen' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u               no-unused-vars
+
+✖ 8 problems (7 errors, 1 warning)
+

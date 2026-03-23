@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Box, Grid, Card, Typography, Button, alpha, useTheme
+  Box, Grid, Card, Typography, Button, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Description, GetApp, Timeline, PieChart, Assessment
 } from "@mui/icons-material";

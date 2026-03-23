@@ -17,7 +17,8 @@ import {
   CalendarToday, Business, Warning, CheckCircleOutline, Cancel,
   AssignmentInd, ExpandMore, ExpandLess, Close, Print,
   Edit, Delete, Add, Schedule, Class, CreditCard, Newspaper, Campaign, AccountBalance, Forum, AccessTime, Person,
-  Menu as MenuIcon, ChevronLeft, ChevronRight, MenuBook, Circle, FormatQuote, LockReset, Password, Security, Lock
+  Menu as MenuIcon, ChevronLeft, ChevronRight, MenuBook, Circle, FormatQuote, LockReset, Password, Security, Lock,
+  History, FactCheck, Verified, Save, RemoveCircle, AddCircle
 }
 from "@mui/icons-material";
 import {
@@ -36,6 +37,9 @@ import {
 
 import CollegesTab from "./tabs/CollegesTab";
 import DepartmentsTab from "./tabs/DepartmentsTab";
+import TranscriptsTab from "./tabs/TranscriptsTab";
+import { useLanguage } from "../../context/LanguageContext";
+import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
 // --- Custom Hooks & Constants ---
 const useCountUp = (target, duration = 1500) => {
@@ -85,6 +89,23 @@ const RegistrarDashboard = () => {
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
+  const { t } = useLanguage();
+
+  // Shared UI Constants
+  const isDark = mode === "dark";
+  const glassStyle = {
+    background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(32px) saturate(200%)',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.1)'}`,
+    boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.05)',
+  };
+  const gradients = {
+    primary: isDark ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+    success: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    danger: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    warning: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+  };
+
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [applications, setApplications] = useState([]);
@@ -99,7 +120,7 @@ const RegistrarDashboard = () => {
   // Dialog states
   const [courseDialog, setCourseDialog] = useState({ open: false, mode: 'add', data: { name: '', code: '', department: '', credits: 3, instructor: '', status: 'Active' } });
   const [scheduleDialog, setScheduleDialog] = useState({ open: false, mode: 'add', data: { courseId: '', courseName: '', day: '', startTime: '', endTime: '', room: '', semester: 'Fall 2026' } });
-  const [studentDialog, setStudentDialog] = useState({ open: false, student: null, newStatus: '' });
+  const [studentDialog, setStudentDialog] = useState({ open: false, student: null, name: '', status: 'Active', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
   const [idRequests, setIdRequests] = useState([]);
 
   // Sidebar & Notifications State
@@ -162,6 +183,13 @@ const RegistrarDashboard = () => {
   const [openRegDialog, setOpenRegDialog] = useState(false);
   const [regDialogYear, setRegDialogYear] = useState(1);
   const [regDialogSemester, setRegDialogSemester] = useState(1);
+  const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
+  const [isSearchingStudents, setIsSearchingStudents] = useState(false);
+  const [studentSearchResults, setStudentSearchResults] = useState([]);
+  const [profileSubTab, setProfileSubTab] = useState('dossier');
+  const [profileTranscript, setProfileTranscript] = useState(null);
+  const [profileEnrollments, setProfileEnrollments] = useState([]);
+  const [loadingProfileData, setLoadingProfileData] = useState(false);
 
   // Fetch all real-time data
   useEffect(() => {
@@ -261,17 +289,62 @@ const RegistrarDashboard = () => {
 
     return () => unsubs.forEach(u => u());
   }, []);
+  // Fetch extended profile data when a student is selected
+  useEffect(() => {
+    if (!selectedStudentProfile) {
+      setProfileTranscript(null);
+      setProfileEnrollments([]);
+      setProfileSubTab('dossier');
+      return;
+    }
+
+    const fetchExtendedData = async () => {
+      setLoadingProfileData(true);
+      try {
+        const studentId = selectedStudentProfile.id;
+        
+        // 1. Fetch Transcript
+        const transcriptQ = query(collection(db, "transcripts"), where("studentUid", "==", studentId));
+        const transcriptSnap = await getDocs(transcriptQ);
+        if (!transcriptSnap.empty) {
+          setProfileTranscript({ id: transcriptSnap.docs[0].id, ...transcriptSnap.docs[0].data() });
+        } else {
+          setProfileTranscript({
+            studentUid: studentId,
+            studentName: selectedStudentProfile.name,
+            studentId: selectedStudentProfile.studentId || "N/A",
+            program: selectedStudentProfile.department || selectedStudentProfile.intendedMajor || "General",
+            termRecords: [],
+            cumulativeGPA: 0.0,
+            status: selectedStudentProfile.status || 'Active'
+          });
+        }
+
+        // 2. Fetch Enrollments
+        const enrollQ = query(collection(db, "enrollments"), where("studentId", "==", selectedStudentProfile.studentId || studentId));
+        const enrollSnap = await getDocs(enrollQ);
+        setProfileEnrollments(enrollSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        
+      } catch (err) {
+        console.error("Error fetching extended profile data:", err);
+      } finally {
+        setLoadingProfileData(false);
+      }
+    };
+
+    fetchExtendedData();
+  }, [selectedStudentProfile]);
 
 
   const handleApproveApplication = async (app) => {
     try {
-      // Generate HTU-XXXX/YYYY student ID
+      // Generate ALX-XXXX/YYYY student ID
       const year = new Date().getFullYear();
       const snapshot = await getDocs(
         query(collection(db, "applications"), where("status", "in", ["approved_by_registrar", "enrolled"]))
       );
       const seq = String(snapshot.size + 1).padStart(4, "0");
-      const studentId = `HTU-${seq}/${year}`;
+      const studentId = `ALX-${seq}/${year}`;
 
       await updateDoc(doc(db, "applications", app.id), {
         status: "final_approved",
@@ -456,7 +529,7 @@ const RegistrarDashboard = () => {
     // Header
     doc.setFontSize(22);
     doc.setTextColor(99, 102, 241);
-    doc.text("HTU UNIVERSITY - EXECUTIVE REPORT", 20, 20);
+    doc.text("ALEX UNIVERSITY - EXECUTIVE REPORT", 20, 20);
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${timestamp}`, 20, 28);
@@ -503,7 +576,7 @@ const RegistrarDashboard = () => {
     doc.setTextColor(150);
     doc.text("CONFIDENTIAL - FOR AUTHORIZED REGISTRAR USE ONLY", 105, 285, { align: "center" });
     
-    doc.save(`HTU_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`ALX_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleExportCSV = () => {
@@ -523,7 +596,7 @@ const RegistrarDashboard = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `HTU_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `ALX_Roster_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -690,6 +763,15 @@ const RegistrarDashboard = () => {
   };
 
   // --- Course CRUD ---
+  const handleOpenCourseDialog = (course = null) => {
+    if (course) {
+      setCourseDialog({ open: true, mode: 'edit', data: { ...course } });
+    } else {
+      setCourseDialog({ open: true, mode: 'add', data: { name: '', code: '', department: '', credits: 3, instructor: '', status: 'Active' } });
+    }
+    setCourseErrors({});
+  };
+
   const [courseErrors, setCourseErrors] = useState({});
   const validateCourse = () => {
     const errs = {};
@@ -746,12 +828,28 @@ const RegistrarDashboard = () => {
     try { await deleteDoc(doc(db, "schedules", id)); } catch (err) { console.error(err); }
   };
 
-  // --- Student Status Update ---
-  const handleUpdateStudentStatus = async () => {
+  // --- Student Profile Update ---
+  const handleUpdateStudentProfile = async () => {
     try {
-      await updateDoc(doc(db, "users", studentDialog.student.id), { status: studentDialog.newStatus });
-      setStudentDialog({ open: false, student: null, newStatus: '' });
-    } catch (err) { console.error(err); }
+      const updateData = { 
+        name: studentDialog.name || '',
+        status: studentDialog.status,
+        gender: studentDialog.gender || '',
+        year: studentDialog.year || 1,
+        department: studentDialog.department || '',
+        phone: studentDialog.phone || '',
+        email: studentDialog.email || '',
+        intellectualIdentity: studentDialog.intellectualIdentity || ''
+      };
+      await updateDoc(doc(db, "users", studentDialog.student.id), updateData);
+      
+      // Update selectedStudentProfile if it's the one we're editing
+      if (selectedStudentProfile && selectedStudentProfile.id === studentDialog.student.id) {
+        setSelectedStudentProfile({ ...selectedStudentProfile, ...updateData });
+      }
+      
+      setStudentDialog({ open: false, student: null, name: '', status: 'Active', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
+    } catch (err) { console.error("Error updating student profile:", err); }
   };
 
   const handleDirectPasswordReset = async (email, name) => {
@@ -838,23 +936,7 @@ const RegistrarDashboard = () => {
     navigate("/");
   };
 
-  const isDark = mode === 'dark';
 
-  const gradients = {
-    primary: "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)",
-    secondary: "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)",
-    success: "linear-gradient(135deg, #10b981 0%, #047857 100%)",
-    warning: "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)",
-    error: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
-    premium: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-  };
-
-  const glassStyle = {
-    background: isDark ? "rgba(30, 41, 59, 0.7)" : "rgba(255, 255, 255, 0.65)",
-    backdropFilter: "blur(20px) saturate(160%)",
-    border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(99, 102, 241, 0.2)",
-    boxShadow: isDark ? "0 12px 40px 0 rgba(0, 0, 0, 0.4)" : "0 12px 40px 0 rgba(0, 0, 0, 0.06)",
-  };
 
   const AuroraBlobs = () => (
     <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
@@ -881,6 +963,579 @@ const RegistrarDashboard = () => {
       `}</style>
     </Box>
   );
+
+  const handleStudentSearch = async () => {
+    if (!searchQuery.trim()) {
+      setStudentSearchResults([]);
+      return;
+    }
+    setIsSearchingStudents(true);
+    try {
+      const q = query(collection(db, "users"), where("role", "==", "student"));
+      const snap = await getDocs(q);
+      const results = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => 
+          (s.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (s.studentId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (s.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      setStudentSearchResults(results);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingStudents(false);
+    }
+  };
+
+  const handleGenerateID = (student) => {
+    setSelectedStudentForPrint(student);
+    setPrintDialogOpen(true);
+  };
+
+  const handleUpdateProfileGrades = async () => {
+    if (!profileTranscript) return;
+    setLoadingProfileData(true);
+    try {
+      const dataToSave = { 
+        ...profileTranscript, 
+        lastUpdated: serverTimestamp() 
+      };
+      if (profileTranscript.id) {
+        await updateDoc(doc(db, "transcripts", profileTranscript.id), dataToSave);
+      } else {
+        const docRef = await addDoc(collection(db, "transcripts"), dataToSave);
+        setProfileTranscript(prev => ({ ...prev, id: docRef.id }));
+      }
+      alert("Academic records synchronized successfully.");
+    } catch (err) {
+      console.error("Error updating grades:", err);
+      alert("Failed to sync academic records.");
+    } finally {
+      setLoadingProfileData(false);
+    }
+  };
+
+  const handleDropProfileEnrollment = async (enrollId) => {
+    if (!window.confirm("Are you sure you want to drop this course? This will remove the enrollment record.")) return;
+    try {
+      await deleteDoc(doc(db, "enrollments", enrollId));
+      setProfileEnrollments(prev => prev.filter(e => e.id !== enrollId));
+      
+      // Also log audit
+      await addDoc(collection(db, "audit_logs"), {
+        action: "Course Dropped (Manual Registrar Override)",
+        student: selectedStudentProfile?.name,
+        user: user.email,
+        timestamp: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error dropping course:", err);
+    }
+  };
+
+  const handleAddProfileEnrollment = async (course) => {
+    if (!selectedStudentProfile) return;
+    try {
+      const newEnroll = {
+        studentId: selectedStudentProfile.studentId || selectedStudentProfile.id,
+        studentName: selectedStudentProfile.name,
+        studentUid: selectedStudentProfile.id,
+        courseCode: course.code,
+        courseName: course.name,
+        credits: course.credits || 3,
+        status: "approved",
+        type: "manual_registrar",
+        timestamp: serverTimestamp()
+      };
+      const docRef = await addDoc(collection(db, "enrollments"), newEnroll);
+      setProfileEnrollments(prev => [...prev, { id: docRef.id, ...newEnroll }]);
+    } catch (err) {
+      console.error("Error adding enrollment:", err);
+    }
+  };
+
+  const renderStudentProfileView = () => {
+    if (!selectedStudentProfile) return null;
+    const s = selectedStudentProfile;
+
+    return (
+      <Box sx={{ mt: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4,
+          p: 3,
+          borderRadius: 4,
+          bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(99,102,241,0.05)',
+          border: '1px solid rgba(255,255,255,0.05)'
+        }}>
+          <Stack direction="row" spacing={3} alignItems="center">
+            <IconButton 
+              onClick={() => setSelectedStudentProfile(null)}
+              sx={{ bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }}
+            >
+              <ArrowForward sx={{ transform: 'rotate(180deg)' }} />
+            </IconButton>
+            <Avatar 
+              src={s.photoURL} 
+              sx={{ width: 64, height: 64, border: '3px solid #6366f1', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
+            >
+              {s.name?.[0]}
+            </Avatar>
+            <Box>
+              <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{s.name}</Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="caption" color="text.secondary" fontWeight={800}>{s.studentId || 'PENDING ID'}</Typography>
+                <Circle sx={{ fontSize: 4, color: 'text.secondary', opacity: 0.5 }} />
+                <Typography variant="caption" color="primary.main" fontWeight={900}>{s.department || s.intendedMajor || 'UNDECLARED'}</Typography>
+              </Stack>
+            </Box>
+          </Stack>
+          
+          <Box sx={{ textAlign: 'right' }}>
+            <Chip 
+              icon={<Verified sx={{ fontSize: '1rem !important' }} />}
+              label={s.status?.toUpperCase() || 'ACTIVE'} 
+              sx={{ 
+                fontWeight: 900, 
+                bgcolor: alpha(s.status === 'suspended' ? '#ef4444' : '#10b981', 0.1), 
+                color: s.status === 'suspended' ? '#ef4444' : '#10b981',
+                px: 1
+              }} 
+            />
+          </Box>
+        </Box>
+
+        <Box sx={{ mb: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Tabs 
+            value={profileSubTab} 
+            onChange={(e, v) => setProfileSubTab(v)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTabs-indicator': { height: 4, borderRadius: '4px 4px 0 0', background: gradients.primary },
+              '& .MuiTab-root': { fontWeight: 800, textTransform: 'none', fontSize: '0.95rem', minWidth: 120, py: 2 }
+            }}
+          >
+            <Tab label="Bio Dossier" value="dossier" icon={<Person sx={{ fontSize: 20 }} />} iconPosition="start" />
+            <Tab label="Academic Record" value="academic" icon={<History sx={{ fontSize: 20 }} />} iconPosition="start" />
+            <Tab label="Live Enrollment" value="enrollment" icon={<FactCheck sx={{ fontSize: 20 }} />} iconPosition="start" />
+            <Tab label="Security & Identity" value="security" icon={<Security sx={{ fontSize: 20 }} />} iconPosition="start" />
+          </Tabs>
+        </Box>
+
+        {loadingProfileData ? (
+          <Box sx={{ py: 10, textAlign: 'center' }}>
+            <CircularProgress />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontWeight: 700 }}>Synchronizing intelligence hub...</Typography>
+          </Box>
+        ) : (
+          <Fade in={true} timeout={500}>
+            <Box>
+              {profileSubTab === 'dossier' && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={8}>
+                    <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, height: '100%' }}>
+                      <Typography variant="subtitle2" fontWeight={1000} color="primary.main" gutterBottom sx={{ letterSpacing: 1.5 }}>INTELLECTUAL IDENTITY PROFILE</Typography>
+                      <Divider sx={{ mb: 4, opacity: 0.1 }} />
+                      <Grid container spacing={3}>
+                        {[
+                          { label: "Email Identity", value: s.email, icon: <Email /> },
+                          { label: "Contact Protocol", value: s.phone || "Not Disclosed", icon: <Phone /> },
+                          { label: "Academic Level", value: `Year ${s.year || 1}`, icon: <TrendingUp /> },
+                          { label: "Account Authority", value: s.role.toUpperCase(), icon: <Security /> },
+                          { label: "Registry Date", value: s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : 'Historical', icon: <CalendarToday /> },
+                          { label: "Gender / Identity", value: s.gender || "Not Specified", icon: <People /> }
+                        ].map((info, i) => (
+                          <Grid item xs={12} sm={6} key={i}>
+                            <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <Stack direction="row" spacing={1.5} alignItems="center">
+                                <Avatar sx={{ bgcolor: alpha('#6366f1', 0.1), color: '#6366f1', width: 32, height: 32 }}>
+                                  {React.cloneElement(info.icon, { sx: { fontSize: 18 } })}
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary" fontWeight={900}>{info.label.toUpperCase()}</Typography>
+                                  <Typography variant="body2" fontWeight={800}>{info.value}</Typography>
+                                </Box>
+                              </Stack>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Stack spacing={3}>
+                      <Card sx={{ ...glassStyle, borderRadius: 6, p: 3 }}>
+                        <Typography variant="subtitle2" fontWeight={1000} gutterBottom>QUICK ACTIONS</Typography>
+                        <Stack spacing={2} sx={{ mt: 2 }}>
+                          <Button 
+              variant="contained" 
+              onClick={() => setStudentDialog({ 
+                open: true, 
+                student: s, 
+                name: s.name || '',
+                status: s.status || 'Active',
+                gender: s.gender || '',
+                year: s.year || 1,
+                department: s.department || s.intendedMajor || '',
+                phone: s.phone || '',
+                email: s.email || ''
+              })}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, background: gradients.primary }}
+            >
+              Update Identity
+            </Button>
+                          <Button 
+                            variant="outlined" startIcon={<AssignmentInd />} 
+                            onClick={() => handleGenerateID(s)}
+                            sx={{ borderRadius: 3, fontWeight: 800 }}
+                          >
+                            Print ID Badge
+                          </Button>
+                        </Stack>
+                      </Card>
+                      <Card sx={{ ...glassStyle, borderRadius: 6, p: 3, bgcolor: alpha('#10b981', 0.05) }}>
+                        <Typography variant="subtitle2" fontWeight={1000} color="success.main">ACADEMIC SUMMARY</Typography>
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="h4" fontWeight={1000}>{profileTranscript?.cumulativeGPA || "0.00"}</Typography>
+                          <Typography variant="caption" fontWeight={800} color="text.secondary">CUMULATIVE GPA</Typography>
+                        </Box>
+                        <Divider sx={{ my: 2, opacity: 0.1 }} />
+                        <Typography variant="body2" fontWeight={700}>Total Modules: {profileTranscript?.termRecords?.reduce((acc, term) => acc + (term.courses?.length || 0), 0) || 0}</Typography>
+                      </Card>
+                    </Stack>
+                  </Grid>
+                </Grid>
+              )}
+
+              {profileSubTab === 'academic' && (
+                <Box>
+                  <Card sx={{ ...glassStyle, borderRadius: 6, mb: 4 }}>
+                    <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box>
+                        <Typography variant="h6" fontWeight={1000}>Academic Transcript Repository</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={800}>OFFICIAL GRADES & SEMESTER RECORDS</Typography>
+                      </Box>
+                      <Stack direction="row" spacing={2}>
+                        <Button 
+                          variant="contained" startIcon={<Save />} 
+                          onClick={handleUpdateProfileGrades}
+                          sx={{ borderRadius: 3, fontWeight: 800 }}
+                        >
+                          Sync Records
+                        </Button>
+                        <Button 
+                          variant="outlined" startIcon={<Print />}
+                          onClick={() => {
+                            // Link to TranscriptsTab's logic or implement here
+                            alert("Generating Official Transcript PDF...");
+                          }}
+                          sx={{ borderRadius: 3, fontWeight: 800 }}
+                        >
+                          Export Transcript
+                        </Button>
+                      </Stack>
+                    </Box>
+                    <CardContent sx={{ p: 4 }}>
+                      {!profileTranscript || !profileTranscript.termRecords || profileTranscript.termRecords.length === 0 ? (
+                        <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
+                          <LibraryBooks sx={{ fontSize: 60, mb: 2 }} />
+                          <Typography variant="h6" fontWeight={800}>No academic records initialized.</Typography>
+                          <Button 
+                            variant="text" startIcon={<Add />} 
+                            sx={{ mt: 2, fontWeight: 800 }}
+                            onClick={() => {
+                              const updated = { ...profileTranscript, termRecords: [{ term: 'Fall 2026', courses: [], termGPA: '0.00' }] };
+                              setProfileTranscript(updated);
+                            }}
+                          >
+                            Initialize Academic Year
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Stack spacing={4}>
+                          {profileTranscript?.termRecords?.map((term, tIdx) => (
+                            <Box key={tIdx}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="subtitle1" fontWeight={1000} color="primary.main">{term.term}</Typography>
+                                <Button 
+                                  size="small" startIcon={<Add />}
+                                  onClick={() => {
+                                    const updated = { ...profileTranscript };
+                                    if (!updated.termRecords[tIdx].courses) {
+                                      updated.termRecords[tIdx].courses = [];
+                                    }
+                                    updated.termRecords[tIdx].courses.push({ 
+                                      code: 'NEW COURSE', 
+                                      title: 'Course Title', 
+                                      credits: 3, 
+                                      grade: 'A', 
+                                      status: 'Active' 
+                                    });
+                                    setProfileTranscript(updated);
+                                  }}
+                                  sx={{ fontWeight: 800 }}
+                                >
+                                  Add Module
+                                </Button>
+                              </Box>
+                              <TableContainer component={Paper} elevation={0} sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell sx={{ fontWeight: 800 }}>CODE</TableCell>
+                                      <TableCell sx={{ fontWeight: 800 }}>MODULE TITLE</TableCell>
+                                      <TableCell sx={{ fontWeight: 800 }}>CREDITS</TableCell>
+                                      <TableCell sx={{ fontWeight: 800 }}>GRADE</TableCell>
+                                      <TableCell align="right" sx={{ fontWeight: 800 }}>OPS</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {term.courses?.map((course, cIdx) => (
+                                      <TableRow key={cIdx}>
+                                        <TableCell sx={{ fontWeight: 800 }}>
+                                          <InputBase 
+                                            value={course.code} 
+                                            onChange={(e) => {
+                                              const updated = { ...profileTranscript };
+                                              updated.termRecords[tIdx].courses[cIdx].code = e.target.value;
+                                              setProfileTranscript(updated);
+                                            }}
+                                            sx={{ fontWeight: 800, fontSize: '0.875rem' }}
+                                          />
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>
+                                          <InputBase 
+                                            value={course.title} 
+                                            onChange={(e) => {
+                                              const updated = { ...profileTranscript };
+                                              updated.termRecords[tIdx].courses[cIdx].title = e.target.value;
+                                              setProfileTranscript(updated);
+                                            }}
+                                            sx={{ fontWeight: 700, fontSize: '0.875rem', width: '100%' }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <InputBase 
+                                            type="number"
+                                            value={course.credits} 
+                                            onChange={(e) => {
+                                              const updated = { ...profileTranscript };
+                                              updated.termRecords[tIdx].courses[cIdx].credits = parseInt(e.target.value) || 0;
+                                              setProfileTranscript(updated);
+                                            }}
+                                            sx={{ fontSize: '0.875rem', width: 40 }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Select 
+                                            size="small" 
+                                            value={course.grade} 
+                                            onChange={(e) => {
+                                              const updated = { ...profileTranscript };
+                                              updated.termRecords[tIdx].courses[cIdx].grade = e.target.value;
+                                              setProfileTranscript(updated);
+                                            }}
+                                            sx={{ height: 32, borderRadius: 2, fontWeight: 900, minWidth: 60 }}
+                                          >
+                                            {['A+','A','A-','B+','B','B-','C+','C','C-','D','F'].map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
+                                          </Select>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                          <IconButton 
+                                            size="small" color="error"
+                                            onClick={() => {
+                                              const updated = { ...profileTranscript };
+                                              updated.termRecords[tIdx].courses.splice(cIdx, 1);
+                                              setProfileTranscript(updated);
+                                            }}
+                                          >
+                                            <Delete fontSize="small" />
+                                          </IconButton>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Box>
+                          ))}
+                        </Stack>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+
+              {profileSubTab === 'enrollment' && (
+                <Box>
+                  <Grid container spacing={4}>
+                    <Grid item xs={12} md={7}>
+                      <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
+                        <Typography variant="h6" fontWeight={1000} gutterBottom>Live Enrollment Protocol</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'block', mb: 3 }}>CURRENTLY REGISTERED MODULES</Typography>
+                        
+                        <Stack spacing={2}>
+                          {profileEnrollments.length === 0 ? (
+                            <Box sx={{ textAlign: 'center', py: 5, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '2px dashed rgba(255,255,255,0.05)' }}>
+                              <Typography color="text.secondary" fontWeight={800}>No active enrollments for current term.</Typography>
+                            </Box>
+                          ) : (
+                            profileEnrollments.map((en, i) => (
+                              <Paper key={i} sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Box>
+                                    <Typography variant="body1" fontWeight={1000}>{en.courseName}</Typography>
+                                    <Typography variant="caption" color="primary.main" fontWeight={900}>{en.courseCode} | {en.credits} Credits</Typography>
+                                  </Box>
+                                  <Button 
+                                    size="small" color="error" variant="outlined" 
+                                    startIcon={<RemoveCircle />}
+                                    onClick={() => handleDropProfileEnrollment(en.id)}
+                                    sx={{ borderRadius: 2, fontWeight: 800 }}
+                                  >
+                                    Drop
+                                  </Button>
+                                </Box>
+                              </Paper>
+                            ))
+                          )}
+                        </Stack>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} md={5}>
+                      <Card sx={{ ...glassStyle, borderRadius: 6, p: 3 }}>
+                        <Typography variant="subtitle2" fontWeight={1000} gutterBottom>QUICK ENROLLMENT</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>MANUALLY ADD MODULE TO ROSTER</Typography>
+                        
+                        <Stack spacing={2}>
+                          {(courses || []).slice(0, 5).map((c, i) => (
+                            <Box 
+                              key={i} 
+                              sx={{ 
+                                p: 1.5, borderRadius: 3, border: '1px solid rgba(255,255,255,0.03)',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                              }}
+                            >
+                              <Box>
+                                <Typography variant="caption" fontWeight={1000}>{c.name}</Typography>
+                                <Typography variant="overline" display="block" sx={{ lineHeight: 1 }}>{c.code}</Typography>
+                              </Box>
+                              <IconButton 
+                                size="small" color="primary" 
+                                onClick={() => handleAddProfileEnrollment(c)}
+                                disabled={profileEnrollments?.some(e => e.courseCode === c.code)}
+                              >
+                                <AddCircle />
+                              </IconButton>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {profileSubTab === 'security' && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
+                      <Typography variant="h6" fontWeight={1000} gutterBottom>Physical Credential Identity</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 4 }}>OFFICIAL ID CARD SERVICE</Typography>
+                      
+                      <Box sx={{ 
+                        width: '100%', aspectRatio: '1.58/1', borderRadius: 4, 
+                        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                        display: 'flex', flexDirection: 'column', color: '#fff', p: 3,
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden'
+                      }}>
+                        <Box sx={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', filter: 'blur(30px)' }} />
+                        <Box sx={{ display: 'flex', gap: 2, position: 'relative', zIndex: 1 }}>
+                          <Avatar src={s.photoURL} sx={{ width: 60, height: 60, border: '2px solid rgba(255,255,255,0.2)' }} />
+                          <Box>
+                            <Typography variant="h6" fontWeight={1000} sx={{ lineHeight: 1.2 }}>{s.name}</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.7 }}>STUDENT ID: {s.studentId}</Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 1 }}>
+                          <Box>
+                            <Typography variant="overline" sx={{ letterSpacing: 2, opacity: 0.6 }}>ALEX UNIVERSITY</Typography>
+                            <Typography variant="h5" fontWeight={1000} color="primary.main">OFFICIAL RECORD</Typography>
+                          </Box>
+                          <Badge color="success" variant="dot"><Verified /></Badge>
+                        </Box>
+                      </Box>
+                      
+                      <Button 
+                        fullWidth variant="contained" 
+                        startIcon={<Print />}
+                        onClick={() => handleGenerateID(s)}
+                        sx={{ mt: 4, borderRadius: 3, fontWeight: 800, background: gradients.primary }}
+                      >
+                        Issue Official Badge
+                      </Button>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, height: '100%' }}>
+                      <Typography variant="h6" fontWeight={1000} gutterBottom>Access Protocols</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 4 }}>CREDENTIAL ROTATION & AUTHENTICATION</Typography>
+                      
+                      <Stack spacing={3}>
+                        <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Typography variant="body2" fontWeight={800}>Forced Password Rotation</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>Triggers a password reset requirement on next login.</Typography>
+                          <Button 
+                            variant="outlined" color="warning" 
+                            startIcon={<LockReset />}
+                            onClick={() => handleDirectPasswordReset(s.email, s.name)}
+                            sx={{ borderRadius: 2, fontWeight: 800 }}
+                          >
+                            Rotate Credentials
+                          </Button>
+                        </Paper>
+                        
+                        <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Typography variant="body2" fontWeight={800}>Intellectual Identity</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>{s.intellectualIdentity || 'No identity protocol established.'}</Typography>
+                          <Button 
+                            variant="outlined" color="secondary"
+                            startIcon={<AssignmentInd />}
+                            onClick={() => {
+                              setStudentDialog({
+                                open: true,
+                                student: s,
+                                name: s.name,
+                                status: s.status || 'Active',
+                                gender: s.gender || '',
+                                year: s.year || 1,
+                                department: s.department || '',
+                                phone: s.phone || '',
+                                email: s.email || '',
+                                intellectualIdentity: s.intellectualIdentity || ''
+                              });
+                            }}
+                            sx={{ borderRadius: 2, fontWeight: 800 }}
+                          >
+                            Update Identity
+                          </Button>
+                        </Paper>
+                      </Stack>
+                    </Card>
+                  </Grid>
+                </Grid>
+              )}
+            </Box>
+          </Fade>
+        )}
+      </Box>
+    );
+  };
 
   // --- Sub-components (Tabs) ---
 
@@ -1301,18 +1956,80 @@ const RegistrarDashboard = () => {
             <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Academic Roster</Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 1.5 }}>ENROLLED STUDENT INTELLIGENCE ({students.length})</Typography>
           </Box>
-          <TextField
-            size="small" placeholder="Search roster..."
-            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><Search sx={{ color: 'primary.main' }} /></InputAdornment>,
-              sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', fontWeight: 600 }
-            }}
-            sx={{ width: 350 }}
-          />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              size="small" placeholder="Search roster (Name, ID, Email)..."
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleStudentSearch()}
+              InputProps={{
+                startAdornment: <InputAdornment position="start"><Search sx={{ color: 'primary.main' }} /></InputAdornment>,
+                sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', fontWeight: 600 }
+              }}
+              sx={{ width: 350 }}
+            />
+            <Button 
+               variant="contained" 
+               onClick={handleStudentSearch}
+               disabled={isSearchingStudents}
+               sx={{ 
+                 borderRadius: 3, px: 3, fontWeight: 800, textTransform: 'none',
+                 background: gradients.primary,
+                 boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)'
+               }}
+            >
+              {isSearchingStudents ? <CircularProgress size={20} color="inherit" /> : "Lookup Search"}
+            </Button>
+          </Box>
         </Box>
 
-        {filtered.length === 0 ? (
+        { (studentSearchResults.length > 0 || searchQuery.trim() !== '') ? (
+          <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none', borderRadius: 4, overflow: 'hidden' }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                  <TableCell sx={{ color: 'text.secondary', fontWeight: 900, fontSize: '0.7rem', border: 0 }}>STUDENT IDENTIFICATION</TableCell>
+                  <TableCell sx={{ color: 'text.secondary', fontWeight: 900, fontSize: '0.7rem', border: 0 }}>DEPARTMENT / MAJOR</TableCell>
+                  <TableCell sx={{ color: 'text.secondary', fontWeight: 900, fontSize: '0.7rem', border: 0 }}>ACADEMIC STATUS</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary', fontWeight: 900, fontSize: '0.7rem', border: 0 }}>ACTIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(studentSearchResults.length > 0 ? studentSearchResults : students.filter(s => (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).map((student) => (
+                  <TableRow 
+                    key={student.id} 
+                    hover 
+                    onClick={() => setSelectedStudentProfile(student)}
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}
+                  >
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar src={student.photoURL} sx={{ borderRadius: 2 }}>{student.name?.[0]}</Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={800}>{student.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{student.studentId || student.email}</Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption" fontWeight={700}>{student.department || student.intendedMajor || 'Undeclared'}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={student.status || 'Active'} 
+                        size="small" 
+                        sx={{ fontWeight: 900, bgcolor: alpha(student.status === 'suspended' ? '#ef4444' : '#10b981', 0.1), color: student.status === 'suspended' ? '#ef4444' : '#10b981' }} 
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small"><ArrowForward fontSize="small" /></IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          filtered.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 10 }}>
             <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.2 }} />
             <Typography color="text.secondary" fontWeight={900}>NO MATCHING RECORDS FOUND</Typography>
@@ -1335,7 +2052,16 @@ const RegistrarDashboard = () => {
                     </TableHead>
                     <TableBody>
                       {deptStudents.map((student) => (
-                        <TableRow key={student.id} hover sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}>
+                        <TableRow 
+                          key={student.id} 
+                          hover 
+                          onClick={() => setSelectedStudentProfile(student)}
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:last-child td': { border: 0 }, 
+                            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } 
+                          }}
+                        >
                           <TableCell sx={{ py: 3, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
                               <Avatar src={student.photoURL} sx={{ width: 44, height: 44, borderRadius: 3 }}>{(student.name || '?')[0]}</Avatar>
@@ -1357,12 +2083,12 @@ const RegistrarDashboard = () => {
                           <TableCell align="right" sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                             <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                               <Tooltip title="Update Status">
-                                <IconButton size="small" onClick={() => setStudentDialog({ open: true, student, newStatus: student.status || 'Active' })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                <IconButton size="small" onClick={() => setStudentDialog({ open: true, student, status: student.status || 'Active' })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
                                   <Edit sx={{ fontSize: 18 }} />
                                 </IconButton>
                               </Tooltip>
                               <Tooltip title="Emergency Reset (Manual)">
-                                <IconButton size="small" onClick={() => handleManualCredentialReset(student.email, student.name)} sx={{ color: 'warning.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'warning.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
                                   <Password sx={{ fontSize: 18 }} />
                                 </IconButton>
                               </Tooltip>
@@ -1386,7 +2112,8 @@ const RegistrarDashboard = () => {
               </CardContent>
             </Card>
           ))
-        )}
+        )
+      )}
       </Box>
     );
   };
@@ -1621,7 +2348,7 @@ const RegistrarDashboard = () => {
                                 <Info sx={{ color: 'primary.main', fontSize: 20 }} />
                               </Box>
                               <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 0.3, lineHeight: 1.6 }}>
-                                <strong>PROTOCOL INFO:</strong> UPON AUTHORIZATION, A PERMANENT ACADEMIC CREDENTIAL (HTU-XXXX/{new Date().getFullYear()}) WILL BE SECURED IN THE MAIN ROSTER AND NOTIFICATION DISPATCHED TO THE APPLICANT.
+                                <strong>PROTOCOL INFO:</strong> UPON AUTHORIZATION, A PERMANENT ACADEMIC CREDENTIAL (ALX-XXXX/{new Date().getFullYear()}) WILL BE SECURED IN THE MAIN ROSTER AND NOTIFICATION DISPATCHED TO THE APPLICANT.
                               </Typography>
                             </Box>
 
@@ -1691,7 +2418,7 @@ const RegistrarDashboard = () => {
                   <AssignmentInd sx={{ color: 'primary.main', fontSize: 32 }} />
                   <Box>
                     <Typography variant="body2" fontWeight={1000} color={isDark ? "white" : "#1e293b"}>Sequential Encoding</Typography>
-                    <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', fontFamily: 'monospace', fontWeight: 900 }}>HTU-XXXX/{new Date().getFullYear()}</Typography>
+                    <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', fontFamily: 'monospace', fontWeight: 900 }}>ALX-XXXX/{new Date().getFullYear()}</Typography>
                   </Box>
                 </Box>
                 <Button fullWidth variant="outlined" sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000, textTransform: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, color: isDark ? 'white' : 'text.primary' }}>
@@ -1781,7 +2508,7 @@ const RegistrarDashboard = () => {
                         }}>
                           {/* Decorative pattern for the ID card top */}
                           <Box sx={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(99, 102, 241, 0.1)', filter: 'blur(20px)' }} />
-                          <Typography variant="h6" color="white" fontWeight={1000} sx={{ letterSpacing: 2, fontFamily: 'Outfit, sans-serif', zIndex: 1 }}>HTU UNIVERSITY</Typography>
+                          <Typography variant="h6" color="white" fontWeight={1000} sx={{ letterSpacing: 2, fontFamily: 'Outfit, sans-serif', zIndex: 1 }}>ALEX UNIVERSITY</Typography>
                         </Box>
 
                         <Box sx={{ p: 4, pt: 0, mt: -7, position: 'relative', zIndex: 2 }}>
@@ -1961,7 +2688,7 @@ const RegistrarDashboard = () => {
                     <CardContent sx={{ p: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                         <Box>
-                          <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>{course.title}</Typography>
+                          <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>{course.name}</Typography>
                           <Typography variant="caption" color="primary.main" fontWeight={1000} sx={{ letterSpacing: 1 }}>CODE: {course.code}</Typography>
                         </Box>
                         <Avatar sx={{ bgcolor: alpha(dept.color || '#6366f1', 0.1), color: dept.color || '#6366f1', width: 40, height: 40 }}>
@@ -2549,7 +3276,7 @@ const RegistrarDashboard = () => {
             <Avatar sx={{ width: 40, height: 40, bgcolor: "primary.main", fontWeight: 800, border: '2px solid rgba(255,255,255,0.5)' }}>{user?.name?.[0]}</Avatar>
             <Box>
               <Typography variant="subtitle2" fontWeight={800} color={isDark ? "#fff" : "#1e293b"} noWrap>{user?.name}</Typography>
-              <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "primary.main" }} fontWeight={700}>REGISTRAR AUTHORITY</Typography>
+              <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "primary.main" }} fontWeight={700}>{t("registrarAuthority")}</Typography>
             </Box>
           </Box>
         )}
@@ -2562,20 +3289,21 @@ const RegistrarDashboard = () => {
 
       <List sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
         {[
-          { label: "Overview", icon: <Dashboard />, index: 0 },
-          { label: "Students", icon: <People />, index: 1 },
-          { label: "Colleges", icon: <Business />, index: 2 },
-          { label: "Courses", icon: <LibraryBooks />, index: 3 },
-          { label: "Curriculum Approval", icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_approval').length },
-          { label: "Schedules", icon: <Schedule />, index: 4 },
-          { label: "Applications", icon: <SwapHoriz />, index: 5 },
-          { label: "Pending IDs", icon: <AssignmentInd />, index: 6, badge: pendingIds.length },
-          { label: "ID Requests", icon: <CreditCard />, index: 7, badge: idRequests.filter(r => r.status === 'pending').length },
-          { label: "Departments", icon: <AccountBalance />, index: 8 },
-          { label: "Finance", icon: <CreditCard />, index: 12, badge: pendingPayments.filter(p => p.status === 'pending_approval').length },
-          { label: "Admissions Posts", icon: <Forum />, index: 9 },
-          { label: "News Feed", icon: <Newspaper />, index: 11 },
-          { label: "Analytics", icon: <Assessment />, index: 10 },
+          { label: t("overview"), icon: <Dashboard />, index: 0 },
+          { label: t("students"), icon: <People />, index: 1 },
+          { label: t("colleges"), icon: <Business />, index: 2 },
+          { label: t("courses"), icon: <LibraryBooks />, index: 3 },
+          { label: t("transcripts"), icon: <MenuBook />, index: 14 },
+          { label: t("curriculumApproval"), icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_approval').length },
+          { label: t("schedules"), icon: <Schedule />, index: 4 },
+          { label: t("applications"), icon: <SwapHoriz />, index: 5 },
+          { label: t("pendingIds"), icon: <AssignmentInd />, index: 6, badge: pendingIds.length },
+          { label: t("idRequests"), icon: <CreditCard />, index: 7, badge: idRequests.filter(r => r.status === 'pending').length },
+          { label: t("departments"), icon: <AccountBalance />, index: 8 },
+          { label: t("finance"), icon: <CreditCard />, index: 12, badge: pendingPayments.filter(p => p.status === 'pending_approval').length },
+          { label: t("admissionsPosts"), icon: <Forum />, index: 9 },
+          { label: t("newsFeed"), icon: <Newspaper />, index: 11 },
+          { label: t("analytics"), icon: <Assessment />, index: 10 },
         ].map((item) => (
           <ListItem key={item.index} disablePadding sx={{ mb: 0.5 }}>
             <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
@@ -2633,7 +3361,7 @@ const RegistrarDashboard = () => {
             "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.05)" }
           }}
         >
-          {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? "Light Mode" : "Dark Mode"}</Typography>}
+          {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? t("lightMode") : t("darkMode")}</Typography>}
         </Button>
         <Button
           fullWidth
@@ -2650,7 +3378,7 @@ const RegistrarDashboard = () => {
             "&:hover": { bgcolor: isDark ? "rgba(255,68,68,0.2)" : "rgba(239, 68, 68, 0.1)", color: isDark ? "#ff8888" : "#dc2626" }
           }}
         >
-          {sidebarOpen && <Typography variant="body2" fontWeight={800}>Sign Out</Typography>}
+          {sidebarOpen && <Typography variant="body2" fontWeight={800}>{t("signOut")}</Typography>}
         </Button>
       </Box>
     </Box>
@@ -2689,14 +3417,15 @@ const RegistrarDashboard = () => {
         }}>
           <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -1, color: isDark ? '#fff' : '#1e293b' }}>
             {[
-              "Overview", "Students", "Colleges", "Courses", "Schedules", "Applications",
-              "Pending IDs", "ID Requests", "Departments", "Admissions Posts",
-              "Analytics", "News Feed", "Finance", "Curriculum Approval"
+              t("overview"), t("students"), t("colleges"), t("courses"), t("schedules"), t("applications"),
+              t("pendingIds"), t("idRequests"), t("departments"), t("admissionsPosts"),
+              t("analytics"), t("newsFeed"), t("finance"), t("curriculumApproval"), t("transcripts")
             ][activeTab]}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Tooltip title="Notifications">
+            <LanguageSwitcher variant="icon" />
+            <Tooltip title={t("notifications")}>
               <IconButton onClick={() => setNotifDrawerOpen(true)} sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.05),
                 "& .MuiBadge-badge": { fontWeight: 900 }
@@ -2712,7 +3441,7 @@ const RegistrarDashboard = () => {
         <Container maxWidth="xl" sx={{ py: 4 }}>
           <Box sx={{ transition: '0.3s' }}>
             {activeTab === 0 && renderOverviewTab()}
-            {activeTab === 1 && renderStudentsTab()}
+            {activeTab === 1 && (selectedStudentProfile ? renderStudentProfileView() : renderStudentsTab())}
             {activeTab === 2 && <CollegesTab colleges={colleges} isDark={isDark} glassStyle={glassStyle} />}
             {activeTab === 3 && renderCoursesTab()}
             {activeTab === 4 && renderSchedulesTab()}
@@ -2725,6 +3454,7 @@ const RegistrarDashboard = () => {
             {activeTab === 11 && renderNewsManagementTab()}
             {activeTab === 12 && renderFinanceRegistrationsTab()}
             {activeTab === 13 && renderCurriculumApprovalTab()}
+            {activeTab === 14 && <TranscriptsTab isDark={isDark} glassStyle={glassStyle} />}
           </Box>
         </Container>
       </Box>
@@ -3094,29 +3824,100 @@ const RegistrarDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={studentDialog.open} onClose={() => setStudentDialog({ open: false, student: null, newStatus: '' })} maxWidth="xs" fullWidth 
+      <Dialog open={studentDialog.open} onClose={() => setStudentDialog({ open: false, student: null })} maxWidth="sm" fullWidth 
         PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Update Student Status</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Calibrate Academic Identity</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2, color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary' }}>
-            Changing status for <strong style={{ color: isDark ? '#fff' : '#1e293b' }}>{studentDialog.student?.name}</strong>
+          <Typography variant="caption" sx={{ mb: 3, display: 'block', color: 'primary.main', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+            MANAGING PROFILE FOR: {studentDialog.student?.name}
           </Typography>
-          <TextField 
-            fullWidth select label="New Status" 
-            value={studentDialog.newStatus} 
-            onChange={e => setStudentDialog(p => ({ ...p, newStatus: e.target.value }))}
-            InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
-            InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
-          >
-            <MenuItem value="Active">Active</MenuItem>
-            <MenuItem value="On Leave">On Leave</MenuItem>
-            <MenuItem value="Suspended">Suspended</MenuItem>
-            <MenuItem value="Graduated">Graduated</MenuItem>
-          </TextField>
+          
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
+            <TextField 
+              fullWidth label="Full Legal Name" 
+              value={studentDialog.name} 
+              onChange={e => setStudentDialog(p => ({ ...p, name: e.target.value }))}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField 
+                  fullWidth select label="Account Status" 
+                  value={studentDialog.status} 
+                  onChange={e => setStudentDialog(p => ({ ...p, status: e.target.value }))}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                >
+                  <MenuItem value="Active">Active</MenuItem>
+                  <MenuItem value="On Leave">On Leave</MenuItem>
+                  <MenuItem value="Suspended">Suspended</MenuItem>
+                  <MenuItem value="Graduated">Graduated</MenuItem>
+                  <MenuItem value="Withdrawn">Withdrawn</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField 
+                  fullWidth select label="Gender / Identity" 
+                  value={studentDialog.gender} 
+                  onChange={e => setStudentDialog(p => ({ ...p, gender: e.target.value }))}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                  <MenuItem value="Prefer not to say">Prefer not to say</MenuItem>
+                </TextField>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField 
+                  fullWidth select label="Academic Year" 
+                  value={studentDialog.year} 
+                  onChange={e => setStudentDialog(p => ({ ...p, year: parseInt(e.target.value) }))}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                >
+                  {[1, 2, 3, 4].map(y => <MenuItem key={y} value={y}>Year {y}</MenuItem>)}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField 
+                  fullWidth label="Department / Major" 
+                  value={studentDialog.department} 
+                  onChange={e => setStudentDialog(p => ({ ...p, department: e.target.value }))}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                />
+              </Grid>
+            </Grid>
+
+            <TextField 
+              fullWidth label="Contact Email" 
+              value={studentDialog.email} 
+              onChange={e => setStudentDialog(p => ({ ...p, email: e.target.value }))}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            />
+            
+            <TextField 
+              fullWidth label="Phone Protocol" 
+              value={studentDialog.phone} 
+              onChange={e => setStudentDialog(p => ({ ...p, phone: e.target.value }))}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            />
+
+            <TextField 
+              fullWidth label="Intellectual Identity" 
+              multiline rows={2}
+              value={studentDialog.intellectualIdentity} 
+              onChange={e => setStudentDialog(p => ({ ...p, intellectualIdentity: e.target.value }))}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            />
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setStudentDialog({ open: false, student: null, newStatus: '' })} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdateStudentStatus} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, boxShadow: "0 8px 25px rgba(99, 102, 241, 0.4)" }}>Update Status</Button>
+          <Button onClick={() => setStudentDialog({ open: false, student: null })} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>Abort</Button>
+          <Button variant="contained" onClick={handleUpdateStudentProfile} sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 800, px: 4, background: gradients.primary }}>
+            Save Protocol Changes
+          </Button>
         </DialogActions>
       </Dialog>
       {/* Open Registration Selection Dialog */}

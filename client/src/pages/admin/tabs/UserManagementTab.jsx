@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Box, Card, Typography, Stack, TextField, Button, Avatar, Chip, Tooltip, IconButton, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, alpha, useTheme
+  Box, Card, Typography, Stack, TextField, Button, Avatar, Chip, Tooltip, IconButton, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Search, PersonAdd, CheckCircle, Block, LockReset, Password, Delete
 } from "@mui/icons-material";

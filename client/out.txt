@@ -1,0 +1,221 @@
+61: const RegistrarStatCard = ({ stat, glassStyle, isDark, alpha }) => {
+91: const isDark = mode === "dark";
+93: background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+95: border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.1)'}`,
+96: boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.05)',
+99: primary: isDark ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+921: <RegistrarStatCard stat={stat} glassStyle={glassStyle} isDark={isDark} alpha={alpha} />
+931: <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', color: isDark ? '#fff' : '#1e293b' }}>Strategic Enrollment Radar</Typography>
+934: <Tooltip title="View Detailed Matrix"><IconButton size="small" sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.05)', color: 'primary.main' }}><TrendingUp /></IconButton></Tooltip>
+939: <PolarGrid stroke={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"} />
+940: <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? 'rgba(255,255,255,0.5)' : '#475569', fontSize: 12, fontWeight: 700 }} />
+955: <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 0.5, color: isDark ? '#fff' : '#1e293b' }}>Daily Intake Pulse</Typography>
+966: <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+970: contentStyle={{ backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', color: isDark ? '#fff' : '#1e293b' }}
+1013: <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', justifyContent: 'space-around' }}>
+1057: background: isDark
+1060: border: isDark ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid rgba(99, 102, 241, 0.1)'
+1066: <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1081: <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1166: <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+1167: <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 11, fontWeight: 700 }} />
+1168: <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 12, fontWeight: 700 }} />
+1170: cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+1171: contentStyle={{ backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}
+1213: <TableCell key={h} sx={{ borderBottom: `2px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, fontWeight: 900, color: "text.secondary", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: 1.5, py: 3 }}>{h}</TableCell>
+1219: <TableRow key={news.id} sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}>
+1220: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}`, py: 3 }}>
+1222: <Avatar src={news.image} variant="rounded" sx={{ width: 44, height: 44, borderRadius: 2, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+1226: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}`, py: 3 }}>
+1227: <Chip label={news.category} size="small" sx={{ fontWeight: 900, textTransform: 'uppercase', fontSize: '0.65rem', borderRadius: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+1229: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}`, py: 3 }}>
+1232: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}`, py: 3 }}>
+1235: <TableCell align="right" sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}`, py: 3 }}>
+1237: <IconButton size="small" onClick={() => handleOpenNewsDialog(news)} sx={{ color: "primary.main", bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}><Edit fontSize="small" /></IconButton>
+1238: <IconButton size="small" onClick={() => handleDeleteNews(news.id)} sx={{ color: "error.main", bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}><Delete fontSize="small" /></IconButton>
+1310: sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', fontWeight: 600 }
+1339: <TableRow key={student.id} hover sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}>
+1340: <TableCell sx={{ py: 3, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1349: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1352: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1355: <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1358: <TableCell align="right" sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1361: <IconButton size="small" onClick={() => setStudentDialog({ open: true, student, newStatus: student.status || 'Active' })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+1366: <IconButton size="small" onClick={() => handleManualCredentialReset(student.email, student.name)} sx={{ color: 'warning.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+1371: <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'info.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+1376: <IconButton size="small" onClick={() => handleGenerateID(student)} sx={{ color: 'success.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+1425: border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+1427: '&:hover': { transform: 'scale(1.02)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)', boxShadow: '0 15px 30px rgba(0,0,0,0.1)' }
+1429: <Box sx={{ p: 2, background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1447: <Divider sx={{ my: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+1449: <IconButton size="small" onClick={() => setScheduleDialog({ open: true, mode: 'edit', data: { ...s } })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}><Edit fontSize="small" /></IconButton>
+1465: PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+1467: <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', color: isDark ? 'white' : 'text.primary' }}>Application Rejection</Typography>
+1472: You are about to formally reject the admission dossier of <strong style={{color: isDark ? '#fff' : '#1e293b'}}>{rejectDialog.app?.name || "Applicant"}</strong> for the <strong style={{color: isDark ? '#fff' : '#1e293b'}}>{rejectDialog.app?.intendedMajor || "Selected"}</strong> sector.
+1482: bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+1483: color: isDark ? 'white' : 'text.primary',
+1484: '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+1509: <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+1513: borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+1543: borderRadius: 5, border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+1544: bgcolor: isExpanded ? (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)') : (isDark ? 'rgba(255,255,255,0.01)' : 'transparent'),
+1546: '&:hover': { borderColor: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)', transform: 'translateX(4px)' }
+1551: badgeContent={<Circle sx={{ fontSize: 12, color: '#10b981', border: `2px solid ${isDark ? '#0f172a' : '#fff'}`, borderRadius: '50%' }} />}>
+1564: <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
+1569: <Chip label={app.level || "Year 1"} size="small" sx={{ fontWeight: 900, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }} />
+1571: bgcolor: isExpanded ? 'primary.main' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
+1575: '&:hover': { bgcolor: isExpanded ? 'primary.dark' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') }
+1583: <Divider sx={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+1584: <Box sx={{ p: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+1593: <Box sx={{ p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
+1598: <Typography variant="body2" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary' }}>{item.value}</Typography>
+1607: bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+1608: border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+1611: <Typography variant="body2" sx={{ lineHeight: 1.8, color: isDark ? 'rgba(255,255,255,0.75)' : 'text.primary', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>
+1659: <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
+1678: height: 8, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+1685: <Divider sx={{ my: 4, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+1694: <Typography variant="body2" fontWeight={1000} color={isDark ? "white" : "#1e293b"}>Sequential Encoding</Typography>
+1695: <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', fontFamily: 'monospace', fontWeight: 900 }}>HTU-XXXX/{new Date().getFullYear()}</Typography>
+1698: <Button fullWidth variant="outlined" sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000, textTransform: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, color: isDark ? 'white' : 'text.primary' }}>
+1704: <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+1705: <Box sx={{ p: 2.5, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+1737: <Card sx={{ ...glassStyle, borderRadius: 7, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+1741: borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+1745: <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: -0.5, mb: 1, color: isDark ? '#fff' : '#1e293b' }}>Credential Deployment Queue</Typography>
+1769: bgcolor: isDark ? 'rgba(15, 23, 42, 0.95)' : '#fff',
+1770: border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+1773: boxShadow: isDark ? '0 20px 40px rgba(0,0,0,0.5)' : '0 20px 40px rgba(0,0,0,0.15)',
+1774: '&:hover': { transform: 'translateY(-12px)', boxShadow: isDark ? '0 30px 60px rgba(0,0,0,0.6)' : '0 30px 60px rgba(0,0,0,0.25)' }
+1778: background: isDark ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : gradients.primary,
+1795: border: isDark ? '5px solid rgba(255,255,255,0.1)' : '5px solid #fff',
+1797: bgcolor: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9'
+1803: <Typography variant="h6" fontWeight={1000} color={isDark ? "white" : "#0f172a"} sx={{ lineHeight: 1.1, mb: 0.5, letterSpacing: -0.2 }}>{student.name?.toUpperCase() || "STUDENT"}</Typography>
+1812: <Typography variant="body2" fontWeight={1000} color={isDark ? "rgba(255,255,255,0.9)" : "#334155"}>{student.department?.toUpperCase() || 'GENERAL'}</Typography>
+1816: <Typography variant="body2" fontWeight={1000} color={isDark ? "rgba(255,255,255,0.9)" : "#334155"}>AUG 2030</Typography>
+1856: <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', color: isDark ? '#fff' : '#1e293b' }}>Identity Recovery Queue</Typography>
+1879: background: req.status === 'pending' ? 'linear-gradient(215deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%)' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.8)'),
+1886: <Typography variant="h6" fontWeight={1000} sx={{ color: isDark ? 'white' : '#1e293b' }}>{req.studentName}</Typography>
+1899: <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'text.secondary', mb: 3, minHeight: 40 }}>{req.reason}</Typography>
+1900: <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+1906: <IconButton onClick={() => handleIdRequestAction(req.id, req.studentUid, 'reject')} sx={{ bgcolor: isDark ? alpha('#ef4444', 0.08) : alpha('#ef4444', 0.05), color: '#ef4444' }}><Cancel fontSize="small" /></IconButton>
+1907: <IconButton onClick={() => handleIdRequestAction(req.id, req.studentUid, 'approve')} sx={{ bgcolor: isDark ? alpha('#10b981', 0.08) : alpha('#10b981', 0.05), color: '#10b981' }}><CheckCircle fontSize="small" /></IconButton>
+1944: <Box sx={{ height: 2, flex: 3, background: `linear-gradient(90deg, transparent 0%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 100%)` }} />
+1958: border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+1960: '&:hover': { transform: 'translateY(-5px)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }
+1994: <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+2050: border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+2052: '&:hover': { transform: 'translateY(-5px)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }
+2080: <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+2116: <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+2120: borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+2138: <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 2, borderBottom: `2px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, px: 4 }}>{h}</TableCell>
+2147: <TableRow key={post.id} hover sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)' } }}>
+2177: PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none', p: 1 } }}>
+2186: InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
+2189: InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
+2194: sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}>
+2207: sx={{ height: 56, borderRadius: 3, fontWeight: 1000, textTransform: 'none', border: !admissionPostForm.isImportant ? `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` : 'none' }}
+2236: <Card sx={{ ...glassStyle, borderRadius: 7, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+2240: borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`
+2250: <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} />
+2251: <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-30} textAnchor="end" tick={{ fill: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 11, fontWeight: 700 }} />
+2252: <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 12, fontWeight: 700 }} />
+2254: cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+2256: backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+2257: border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+2259: color: isDark ? '#fff' : '#1e293b',
+2262: itemStyle={{ fontWeight: 1000, color: isDark ? '#fff' : '#1e293b' }}
+2288: border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.1)'}`,
+2315: sx={{ borderRadius: 4, py: 2, textTransform: 'none', fontWeight: 1000, color: isDark ? 'white' : 'primary.main', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.2)'}`, '&:hover': { border: `1px solid ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(99,102,241,0.4)'}`, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.03)' } }}>
+2320: <Box sx={{ mt: 6, width: '100%', pt: 4, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+2341: PaperProps={{ sx: { ...glassStyle, borderRadius: 8, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+2342: <DialogTitle sx={{ p: 5, pb: 2, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+2360: <Box key={i} sx={{ p: 2.5, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', alignItems: 'center', gap: 3 }}>
+2376: <Typography variant="body2" color={isDark ? "rgba(255,255,255,0.8)" : "text.secondary"} sx={{ lineHeight: 1.7, fontWeight: 700 }}>
+2411: border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+2446: border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+2448: background: isPending ? `linear-gradient(215deg, ${alpha('#6366f1', 0.03)} 0%, transparent 100%)` : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)')
+2466: <Box sx={{ mb: 2, p: 1.5, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+2531: background: isDark
+2534: color: isDark ? 'white' : '#1e293b',
+2536: borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.15)'}`,
+2552: <Typography variant="subtitle2" fontWeight={800} color={isDark ? "#fff" : "#1e293b"} noWrap>{user?.name}</Typography>
+2553: <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "primary.main" }} fontWeight={700}>REGISTRAR AUTHORITY</Typography>
+2557: <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ color: isDark ? 'white' : 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(99,102,241,0.05)' }}>
+2594: color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.7)" : "#475569"),
+2600: color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.6)" : "#64748b")
+2603: bgcolor: activeTab === item.index ? "" : (isDark ? "alpha(#fff, 0.08)" : "alpha(#6366f1, 0.08)"),
+2631: color: isDark ? "rgba(255,255,255,0.7)" : "#64748b",
+2634: "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.7)" : "#6366f1" },
+2635: "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.05)" }
+2646: color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444",
+2647: bgcolor: isDark ? "rgba(255,255,255,0.1)" : "rgba(239, 68, 68, 0.05)",
+2651: "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444" },
+2652: "&:hover": { bgcolor: isDark ? "rgba(255,68,68,0.2)" : "rgba(239, 68, 68, 0.1)", color: isDark ? "#ff8888" : "#dc2626" }
+2662: <Box sx={{ display: "flex", bgcolor: isDark ? "#0f172a" : "#f8fafc", minHeight: "100vh", position: 'relative' }}>
+2687: background: isDark ? alpha("#0f172a", 0.7) : alpha("#ffffff", 0.7),
+2689: borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(99,102,241,0.1)'}`,
+2690: boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.02)'
+2692: <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -1, color: isDark ? '#fff' : '#1e293b' }}>
+2718: {activeTab === 2 && <CollegesTab colleges={colleges} isDark={isDark} glassStyle={glassStyle} />}
+2724: {activeTab === 8 && <DepartmentsTab departments={departments} colleges={colleges} isDark={isDark} glassStyle={glassStyle} />}
+2730: {activeTab === 14 && <TranscriptsTab isDark={isDark} glassStyle={glassStyle} />}
+2742: sx: { ...glassStyle, border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'}`, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' }
+2745: <DialogTitle sx={{ color: isDark ? '#fff' : 'text.primary', fontWeight: 900 }}>Review & Approve Course</DialogTitle>
+2749: <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', textTransform: 'uppercase' }}>Course Identity</Typography>
+2750: <Typography variant="h6" sx={{ color: isDark ? '#fff' : 'text.primary', fontWeight: 700 }}>{selectedCourseForApproval?.name} ({selectedCourseForApproval?.code})</Typography>
+2751: <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.8)' : 'text.secondary' }}>Credits: {selectedCourseForApproval?.credits} | Dept: {selectedCourseForApproval?.department}</Typography>
+2760: InputProps={{ style: { color: isDark ? '#fff' : '#1e293b' } }}
+2761: InputLabelProps={{ style: { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)' } }}
+2772: InputProps={{ style: { color: isDark ? '#fff' : '#1e293b' } }}
+2773: InputLabelProps={{ style: { color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)' } }}
+2779: <Button onClick={() => setOpenApprovalDialog(false)} sx={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'text.secondary' }}>Cancel</Button>
+2802: bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+2804: borderLeft: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.1)'}`
+2838: <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: isDark ? '#0f172a' : '#f1f5f9' }}>
+2968: PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+2969: <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>{courseDialog.mode === 'add' ? 'Add New Course' : 'Edit Course'}</DialogTitle>
+2977: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+2978: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+2986: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+2987: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+2994: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+2995: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3003: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3004: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3010: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3011: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3017: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3018: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3026: <Button onClick={() => setCourseDialog(p => ({ ...p, open: false }))} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>
+3035: PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+3036: <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>{scheduleDialog.mode === 'add' ? 'Add Class Schedule' : 'Edit Schedule'}</DialogTitle>
+3046: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3047: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3055: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3056: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3065: InputLabelProps={{ shrink: true, sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3066: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3072: InputLabelProps={{ shrink: true, sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3073: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3080: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3081: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3087: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3088: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3093: <Button onClick={() => setScheduleDialog(p => ({ ...p, open: false }))} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>
+3101: PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+3102: <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Update Student Status</DialogTitle>
+3104: <Typography variant="body2" sx={{ mb: 2, color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary' }}>
+3105: Changing status for <strong style={{ color: isDark ? '#fff' : '#1e293b' }}>{studentDialog.student?.name}</strong>
+3111: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3112: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3121: <Button onClick={() => setStudentDialog({ open: false, student: null, newStatus: '' })} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>
+3127: PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
+3128: <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Open Registration Window</DialogTitle>
+3130: <Typography variant="body2" sx={{ mb: 3, color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary' }}>
+3138: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3139: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3147: InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
+3148: InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
+3155: <Button onClick={() => setOpenRegDialog(false)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>

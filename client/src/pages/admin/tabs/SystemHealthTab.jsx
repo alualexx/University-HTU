@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Box, Grid, Card, Typography, Chip, Stack, Button, CircularProgress, alpha, useTheme
+  Box, Grid, Card, Typography, Chip, Stack, Button, CircularProgress, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Memory as MemoryIcon, CloudQueue, Router as NetworkIcon, Speed, Storage, Security
 } from "@mui/icons-material";

@@ -108,8 +108,13 @@ const Login = () => {
 
         <Box sx={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 440 }}>
           {/* Logo */}
-          <Box sx={{ display: "inline-flex", p: 2, borderRadius: 4, bgcolor: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", mb: 5 }}>
-            <School sx={{ fontSize: 52, color: "white" }} />
+          <Box sx={{ 
+            display: "inline-flex", p: 1, borderRadius: 4, bgcolor: "white", 
+            border: "1px solid rgba(255,255,255,0.15)", mb: 5,
+            width: 120, height: 120, overflow: "hidden",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
+          }}>
+            <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </Box>
 
           <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.04em", mb: 2, lineHeight: 1.1 }}>
@@ -158,7 +163,7 @@ const Login = () => {
         {/* Mobile logo */}
         <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 1.5, mb: 6 }}>
           <School sx={{ color: "primary.main", fontSize: 38 }} />
-          <Typography variant="h5" fontWeight={900} color="primary.main" sx={{ letterSpacing: "-0.03em" }}>HTU Portal</Typography>
+          <Typography variant="h5" fontWeight={900} color="primary.main" sx={{ letterSpacing: "-0.03em" }}>Alex Portal</Typography>
         </Box>
 
         <Fade in timeout={600}>
@@ -265,6 +270,7 @@ const Login = () => {
                 {[
                   { label: "Admin", email: "admin@university.edu", color: "#1e3a8a" },
                   { label: "Registrar", email: "registrar@university.edu", color: "#7c3aed" },
+                  { label: "College", email: "dean@university.edu", color: "#6d28d9" },
                   { label: "Faculty", email: "head@university.edu", color: "#2e7d32" },
                   { label: "Student", email: "student@university.edu", color: "#ea580c" },
                 ].map((d) => (

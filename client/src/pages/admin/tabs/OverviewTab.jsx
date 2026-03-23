@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Grid, Card, Typography, Box, Stack, Chip, CircularProgress, useTheme, alpha
+  Grid, Card, Typography, Box, Stack, Chip, CircularProgress, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   People, School, Book, Assessment,
 } from "@mui/icons-material";

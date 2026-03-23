@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  Box, Card, Typography, Stack, TextField, MenuItem, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Avatar, alpha, useTheme
+  Box, Card, Typography, Stack, TextField, MenuItem, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Avatar, Chip, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Search, Storage, History
 } from "@mui/icons-material";
@@ -20,10 +21,11 @@ const AuditLogsTab = ({
   const theme = useTheme();
 
   const filteredLogs = activities.filter(log => {
+    const searchLower = logSearch.toLowerCase();
     const matchesSearch = 
-      log.action?.toLowerCase().includes(logSearch.toLowerCase()) ||
-      log.adminName?.toLowerCase().includes(logSearch.toLowerCase()) ||
-      log.details?.toLowerCase().includes(logSearch.toLowerCase());
+      (log.action || "").toLowerCase().includes(searchLower) ||
+      (log.adminName || "").toLowerCase().includes(searchLower) ||
+      (log.details || "").toLowerCase().includes(searchLower);
     
     const matchesFilter = logFilter === 'all' || log.sector === logFilter;
     
@@ -78,10 +80,10 @@ const AuditLogsTab = ({
                 <TableRow key={i} sx={{ '& td': { borderBottom: '1px solid rgba(255,255,255,0.03)' }, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                   <TableCell sx={{ p: 3 }}>
                     <Typography variant="body2" fontWeight={1000} color="primary.main">
-                      {log.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {log.timestamp?.toDate?.() ? log.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "N/A"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                      {log.timestamp?.toDate().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {log.timestamp?.toDate?.() ? log.timestamp.toDate().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : "---"}
                     </Typography>
                   </TableCell>
                   <TableCell>

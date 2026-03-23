@@ -179,7 +179,24 @@ const AuthProvider = ({ children }) => {
       setUser(demoHead);
       return { success: true, role: "faculty", redirectTo: "/department-dashboard" };
     }
+    if (email === "dean@university.edu" && password === "password123") {
+      const demoDean = {
+        uid: "demo-dean-uid",
+        email: "dean@university.edu",
+        name: "Dean James Moriarty",
+        role: "college_admin",
+        college: "Engineering & Technology",
+      };
+      setUser(demoDean);
+      return { success: true, role: "college_admin", redirectTo: "/college-dashboard" };
+    }
     // ---------------------------
+
+    // Enforce University Email Login (except for demo accounts)
+    if (!email.endsWith("@university.edu") && !email.includes("demo") && email !== "admin@university.edu") {
+      logSecurityEvent("Unauthorized Access", `Blocked login attempt with non-university email: ${email}`, "error");
+      return { success: false, error: "ACCESS DENIED: Only official university emails (@university.edu) are authorized for portal access." };
+    }
 
     try {
       setError(null);
@@ -236,6 +253,14 @@ const AuthProvider = ({ children }) => {
       }
 
       setUser(userData);
+      if (userData.requiresPasswordChange) {
+        return {
+          success: true,
+          role: userData.role,
+          redirectTo: "/change-password",
+        };
+      }
+
       return {
         success: true,
         role: userData.role,

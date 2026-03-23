@@ -25,7 +25,8 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
     name: "", 
     code: "", 
     description: "", 
-    faculty: "", 
+    headName: "", 
+    headEmail: "",
     collegeId: "",
     duration: "4 Years", 
     seats: 100, 
@@ -45,7 +46,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
     } else {
       setEditingDept(null);
       setDeptForm({ 
-        name: "", code: "", description: "", faculty: "", collegeId: "",
+        name: "", code: "", description: "", headName: "", headEmail: "", collegeId: "",
         duration: "4 Years", seats: 100, requirements: "", iconUrl: "", color: "#1976d2",
         isPublished: true, admissionOpen: true, requiredDocuments: "Transcript, ID/Passport, Photo"
       });
@@ -112,7 +113,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
       </Box>
 
       <Grid container spacing={3}>
-        {departments.length === 0 ? (
+        {departments?.length === 0 ? (
           <Grid item xs={12}>
             <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
               <AccountTree sx={{ fontSize: 80, mb: 2 }} />
@@ -120,7 +121,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
             </Box>
           </Grid>
         ) : (
-          departments.map((dept) => (
+          departments?.map((dept) => (
             <Grid item xs={12} sm={6} md={4} key={dept.id}>
               <Card sx={{ ...glassStyle, borderRadius: 5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -145,7 +146,10 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
                       </Avatar>
                       <Box>
                         <Typography variant="caption" display="block" sx={{ opacity: 0.6, fontWeight: 800 }}>FACULTY HEAD</Typography>
-                        <Typography variant="body2" fontWeight={1000}>{dept.faculty}</Typography>
+                        <Typography variant="body2" fontWeight={1000}>{dept.headName || dept.faculty}</Typography>
+                        {dept.headEmail && (
+                          <Typography variant="caption" sx={{ opacity: 0.7 }}>{dept.headEmail}</Typography>
+                        )}
                       </Box>
                     </Box>
                   </Stack>
@@ -197,14 +201,15 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
                   <FormControl fullWidth required>
                     <InputLabel>Parent College</InputLabel>
                     <Select value={deptForm.collegeId} label="Parent College" onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })}>
-                      {colleges.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                      {colleges?.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </Stack>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Stack spacing={3}>
-                  <TextField fullWidth label="Faculty Head" value={deptForm.faculty} onChange={e => setDeptForm({ ...deptForm, faculty: e.target.value })} required />
+                  <TextField fullWidth label="Faculty Head Name" value={deptForm.headName} onChange={e => setDeptForm({ ...deptForm, headName: e.target.value })} required />
+                  <TextField fullWidth label="Head Email" type="email" value={deptForm.headEmail} onChange={e => setDeptForm({ ...deptForm, headEmail: e.target.value })} required />
                   <TextField fullWidth label="Duration" value={deptForm.duration} onChange={e => setDeptForm({ ...deptForm, duration: e.target.value })} />
                   <TextField fullWidth label="Available Seats" type="number" value={deptForm.seats} onChange={e => setDeptForm({ ...deptForm, seats: e.target.value })} />
                 </Stack>

@@ -469,7 +469,7 @@ const Home = () => {
                   }
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 6 }}>
-                    <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', fontWeight: 1000, fontSize: '1.5rem', boxShadow: '0 8px 16px rgba(99, 102, 241, 0.4)' }}>HTU</Avatar>
+                    <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', fontWeight: 1000, fontSize: '1.5rem', boxShadow: '0 8px 16px rgba(99, 102, 241, 0.4)' }}>ALX</Avatar>
                     <Box>
                       <Typography variant="h6" fontWeight={1000} color="white" sx={{ fontFamily: 'Outfit, sans-serif' }}>University Core</Typography>
                       <Typography variant="caption" fontWeight={900} color="rgba(255,255,255,0.5)" sx={{ letterSpacing: 1 }}>SYSTEM STATUS: OPTIMAL</Typography>
@@ -823,7 +823,7 @@ const Home = () => {
       <Box sx={{ py: 15, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc' }}>
         <Container maxWidth="lg">
           <Box textAlign="center" mb={10}>
-            <Typography variant="caption" fontWeight={1000} color="primary.main" sx={{ letterSpacing: 4, mb: 2, display: 'block' }}>THE HTU ADVANTAGE</Typography>
+            <Typography variant="caption" fontWeight={1000} color="primary.main" sx={{ letterSpacing: 4, mb: 2, display: 'block' }}>THE ALEX ADVANTAGE</Typography>
             <Typography variant="h2" fontWeight={1000} gutterBottom sx={{ letterSpacing: "-0.03em", fontFamily: 'Outfit, sans-serif' }}>
               Why Engineers Choose Us
             </Typography>
@@ -909,7 +909,7 @@ const Home = () => {
             Ready to Accelerate Your <Box component="span" sx={{ color: 'primary.main' }}>Future?</Box>
           </Typography>
           <Typography variant="h6" color="rgba(255,255,255,0.6)" sx={{ mb: 6, fontWeight: 500, maxWidth: 600, mx: 'auto' }}>
-            Join the elite circle of students and faculty currently utilizing the HTU Core ecosystem.
+            Join the elite circle of students and faculty currently utilizing the Alex Core ecosystem.
           </Typography>
           <Box sx={{ display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap" }}>
             <Button

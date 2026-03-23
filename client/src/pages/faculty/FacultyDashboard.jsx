@@ -293,7 +293,7 @@ export default function FacultyDashboard() {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <IconButton sx={{ bgcolor: alpha("#6366f1", 0.08), color: "#6366f1" }}>
-              <Badge badgeContent={announcements.length} color="error"><Notifications /></Badge>
+              <Badge badgeContent={announcements?.length || 0} color="error"><Notifications /></Badge>
             </IconButton>
             <Avatar sx={{ width: 36, height: 36, background: g.primary, fontWeight: 900, fontSize: "0.85rem" }}>{(user?.name || "F")[0]}</Avatar>
           </Box>
@@ -319,11 +319,11 @@ export default function FacultyDashboard() {
               {/* Stat Cards */}
               <Grid container spacing={3} sx={{ mb: 4 }}>
                 {[
-                  { label: "Total Departments",  value: departments.length || 6,    icon: <Business />,     grad: g.primary,   chip: "Active" },
-                  { label: "Faculty Members",     value: faculty.length || 48,       icon: <Groups />,       grad: g.secondary, chip: "+3 new" },
-                  { label: "Enrolled Students",   value: students.length || 1240,    icon: <People />,       grad: g.success,   chip: "+8.2%" },
-                  { label: "Active Courses",      value: courses.length || 84,       icon: <LibraryBooks />, grad: g.warning,   chip: "Semester" },
-                  { label: "Research Projects",   value: research.length || 12,      icon: <Science />,      grad: g.teal,      chip: "Ongoing" },
+                  { label: "Total Departments",  value: departments?.length || 0,    icon: <Business />,     grad: g.primary,   chip: "Active" },
+                  { label: "Faculty Members",     value: faculty?.length || 0,       icon: <Groups />,       grad: g.secondary, chip: "+3 new" },
+                  { label: "Enrolled Students",   value: students?.length || 0,    icon: <People />,       grad: g.success,   chip: "+8.2%" },
+                  { label: "Active Courses",      value: courses?.length || 0,       icon: <LibraryBooks />, grad: g.warning,   chip: "Semester" },
+                  { label: "Research Projects",   value: research?.length || 0,      icon: <Science />,      grad: g.teal,      chip: "Ongoing" },
                   { label: "Avg. GPA",            value: "3.41",                     icon: <EmojiEvents />,  grad: g.danger,    chip: "▲ 0.1" },
                 ].map((s, i) => (
                   <Grid item xs={12} sm={6} md={4} key={i}><StatCard {...s} /></Grid>
@@ -468,10 +468,10 @@ export default function FacultyDashboard() {
               </Box>
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 {[
-                  { label: "Total Enrolled", value: students.length || 1240, grad: g.primary },
-                  { label: "Undergraduate",  value: Math.floor((students.length || 1240) * 0.73), grad: g.secondary },
-                  { label: "Graduate",       value: Math.floor((students.length || 1240) * 0.27), grad: g.teal },
-                  { label: "At Risk",        value: students.filter(s => s.status === "At Risk").length || 23, grad: g.danger },
+                  { label: "Total Enrolled", value: students?.length || 0, grad: g.primary },
+                  { label: "Undergraduate",  value: Math.floor((students?.length || 0) * 0.73), grad: g.secondary },
+                  { label: "Graduate",       value: Math.floor((students?.length || 0) * 0.27), grad: g.teal },
+                  { label: "At Risk",        value: students?.filter(s => s.status === "At Risk")?.length || 0, grad: g.danger },
                 ].map((s, i) => (
                   <Grid item xs={6} md={3} key={i}>
                     <Card sx={{ ...glassStyle, borderRadius: 4, textAlign: "center", p: 2 }}>
@@ -636,6 +636,9 @@ export default function FacultyDashboard() {
                           <Box>
                             <Typography variant="subtitle1" fontWeight={900}>{ann.title}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{ann.body}</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.5, mt: 1, display: 'block' }}>
+                              {ann.createdAt?.toDate ? ann.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                            </Typography>
                           </Box>
                         </Box>
                         <Chip

@@ -10,6 +10,7 @@ import {
 } from "@mui/icons-material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useLanguage } from "../../context/LanguageContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 /* ── Typing bubble animation ────────────────────────────────────────── */
 const TypingDots = () => (
@@ -178,24 +179,7 @@ export default function ChatBot() {
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               {/* Language Switcher in Header */}
-              <FormControl size="small">
-                <Select
-                  value={language}
-                  onChange={e => setLanguage(e.target.value)}
-                  variant="outlined"
-                  startAdornment={<Translate sx={{ color: "white", fontSize: 16, mr: 0.5 }} />}
-                  sx={{
-                    color: "white", fontSize: "0.75rem", fontWeight: 800,
-                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.3)" },
-                    "& .MuiSvgIcon-root": { color: "white" },
-                    "& .MuiSelect-select": { py: 0.6, px: 1, pr: "24px !important" },
-                    bgcolor: "rgba(255,255,255,0.12)", borderRadius: 2,
-                  }}
-                >
-                  <MenuItem value="en" sx={{ fontWeight: 700 }}>🇬🇧 English</MenuItem>
-                  <MenuItem value="am" sx={{ fontWeight: 700 }}>🇪🇹 አማርኛ</MenuItem>
-                </Select>
-              </FormControl>
+              <LanguageSwitcher variant="icon" />
               <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: "white", bgcolor: "rgba(255,255,255,0.12)", "&:hover": { bgcolor: "rgba(255,255,255,0.2)" } }}>
                 <Close sx={{ fontSize: 18 }} />
               </IconButton>
@@ -205,15 +189,17 @@ export default function ChatBot() {
           {/* Quick suggestion chips */}
           {messages.length <= 1 && (
             <Box sx={{ px: 2, pt: 1.5, pb: 0.5, display: "flex", gap: 1, flexWrap: "wrap", flexShrink: 0 }}>
-              {(language === "am"
-                ? ["ስለ ምዝገባ", "ኮርሶች", "ክፍያ", "ደረጃዎቼ"]
-                : ["Admission info", "Course registration", "Tuition fees", "My grades"]
-              ).map(s => (
+              {[
+                { key: "chatAdmission", text: t("chatAdmission") },
+                { key: "chatCourses", text: t("chatCourses") },
+                { key: "chatFees", text: t("chatFees") },
+                { key: "chatGrades", text: t("chatGrades") }
+              ].map(item => (
                 <Chip
-                  key={s}
-                  label={s}
+                  key={item.key}
+                  label={item.text}
                   size="small"
-                  onClick={() => { setInput(s); setTimeout(sendMessage, 50); }}
+                  onClick={() => { setInput(item.text); setTimeout(sendMessage, 50); }}
                   sx={{ fontSize: "0.7rem", fontWeight: 700, bgcolor: isDark ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.09)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.2)", cursor: "pointer", "&:hover": { bgcolor: "rgba(99,102,241,0.2)" } }}
                 />
               ))}
@@ -281,7 +267,7 @@ export default function ChatBot() {
               </IconButton>
             </Box>
             <Typography variant="caption" sx={{ display: "block", textAlign: "center", mt: 0.8, opacity: 0.4, fontSize: "0.62rem", fontWeight: 600 }}>
-              University AI Assistant · Powered by HTU
+              {t("chatFooter")}
             </Typography>
           </Box>
         </Paper>

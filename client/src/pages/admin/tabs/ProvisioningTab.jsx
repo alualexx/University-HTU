@@ -1,8 +1,9 @@
 import React from "react";
 import {
   Box, Typography, Grid, Card, CardContent, Avatar, Chip, Button, Tooltip, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions, Stack, TextField, InputAdornment, CircularProgress, alpha, useTheme
+  Dialog, DialogTitle, DialogContent, DialogActions, Stack, TextField, InputAdornment, CircularProgress, useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Business, Apartment, PersonAdd, Delete, Person, Email, Lock, AssignmentTurnedIn
 } from "@mui/icons-material";
@@ -30,7 +31,7 @@ const ProvisioningTab = ({
   const handleOpenProvisionDialog = (entity = null) => {
     setProvisioningEntity(entity);
     setProvisionForm({
-      name: entity?.type === 'college' ? entity.deanName || '' : entity?.headName || '',
+      name: entity?.type === 'college' ? entity.deanName || '' : (entity?.headName || entity?.faculty || ''),
       email: entity?.type === 'college' ? entity.deanEmail || '' : entity?.headEmail || '',
       password: '',
     });
@@ -51,7 +52,7 @@ const ProvisioningTab = ({
         name: provisionForm.name,
         email: provisionForm.email,
         password: provisionForm.password,
-        role: provisioningEntity.type === 'college' ? 'dean' : 'department_head',
+        role: provisioningEntity.type === 'college' ? 'college_admin' : 'faculty',
         collegeId: provisioningEntity.type === 'college' ? provisioningEntity.id : provisioningEntity.collegeId,
         departmentId: provisioningEntity.type === 'department' ? provisioningEntity.id : null,
       });
