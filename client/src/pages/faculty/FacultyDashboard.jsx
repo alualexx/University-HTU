@@ -23,11 +23,7 @@ import {
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { db } from "../../services/Firebase";
-import {
-  collection, query, where, onSnapshot, doc, updateDoc,
-  serverTimestamp, addDoc, deleteDoc, writeBatch,
-} from "firebase/firestore";
+import { authAPI, coursesAPI, usersAPI, departmentsAPI, announcementsAPI, researchAPI } from "../../services/api";
 
 /* ── Theme ─────────────────────────────────────────────────────────── */
 const g = {
@@ -79,7 +75,7 @@ function StatCard({ label, value, icon, grad, chip }) {
 
 /* ── Main ───────────────────────────────────────────────────────────── */
 export default function FacultyDashboard() {
-  const { user, logout, sendPasswordReset } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
@@ -97,6 +93,7 @@ export default function FacultyDashboard() {
   const [announcements, setAnnouncements] = useState([]);
   const [research, setResearch]         = useState([]);
   const [departments, setDepartments]   = useState([]);
+  const [loading, setLoading]           = useState(true);
 
   // Dialogs
   const [addCourseOpen, setAddCourseOpen]         = useState(false);
@@ -113,43 +110,83 @@ export default function FacultyDashboard() {
     boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.3)" : "0 8px 32px rgba(99,102,241,0.08)",
   };
 
-  /* ── Firestore ─────────────────────────────────────────────────────── */
+  /* ── Fetch Data ────────────────────────────────────────────────────── */
   useEffect(() => {
-    if (!user?.uid) return;
-    const dept = user?.department || "";
-    const subs = [];
+    if (!user?.id) return;
+    
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const dept = user?.department || "";
+        
+        const [resCourses, resFaculty, resStudents, resDepts, resAnn, resResearch] = await Promise.all([
+          coursesAPI.getAll({ department: dept }),
+          usersAPI.getAll({ role: "teacher", department: dept }),
+          usersAPI.getAll({ role: "student" }),
+          departmentsAPI.getAll(),
+          announcementsAPI.getAll({ department: dept }),
+          researchAPI.getAll({ department: dept }),
+        ]);
 
-    const snap = (q, fn) => subs.push(onSnapshot(q, s => fn(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+        setCourses(resCourses.data);
+        setFaculty(resFaculty.data);
+        setStudents(resStudents.data);
+        setDepartments(resDepts.data);
+        setAnnouncements(resAnn.data);
+        setResearch(resResearch.data);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    snap(query(collection(db, "courses"),      where("department", "==", dept)), setCourses);
-    snap(query(collection(db, "users"),        where("role", "==", "teacher"), where("department", "==", dept)), setFaculty);
-    snap(query(collection(db, "users"),        where("role", "==", "student")), setStudents);
-    snap(query(collection(db, "departments")), setDepartments);
-    snap(query(collection(db, "announcements"), where("postedBy", "==", user.uid)), setAnnouncements);
-    snap(query(collection(db, "research_projects"), where("department", "==", dept)), setResearch);
-
-    return () => subs.forEach(u => u());
-  }, [user?.uid, user?.department]);
+    fetchData();
+  }, [user?.id, user?.department]);
 
   /* ── Handlers ──────────────────────────────────────────────────────── */
   const handleLogout = async () => { await logout(); navigate("/"); };
 
   const handleAddCourse = async () => {
     if (!newCourse.code || !newCourse.name) return;
-    await addDoc(collection(db, "courses"), { ...newCourse, department: user.department, createdAt: serverTimestamp(), createdBy: user.uid, status: "draft" });
-    setAddCourseOpen(false); setNewCourse({ code: "", name: "", credits: 3 });
+    try {
+      await coursesAPI.create({ ...newCourse, department: user.department, status: "draft" });
+      setAddCourseOpen(false); 
+      setNewCourse({ code: "", name: "", credits: 3 });
+      // Refresh
+      const res = await coursesAPI.getAll({ department: user.department });
+      setCourses(res.data);
+    } catch (error) {
+      console.error("Error adding course:", error);
+    }
   };
 
   const handleAddAnnouncement = async () => {
     if (!newAnn.title) return;
-    await addDoc(collection(db, "announcements"), { ...newAnn, postedBy: user.uid, postedByName: user.name, department: user.department, createdAt: serverTimestamp() });
-    setAddAnnouncementOpen(false); setNewAnn({ title: "", body: "", priority: "normal" });
+    try {
+      await announcementsAPI.create({ ...newAnn, targetAudience: "all" });
+      setAddAnnouncementOpen(false); 
+      setNewAnn({ title: "", body: "", priority: "normal" });
+      // Refresh
+      const res = await announcementsAPI.getAll({ department: user.department });
+      setAnnouncements(res.data);
+    } catch (error) {
+      console.error("Error adding announcement:", error);
+    }
   };
 
   const handleAddResearch = async () => {
     if (!newResearch.title) return;
-    await addDoc(collection(db, "research_projects"), { ...newResearch, department: user.department, createdAt: serverTimestamp(), createdBy: user.uid });
-    setAddResearchOpen(false); setNewResearch({ title: "", pi: "", grant: "", status: "Active" });
+    try {
+      await researchAPI.create(newResearch);
+      setAddResearchOpen(false); 
+      setNewResearch({ title: "", pi: "", grant: "", status: "Active" });
+      // Refresh
+      const res = await researchAPI.getAll({ department: user.department });
+      setResearch(res.data);
+    } catch (error) {
+      console.error("Error adding research project:", error);
+    }
   };
 
   /* ── Sidebar ───────────────────────────────────────────────────────── */

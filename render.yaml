@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: university-server
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false # Set your MongoDB Atlas connection string in the Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Set your JWT secret in the Render Dashboard

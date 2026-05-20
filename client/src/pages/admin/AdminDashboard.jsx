@@ -13,11 +13,17 @@ import {
   Speed, VpnKey, Newspaper, Menu as MenuIcon, Assignment, LockReset, Password, Circle, DarkMode, LightMode,
   Refresh as RefreshIcon, ContentCopy as ContentCopyIcon
 } from "@mui/icons-material";
-import {
-  collection, query, onSnapshot, doc, addDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, where, orderBy, limit, getDocs
-} from "firebase/firestore";
-import { db } from "../../services/Firebase";
 import { useAuth, ROLES } from "../../context/AuthContext";
+import {
+  usersAPI,
+  activityLogsAPI,
+  securityLogsAPI,
+  systemAPI,
+  applicationsAPI,
+  announcementsAPI,
+  collegesAPI,
+  departmentsAPI
+} from "../../services/api";
 import { useColorMode } from "../../context/ThemeContext";
 import { useTheme, alpha } from "@mui/material/styles";
 import { useLanguage } from "../../context/LanguageContext";
@@ -158,81 +164,61 @@ const AdminDashboard = () => {
 
   // Fetch Data Effects
   React.useEffect(() => {
-    setDataLoading(true);
+    const fetchData = async () => {
+      try {
+        const [
+          usersRes,
+          activitiesRes,
+          configRes,
+          appsRes,
+          newsRes,
+          securityRes,
+          depsRes,
+          collegesRes
+        ] = await Promise.all([
+          usersAPI.getAll(),
+          activityLogsAPI.getAll(),
+          systemAPI.getSettings('settings').catch(() => ({ data: { maintenanceMode: false } })),
+          applicationsAPI.getAll({ status: 'final_approved' }),
+          announcementsAPI.getAll(),
+          securityLogsAPI.getAll(),
+          departmentsAPI.getAll(),
+          collegesAPI.getAll()
+        ]);
 
-    const unsubUsers = onSnapshot(query(collection(db, "users")), (snapshot) => {
-      const users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      users.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-      setUsersList(users);
-      setStatsData(prev => ({
-        ...prev,
-        students: users.filter(u => u.role === ROLES.STUDENT).length,
-        faculty: users.filter(u => u.role === ROLES.TEACHER || u.role === ROLES.FACULTY).length
-      }));
-      setDataLoading(false);
-    });
+        const users = usersRes.data;
+        setUsersList(users);
+        setStatsData(prev => ({
+          ...prev,
+          students: users.filter(u => u.role === ROLES.STUDENT).length,
+          faculty: users.filter(u => u.role === ROLES.TEACHER || u.role === ROLES.FACULTY).length
+        }));
 
-    const unsubActivities = onSnapshot(query(collection(db, "activity_logs"), limit(100)), (snapshot) => {
-      const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      logs.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      setActivities(logs);
-    });
+        setActivities(activitiesRes.data);
+        setMaintenanceMode(configRes.data.maintenanceMode || false);
+        setApprovedApplications(appsRes.data);
+        setNewsList(newsRes.data);
+        setSecurityLogs(securityRes.data);
+        
+        const deps = depsRes.data;
+        setDepartmentsList(deps);
+        setStatsData(prev => ({ ...prev, departments: deps.length }));
+        
+        setCollegesList(collegesRes.data);
+        
+        const resetsRes = await passwordResetsAPI.getAll();
+        setPasswordResetsList(resetsRes.data);
 
-    const unsubConfig = onSnapshot(doc(db, "system_config", "settings"), (snap) => {
-      if (snap.exists()) setMaintenanceMode(snap.data().maintenanceMode);
-    });
-
-    const unsubApps = onSnapshot(query(collection(db, "applications"), where("status", "==", "final_approved")), (snapshot) => {
-      setApprovedApplications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    const unsubNews = onSnapshot(query(collection(db, "news"), orderBy("date", "desc")), (snapshot) => {
-      setNewsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    const unsubSecurity = onSnapshot(query(collection(db, "security_logs"), limit(50)), (snapshot) => {
-      const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      logs.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      setSecurityLogs(logs);
-    });
-
-    const unsubDeps = onSnapshot(collection(db, "departments"), (snapshot) => {
-      const deps = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setDepartmentsList(deps);
-      setStatsData(prev => ({ ...prev, departments: deps.length }));
-    });
-
-    const unsubColleges = onSnapshot(collection(db, "colleges"), (snapshot) => {
-      setCollegesList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    const unsubResets = onSnapshot(collection(db, "password_resets"), (snapshot) => {
-      const resets = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      resets.sort((a, b) => (b.requestedAt?.toMillis() || 0) - (a.requestedAt?.toMillis() || 0));
-      setPasswordResetsList(resets);
-    });
-
-    const unsubOtps = onSnapshot(collection(db, "otps"), (snapshot) => {
-      const otps = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      otps.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-      setOtpsList(otps);
-    });
-
-    const unsubPendingColleges = onSnapshot(query(collection(db, "colleges"), where("status", "==", "pending_credentials")), (snapshot) => {
-      const pending = snapshot.docs.map(d => ({ id: d.id, type: 'college', ...d.data() }));
-      setPendingEntities(prev => [...prev.filter(e => e.type !== 'college'), ...pending]);
-    });
-
-    const unsubPendingDepts = onSnapshot(query(collection(db, "departments"), where("status", "==", "pending_credentials")), (snapshot) => {
-      const pending = snapshot.docs.map(d => ({ id: d.id, type: 'department', ...d.data() }));
-      setPendingEntities(prev => [...prev.filter(e => e.type !== 'department'), ...pending]);
-    });
-
-    return () => {
-      unsubUsers(); unsubActivities(); unsubConfig(); unsubApps(); unsubNews();
-      unsubSecurity(); unsubDeps(); unsubColleges(); unsubResets(); unsubOtps();
-      unsubPendingColleges(); unsubPendingDepts();
+        setDataLoading(false);
+      } catch (err) {
+        console.error("Data fetch error:", err);
+        setDataLoading(false);
+      }
     };
+
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, []);
 
   // Performance Monitoring Simulation
@@ -261,9 +247,9 @@ const AdminDashboard = () => {
   // Handler Functions
   const logActivity = async (action, details) => {
     try {
-      await addDoc(collection(db, "activity_logs"), {
+      await activityLogsAPI.create({
         action, details, adminName: user?.name, adminEmail: user?.email,
-        ipAddress: userIp || "Unknown", timestamp: serverTimestamp(),
+        ipAddress: userIp || "Unknown",
         color: action.includes("Delete") ? "#ff003c" : "#00f0ff"
       });
     } catch (err) { console.error("Logging error:", err); }
@@ -274,10 +260,13 @@ const AdminDashboard = () => {
   const toggleMaintenanceMode = async (status) => {
     setMaintenanceLoading(true);
     try {
-      await setDoc(doc(db, "system_config", "settings"), { maintenanceMode: status }, { merge: true });
+      await systemAPI.updateSettings('settings', { maintenanceMode: status });
       setMaintenanceSuccess(status ? "MAINTENANCE_MODE: ENGAGED" : "MAINTENANCE_MODE: DISENGAGED");
       logActivity("System Control", `${status ? 'Engaged' : 'Disengaged'} Maintenance Protocol`);
       setTimeout(() => setMaintenanceSuccess(""), 4000);
+      setMaintenanceMode(status);
+    } catch (err) {
+      console.error("Maintenance error:", err);
     } finally { setMaintenanceLoading(false); }
   };
 
@@ -298,14 +287,22 @@ const AdminDashboard = () => {
   const handleApproveReset = async (req) => {
     try {
       await sendPasswordReset(req.email);
-      await updateDoc(doc(db, "password_resets", req.id), { status: "approved", processedBy: user?.name });
+      await passwordResetsAPI.update(req.id, { status: "approved", processedBy: user?.name });
       logActivity("Reset Approval", `Approved reset request for ${req.email}`);
+      // Refresh list
+      const resetsRes = await passwordResetsAPI.getAll();
+      setPasswordResetsList(resetsRes.data);
     } catch (err) { alert(err.message); }
   };
 
   const handleRejectReset = async (req) => {
-    await updateDoc(doc(db, "password_resets", req.id), { status: "rejected", processedBy: user?.name });
-    logActivity("Reset Rejection", `Rejected reset request for ${req.email}`);
+    try {
+      await passwordResetsAPI.update(req.id, { status: "rejected", processedBy: user?.name });
+      logActivity("Reset Rejection", `Rejected reset request for ${req.email}`);
+      // Refresh list
+      const resetsRes = await passwordResetsAPI.getAll();
+      setPasswordResetsList(resetsRes.data);
+    } catch (err) { alert(err.message); }
   };
 
   const handleManualCredentialReset = async (email, name) => {
@@ -491,8 +488,11 @@ const AdminDashboard = () => {
   const handleRejectApplication = async (app) => {
     if (!window.confirm(`Are you sure you want to reject the application for ${app.name}?`)) return;
     try {
-      await updateDoc(doc(db, "applications", app.id), { status: "rejected" });
+      await applicationsAPI.patch(app.id, { status: "rejected" });
       logActivity("Application Rejected", `Rejected application for ${app.email}`);
+      // Refresh list
+      const appsRes = await applicationsAPI.getAll({ status: 'final_approved' });
+      setApprovedApplications(appsRes.data);
     } catch (err) {
       console.error("Failed to reject application:", err);
       alert("Error rejecting application.");
@@ -507,13 +507,18 @@ const AdminDashboard = () => {
       if (res.success) {
         if (formData.applicationId) {
           try {
-            await updateDoc(doc(db, "applications", formData.applicationId), { status: "provisioned" });
+            await applicationsAPI.patch(formData.applicationId, { status: "provisioned" });
+            const appsRes = await applicationsAPI.getAll({ status: 'final_approved' });
+            setApprovedApplications(appsRes.data);
           } catch (appErr) {
              console.error("Failed to update application status:", appErr);
           }
         }
         setCreationSuccess("Identity provisioned successfully.");
         setFormData({ name: "", email: "", password: "", role: ROLES.STUDENT, applicationId: null });
+        // Refresh users
+        const usersRes = await usersAPI.getAll();
+        setUsersList(usersRes.data);
         setTimeout(() => setOpenDialog(false), 2000);
       } else { setCreationError(res.error); }
     } finally { setCreationLoading(false); }
@@ -521,8 +526,10 @@ const AdminDashboard = () => {
 
   const handleToggleUserActive = async (userId, isCurrentlyDisabled) => {
     try {
-      await updateDoc(doc(db, "users", userId), { disabled: !isCurrentlyDisabled });
+      await usersAPI.patch(userId, { disabled: !isCurrentlyDisabled });
       logActivity(isCurrentlyDisabled ? "Grant Access" : "Revoke Access", `Toggled user ${userId} → ${isCurrentlyDisabled ? 'active' : 'disabled'}`);
+      // Update local state
+      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, disabled: !isCurrentlyDisabled } : u));
     } catch (err) { alert(err.message); }
   };
 
@@ -537,8 +544,9 @@ const AdminDashboard = () => {
   const handleDeleteUser = async (userId) => {
     if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
     try {
-      await deleteDoc(doc(db, "users", userId));
+      await usersAPI.delete(userId);
       logActivity("Delete User", `Deleted user ID: ${userId}`);
+      setUsersList(prev => prev.filter(u => u.id !== userId));
     } catch (err) { alert(err.message); }
   };
 
@@ -554,23 +562,22 @@ const AdminDashboard = () => {
 
   const handleDeactivateStudent = async (studentToDeactivate) => {
     try {
-      await updateDoc(doc(db, "users", studentToDeactivate.id), { disabled: true, status: 'Deactivated' });
+      await usersAPI.patch(studentToDeactivate.id, { disabled: true, status: 'Deactivated' });
       
-      await addDoc(collection(db, "security_logs"), {
+      await securityLogsAPI.create({
         action: "ACCOUNT_DEACTIVATED",
         details: `Deactivated student ${studentToDeactivate.name} (${studentToDeactivate.email}) due to clearance status (${studentToDeactivate.status}).`,
         ip: userIp || "Unknown",
-        timestamp: serverTimestamp(),
         user: user?.name || "Admin",
         severity: "high"
       });
       alert(`Successfully deactivated student ${studentToDeactivate.name}`);
+      setUsersList(prev => prev.map(u => u.id === studentToDeactivate.id ? { ...u, disabled: true, status: 'Deactivated' } : u));
     } catch (err) {
       console.error("Error deactivating student:", err);
       alert("Error: " + err.message);
     }
   };
-
 
   const handleGenerateSecurityReport = () => {
     const pdfDoc = new jsPDF();
@@ -582,7 +589,7 @@ const AdminDashboard = () => {
     let y = 58;
     securityLogs.slice(0, 40).forEach((log) => {
       if (y > 270) { pdfDoc.addPage(); y = 20; }
-      pdfDoc.text(`${log.timestamp?.toDate?.().toLocaleString() || 'N/A'} | ${log.classification || ''} | ${log.resolution || ''}`, 20, y);
+      pdfDoc.text(`${new Date(log.timestamp).toLocaleString()} | ${log.classification || ''} | ${log.resolution || ''}`, 20, y);
       y += 7;
     });
     pdfDoc.save(`ALX-Security-Report-${Date.now()}.pdf`);
@@ -594,12 +601,16 @@ const AdminDashboard = () => {
     setNewsLoading(true);
     try {
       if (editingNews) {
-        await updateDoc(doc(db, "news", editingNews.id), { ...newsForm, updatedAt: serverTimestamp() });
+        await announcementsAPI.update(editingNews.id, newsForm);
       } else {
-        await addDoc(collection(db, "news"), { ...newsForm, date: serverTimestamp() });
+        await announcementsAPI.create(newsForm);
       }
+      const newsRes = await announcementsAPI.getAll();
+      setNewsList(newsRes.data);
       setOpenNewsDialog(false);
-    } finally { setNewsLoading(false); }
+    } catch (err) {
+      console.error("Save news error:", err);
+    } finally { setNewsLoading(true); }
   };
 
   const handleExportLogs = () => {
@@ -660,16 +671,13 @@ const AdminDashboard = () => {
     e.preventDefault();
     setBroadcastLoading(true);
     try {
-      const q = query(collection(db, "system_broadcasts"), where("active", "==", true));
-      const existing = await getDocs(q);
-      const batchPromises = existing.docs.map(d => updateDoc(doc(db, "system_broadcasts", d.id), { active: false }));
-      await Promise.all(batchPromises);
-
-      await addDoc(collection(db, "system_broadcasts"), {
-        message: broadcastMessage, type: broadcastType, active: true, createdAt: serverTimestamp()
+      await systemBroadcastsAPI.create({
+        message: broadcastMessage, type: broadcastType, active: true
       });
       setOpenBroadcast(false);
       logActivity("Broadcast", `Sent ${broadcastType} alert: ${broadcastMessage}`);
+    } catch (err) {
+      console.error("Broadcast error:", err);
     } finally { setBroadcastLoading(false); }
   };
 
@@ -690,15 +698,49 @@ const AdminDashboard = () => {
 
   const adminSidebarContent = (
     <>
-      <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 2 }}>
-        <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "primary.main", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><School /></Box>
-        {sidebarOpen && <Typography variant="h6" fontWeight={1000}>{t("adminCore")}</Typography>}
+      {/* Sidebar Header with Toggle Button */}
+      <Box sx={{
+        px: 2, display: "flex", alignItems: "center",
+        borderBottom: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+        minHeight: 64, overflow: 'hidden'
+      }}>
+        {sidebarOpen ? (
+          /* Expanded: logo + title on left, toggle on right */
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+              <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: "primary.main", display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <School sx={{ fontSize: 20 }} />
+              </Box>
+              <Typography variant="h6" fontWeight={1000} noWrap>{t("adminCore")}</Typography>
+            </Box>
+            {!isMobile && (
+              <IconButton
+                onClick={() => setSidebarOpen(false)}
+                size="small"
+                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.18) }, flexShrink: 0 }}
+              >
+                <MenuIcon fontSize="small" />
+              </IconButton>
+            )}
+          </>
+        ) : (
+          /* Collapsed: only the toggle button, perfectly centered */
+          !isMobile && (
+            <IconButton
+              onClick={() => setSidebarOpen(true)}
+              size="small"
+              sx={{ mx: 'auto', bgcolor: alpha(theme.palette.primary.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.18) } }}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+          )
+        )}
       </Box>
       <List sx={{ px: 2, flex: 1 }}>
         {menuItems.map((item) => (
           <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
-              onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+              onClick={() => { setActiveTab(item.id); if (isMobile) setMobileDrawerOpen(false); }}
               sx={{
                 borderRadius: 3, py: 1.5,
                 bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
@@ -769,7 +811,12 @@ const AdminDashboard = () => {
       <Box sx={{ flexGrow: 1, p: { xs: 2, md: 5 }, minWidth: 0 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 3, md: 6 }, flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => isMobile ? setMobileDrawerOpen(true) : setSidebarOpen(!sidebarOpen)} sx={{ bgcolor: alpha(theme.palette.divider, 0.05) }}><MenuIcon /></IconButton>
+            {/* Mobile-only menu toggle — desktop toggle is now inside the sidebar header */}
+            {isMobile && (
+              <IconButton onClick={() => setMobileDrawerOpen(true)} sx={{ bgcolor: alpha(theme.palette.divider, 0.05) }}>
+                <MenuIcon />
+              </IconButton>
+            )}
             <Box>
               <Typography variant="h4" fontWeight={900}>{menuItems.find(i => i.id === activeTab)?.label}</Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={800}>UNIVERSITY OPERATIONAL COMMAND · {new Date().toLocaleDateString()}</Typography>

@@ -4,11 +4,14 @@
   "description": "University Management System - Full Stack Application",
   "scripts": {
     "client": "cd client && npm run dev",
-    "server": "cd server && node server/server.js",
+    "server": "cd server && node server.js",
+    "server:dev": "cd server && npm run dev",
+    "server:seed": "cd server && node scripts/seed.js",
     "dev": "npm run client",
     "install:all": "cd client && npm install && cd ../server && npm install",
     "build": "cd client && npm run build"
   },
+
   "keywords": [],
   "author": "",
   "license": "ISC"

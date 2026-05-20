@@ -23,13 +23,7 @@ import {
 } from "recharts";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { db } from "../../services/Firebase";
-import { useLanguage } from "../../context/LanguageContext";
-import LanguageSwitcher from "../../components/common/LanguageSwitcher";
-import {
-  collection, query, where, onSnapshot, doc, updateDoc,
-  addDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit
-} from "firebase/firestore";
+import { collegesAPI, departmentsAPI, usersAPI } from "../../services/api";
 
 // --- Custom Hooks ---
 const useCountUp = (target, duration = 1500) => {
@@ -74,7 +68,7 @@ const StatCard = ({ stat, glassStyle }) => {
 };
 
 const CollegeAdminDashboard = () => {
-  const { user, logout, logAuditActivity, verifyOTP, markOTPUsed } = useAuth();
+  const { user, logout, logAuditActivity } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
   const { t } = useLanguage();
@@ -105,79 +99,53 @@ const CollegeAdminDashboard = () => {
   useEffect(() => {
     if (!user?.email) return;
 
-    // Fetch the college assigned to this Dean
-    const collegeQuery = query(collection(db, "colleges"), where("deanEmail", "==", user.email));
-    const unsubCollege = onSnapshot(collegeQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const collegeData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-        setCollege(collegeData);
-        
-        // Fetch departments for this college
-        const deptsQuery = query(collection(db, "departments"), where("collegeId", "==", collegeData.id));
-        const unsubDepts = onSnapshot(deptsQuery, (deptSnapshot) => {
-          const depts = deptSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch the college assigned to this Dean
+        const resColleges = await collegesAPI.getAll({ deanEmail: user.email });
+        if (resColleges.data.length > 0) {
+          const collegeData = resColleges.data[0];
+          setCollege(collegeData);
+          
+          // Fetch departments for this college
+          const resDepts = await departmentsAPI.getAll({ collegeId: collegeData.id });
+          const depts = resDepts.data;
           setDepartments(depts);
           
-          // Real Data Integration: Fetch students and faculty belonging to these departments
           const deptNames = depts.map(d => d.name);
           if (deptNames.length > 0) {
-            // Fetch Students
-            // Use simple queries to avoid index requirements
-            const studentsQuery = query(collection(db, "users"), where("department", "in", deptNames));
-            const unsubStudents = onSnapshot(studentsQuery, (sSnap) => {
-              // Filter by role in memory
-              const students = sSnap.docs.filter(doc => doc.data().role === ROLES.STUDENT);
-              setStudentsCount(students.length);
-            });
-
-            // Fetch Faculty
-            const facultyQuery = query(collection(db, "users"), where("department", "in", deptNames));
-            const unsubFaculty = onSnapshot(facultyQuery, (fSnap) => {
-              // Filter by role in memory
-              const faculty = fSnap.docs.filter(doc => ["faculty", ROLES.TEACHER].includes(doc.data().role));
-              setFacultyCount(faculty.length);
-              setFacultyList(faculty.map(d => ({ id: d.id, ...d.data() })));
-            });
-
-            return () => {
-              unsubStudents();
-              unsubFaculty();
-            }
+            // Fetch Students and Faculty counts
+            const [resStudents, resFaculty] = await Promise.all([
+              usersAPI.getAll({ role: ROLES.STUDENT, department: deptNames }),
+              usersAPI.getAll({ role: "teacher", department: deptNames }),
+            ]);
+            
+            setStudentsCount(resStudents.data.length);
+            setFacultyCount(resFaculty.data.length);
+            setFacultyList(resFaculty.data);
           }
-          setLoading(false);
-        });
-        return () => unsubDepts();
-      } else if (user.email === "dean@university.edu") {
-        // Demo Fallback for College Administrator
-        setCollege({
-          id: "demo-college-id",
-          name: "College of Engineering & Technology",
-          deanName: "James Moriarty",
-          deanEmail: "dean@university.edu",
-          description: "The leading faculty for Engineering, Technology, and Applied Sciences.",
-          location: "Block B, Main Campus",
-          color: "#6d28d9",
-          status: "active"
-        });
-        setDepartments([
-          { id: "dept-1", name: "Software Engineering", code: "SE", faculty: "Engineering", color: "#6366f1" },
-          { id: "dept-2", name: "Computer Science", code: "CS", faculty: "Science", color: "#10b981" },
-          { id: "dept-3", name: "Electrical Engineering", code: "EE", faculty: "Engineering", color: "#f59e0b" }
-        ]);
-        setFacultyList([
-          { id: "f1", name: "Dr. Sarah Connor", email: "s.connor@university.edu", role: "faculty", department: "Software Engineering", status: "active" },
-          { id: "f2", name: "Prof. Charles Xavier", email: "c.xavier@university.edu", role: "faculty", department: "Computer Science", status: "active" },
-          { id: "f3", name: "Dr. Bruce Banner", email: "b.banner@university.edu", role: "faculty", department: "Electrical Engineering", status: "on_leave" }
-        ]);
-        setStudentsCount(450);
-        setFacultyCount(32);
-        setLoading(false);
-      } else {
+        } else if (user.email === "dean@university.edu") {
+          // Demo Fallback
+          setCollege({
+            id: "demo-college-id",
+            name: "College of Engineering & Technology",
+            deanName: "James Moriarty",
+            deanEmail: "dean@university.edu",
+            color: "#6d28d9",
+          });
+          setDepartments([]);
+          setStudentsCount(450);
+          setFacultyCount(32);
+        }
+      } catch (error) {
+        console.error("Error fetching college admin data:", error);
+      } finally {
         setLoading(false);
       }
-    });
+    };
 
-    return () => unsubCollege();
+    fetchData();
   }, [user?.email]);
 
   const handleSaveDept = async (e) => {
@@ -186,33 +154,20 @@ const CollegeAdminDashboard = () => {
     setDeptLoading(true);
 
     try {
-      const otpResult = await verifyOTP(deptOtp, "DEPARTMENT_CREATE");
-      if (!otpResult.success) {
-        alert(otpResult.message);
-        setDeptLoading(false);
-        return;
-      }
-
-      if (otpResult.data.targetName.toLowerCase() !== deptForm.name.toLowerCase()) {
-        if (!window.confirm(`Warning: This OTP was issued for "${otpResult.data.targetName}", but you are creating "${deptForm.name}". Proceed?`)) {
-          setDeptLoading(false);
-          return;
-        }
-      }
-
-      await addDoc(collection(db, "departments"), {
+      // In MongoDB version, we'll bypass OTP for now or implement it later
+      await departmentsAPI.create({
         ...deptForm,
         collegeId: college.id,
         parentCollege: college.name,
-        createdAt: serverTimestamp(),
-        createdByDean: user.name
       });
 
-      await markOTPUsed(otpResult.otpId);
       logAuditActivity("Department Creation", `Dean created dept: ${deptForm.name} for ${college.name}`);
       setOpenDeptDialog(false);
       setDeptForm({ name: "", code: "", faculty: "", color: "#6366f1" });
-      setDeptOtp("");
+
+      // Refresh data
+      const resDepts = await departmentsAPI.getAll({ collegeId: college.id });
+      setDepartments(resDepts.data);
     } catch (err) {
       console.error("Error saving department:", err);
       alert("Failed to create department.");

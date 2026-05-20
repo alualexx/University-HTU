@@ -12,8 +12,7 @@ import {
   NavigateNext, NavigateBefore
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../services/Firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { departmentsAPI, applicationsAPI } from "../services/api";
 
 const steps = ["Profile", "Academic", "Documents", "Identity", "Review"];
 
@@ -26,11 +25,15 @@ const Register = () => {
   const { userIp, logSecurityEvent, globalAdmissionOpen } = useAuth();
 
   useEffect(() => {
-    const q = query(collection(db, "departments"), where("isPublished", "==", true));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setDepartments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
+    const fetchDepartments = async () => {
+      try {
+        const res = await departmentsAPI.getAll();
+        setDepartments(res.data);
+      } catch (err) {
+        console.error("Error fetching departments:", err);
+      }
+    };
+    fetchDepartments();
   }, []);
 
   // Files
@@ -198,11 +201,9 @@ const Register = () => {
         referenceId: referenceIdPreview,
         status: "pending_dept_review",
         ipAddress: userIp || "Unknown",
-        submittedAt: serverTimestamp(),
-        lastStatusUpdate: serverTimestamp()
       };
 
-      await addDoc(collection(db, "applications"), applicationData);
+      await applicationsAPI.submit(applicationData);
       logSecurityEvent("Identity Management", `New Application Submitted: ${formData.email} [${referenceIdPreview}]`, "info");
       setSuccess(true);
     } catch (err) {

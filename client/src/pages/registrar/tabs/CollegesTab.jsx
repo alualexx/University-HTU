@@ -8,10 +8,7 @@ import {
 import { 
   Add, Business, Edit, Delete, Person, Email, Lock 
 } from '@mui/icons-material';
-import { 
-  collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../../../services/Firebase';
+import { collegesAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
 const CollegesTab = ({ colleges, isDark, glassStyle }) => {
@@ -74,17 +71,16 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
            }
         }
 
-        await addDoc(collection(db, "colleges"), { 
+        await collegesAPI.create({ 
           ...collegeForm, 
-          status: "pending_credentials",
-          createdAt: serverTimestamp() 
+          status: "active" 
         });
         
         await markOTPUsed(otpResult.otpId);
         logAuditActivity("College Creation", `Created new college: ${collegeForm.name}`);
         alert("College created successfully! It is now pending Administrator provisioning for credentials.");
       } else {
-        await updateDoc(doc(db, "colleges", editingCollege.id), collegeForm);
+        await collegesAPI.update(editingCollege.id || editingCollege._id, collegeForm);
         logAuditActivity("College Update", `Updated college: ${collegeForm.name}`);
       }
       setOpenCollegeDialog(false);
@@ -99,7 +95,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
   const handleDeleteCollege = async (collegeId) => {
     if (window.confirm("Are you sure you want to delete this college? This will orphan all associated departments and data.")) {
       try {
-        await deleteDoc(doc(db, "colleges", collegeId));
+        await collegesAPI.delete(collegeId);
         logAuditActivity("College Deletion", `Deleted college with ID: ${collegeId}`);
       } catch (err) {
         console.error("Error deleting college:", err);

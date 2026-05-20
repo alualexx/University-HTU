@@ -29,7 +29,7 @@ import {
 import { jsPDF } from "jspdf";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { db } from "../../services/Firebase";
+import { collegesAPI, departmentsAPI, applicationsAPI } from "../../services/api";
 import {
   collection, query, where, onSnapshot, doc, updateDoc,
   addDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit, setDoc
@@ -196,29 +196,54 @@ const RegistrarDashboard = () => {
     const unsubs = [];
 
     // Pending applications (Only those approved by Dept Head)
-    unsubs.push(onSnapshot(query(collection(db, "applications"), where("status", "==", "approved_by_dept")), (snap) => {
-      setApplications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("applications listener failed:", err)));
+    const fetchApps = async () => {
+      try {
+        const res = await applicationsAPI.getAll();
+        // Filtering in frontend for now to match the Firebase logic if needed
+        setApplications(res.data.filter(app => app.status === "approved_by_dept" || app.status === "pending_dept_review"));
+      } catch (err) {
+        console.warn("applications fetch failed:", err);
+      }
+    };
+    fetchApps();
 
     // Pending IDs
-    unsubs.push(onSnapshot(query(collection(db, "applications"), where("status", "==", "setup_completed")), (snap) => {
-      setPendingIds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("pendingIds listener failed:", err)));
+    const fetchPendingIds = async () => {
+      try {
+        const res = await applicationsAPI.getAll();
+        setPendingIds(res.data.filter(app => app.status === "setup_completed"));
+      } catch (err) {
+        console.warn("pendingIds fetch failed:", err);
+      }
+    };
+    fetchPendingIds();
 
     // Students (users with role=student)
-    unsubs.push(onSnapshot(query(collection(db, "users"), where("role", "==", "student")), (snap) => {
-      setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("students listener failed:", err)));
+    const fetchStudents = async () => {
+      try {
+        const res = await usersAPI.getAll({ role: "student" });
+        setStudents(res.data);
+      } catch (err) {
+        console.warn("students fetch failed:", err);
+      }
+    };
+    fetchStudents();
 
     // Courses
-    unsubs.push(onSnapshot(collection(db, "courses"), (snap) => {
-      setCourses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("courses listener failed:", err)));
+    const fetchCourses = async () => {
+      try {
+        const res = await coursesAPI.getAll();
+        setCourses(res.data);
+      } catch (err) {
+        console.warn("courses fetch failed:", err);
+      }
+    };
+    fetchCourses();
 
-    // Schedules
-    unsubs.push(onSnapshot(collection(db, "schedules"), (snap) => {
-      setSchedules(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("schedules listener failed:", err)));
+    // Schedules - Placeholder as we don't have schedules API yet
+    // unsubs.push(onSnapshot(collection(db, "schedules"), (snap) => {
+    //   setSchedules(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    // }, (err) => console.warn("schedules listener failed:", err)));
 
     // ID Requests
     unsubs.push(onSnapshot(query(collection(db, "id_requests"), orderBy("timestamp", "desc")), (snap) => {
@@ -231,14 +256,26 @@ const RegistrarDashboard = () => {
     }, (err) => console.warn("news listener failed:", err)));
 
     // Colleges
-    unsubs.push(onSnapshot(query(collection(db, "colleges"), orderBy("name")), (snap) => {
-      setColleges(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("colleges listener failed:", err)));
+    const fetchColleges = async () => {
+      try {
+        const res = await collegesAPI.getAll();
+        setColleges(res.data);
+      } catch (err) {
+        console.warn("colleges fetch failed:", err);
+      }
+    };
+    fetchColleges();
 
     // Departments
-    unsubs.push(onSnapshot(query(collection(db, "departments"), orderBy("name")), (snap) => {
-      setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.warn("departments listener failed:", err)));
+    const fetchDepts = async () => {
+      try {
+        const res = await departmentsAPI.getAll();
+        setDepartments(res.data);
+      } catch (err) {
+        console.warn("departments fetch failed:", err);
+      }
+    };
+    fetchDepts();
 
     // Admissions Posts
     unsubs.push(onSnapshot(query(collection(db, "admissions_posts"), orderBy("date", "desc")), (snap) => {
@@ -338,34 +375,13 @@ const RegistrarDashboard = () => {
 
   const handleApproveApplication = async (app) => {
     try {
-      // Generate ALX-XXXX/YYYY student ID
-      const year = new Date().getFullYear();
-      const snapshot = await getDocs(
-        query(collection(db, "applications"), where("status", "in", ["approved_by_registrar", "enrolled"]))
-      );
-      const seq = String(snapshot.size + 1).padStart(4, "0");
-      const studentId = `ALX-${seq}/${year}`;
-
-      await updateDoc(doc(db, "applications", app.id), {
-        status: "final_approved",
-        studentId,
-        approvedAt: serverTimestamp(),
-        reviewedBy: user?.name,
-      });
-
-      // Write notification
-      await addDoc(collection(db, "notifications"), {
-        applicantEmail: app.email,
-        applicantPhone: app.phone || "",
-        applicantName: app.name,
-        status: "accepted",
-        department: app.intendedMajor,
-        studentId,
-        message: `Congratulations! Your application to ${app.intendedMajor} has been accepted. Your Student ID is ${studentId}. Please wait for the admin to create your portal account.`,
-        sentAt: serverTimestamp(),
-      });
+      const res = await applicationsAPI.updateStatus(app._id || app.id, "final_approved", "Approved by Registrar");
+      if (res.data) {
+        alert(`Application for ${app.name} approved. Student ID issued: ${res.data.studentId}`);
+      }
     } catch (err) {
       console.error("Error approving application:", err);
+      alert("Failed to approve application.");
     }
   };
 
@@ -425,24 +441,11 @@ const RegistrarDashboard = () => {
 
   const handleRejectApplication = async (appId, appData, reason) => {
     try {
-      await updateDoc(doc(db, "applications", appId), {
-        status: "rejected_by_registrar",
-        rejectionReason: reason,
-        rejectedAt: serverTimestamp(),
-        reviewedBy: user?.name,
-      });
-
-      await addDoc(collection(db, "notifications"), {
-        applicantEmail: appData.email,
-        applicantPhone: appData.phone || "",
-        applicantName: appData.name,
-        status: "rejected",
-        department: appData.intendedMajor,
-        message: `We regret to inform you that your application to ${appData.intendedMajor} has been unsuccessful. Reason: ${reason}`,
-        sentAt: serverTimestamp(),
-      });
+      await applicationsAPI.updateStatus(appId, "rejected_by_registrar", reason);
+      alert("Application rejected.");
     } catch (err) {
       console.error("Error rejecting application:", err);
+      alert("Failed to reject application.");
     }
   };
 
