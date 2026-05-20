@@ -261,36 +261,7 @@ const Login = () => {
               </Stack>
             </form>
 
-            {/* Demo accounts */}
-            <Box sx={{ mt: 7 }}>
-              <Typography variant="overline" color="text.secondary" fontWeight={800} align="center" display="block" sx={{ mb: 2, letterSpacing: 2 }}>
-                Quick Access
-              </Typography>
-              <Grid container spacing={1.5}>
-                {[
-                  { label: "Admin", email: "admin@university.edu", color: "#1e3a8a" },
-                  { label: "Registrar", email: "registrar@university.edu", color: "#7c3aed" },
-                  { label: "College", email: "dean@university.edu", color: "#6d28d9" },
-                  { label: "Faculty", email: "head@university.edu", color: "#2e7d32" },
-                  { label: "Student", email: "student@university.edu", color: "#ea580c" },
-                ].map((d) => (
-                  <Grid item xs={6} key={d.label}>
-                    <Button
-                      fullWidth variant="outlined" size="small"
-                      onClick={() => fillDemo(d.email)}
-                      sx={{
-                        py: 1.5, textTransform: "none", borderRadius: 3, fontWeight: 700,
-                        borderColor: isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0",
-                        color: "text.secondary",
-                        "&:hover": { bgcolor: alpha(d.color, 0.08), borderColor: d.color, color: d.color }
-                      }}
-                    >
-                      {d.label}
-                    </Button>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
+
           </Box>
         </Fade>
 
