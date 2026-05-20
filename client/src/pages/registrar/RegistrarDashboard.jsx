@@ -29,7 +29,8 @@ import {
 import { jsPDF } from "jspdf";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { collegesAPI, departmentsAPI, applicationsAPI } from "../../services/api";
+import { collegesAPI, departmentsAPI, applicationsAPI, usersAPI, coursesAPI } from "../../services/api";
+import { db } from "../../services/Firebase";
 import {
   collection, query, where, onSnapshot, doc, updateDoc,
   addDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit, setDoc
