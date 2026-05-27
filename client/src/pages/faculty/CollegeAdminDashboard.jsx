@@ -24,6 +24,8 @@ import {
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
 import { collegesAPI, departmentsAPI, usersAPI } from "../../services/api";
+import { useLanguage } from "../../context/LanguageContext";
+import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
 // --- Custom Hooks ---
 import useCountUp from "../../hooks/useCountUp";
