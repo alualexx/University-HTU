@@ -239,13 +239,13 @@ const OTPManagementTab = ({
                     fullWidth select label="Target College"
                     value={otpFormData.targetId || ''}
                     onChange={(e) => {
-                      const col = collegesList.find(c => c.id === e.target.value);
+                      const col = collegesList.find(c => (c._id || c.id) === e.target.value);
                       setOtpFormData({ ...otpFormData, targetId: e.target.value, targetName: col?.name || '' });
                     }}
                     required
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   >
-                    {collegesList.map(c => <MenuItem key={c.id} value={c.id}>{c.name} ({c.code})</MenuItem>)}
+                    {collegesList.map(c => <MenuItem key={c._id || c.id} value={c._id || c.id}>{c.name} ({c.code})</MenuItem>)}
                     <MenuItem value="__new__">+ New College (enter name manually)</MenuItem>
                   </TextField>
                 ) : (
@@ -265,15 +265,15 @@ const OTPManagementTab = ({
                     fullWidth select label="Target Department"
                     value={otpFormData.targetId || ''}
                     onChange={(e) => {
-                      const dept = departmentsList.find(d => d.id === e.target.value);
+                      const dept = departmentsList.find(d => (d._id || d.id) === e.target.value);
                       setOtpFormData({ ...otpFormData, targetId: e.target.value, targetName: dept?.name || '' });
                     }}
                     required
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   >
                     {departmentsList.map(d => {
-                      const parentCollege = collegesList.find(c => c.id === d.collegeId);
-                      return <MenuItem key={d.id} value={d.id}>{d.name} {parentCollege ? `· ${parentCollege.code}` : ''}</MenuItem>;
+                      const parentCollege = collegesList.find(c => (c._id || c.id) === d.collegeId);
+                      return <MenuItem key={d._id || d.id} value={d._id || d.id}>{d.name} {parentCollege ? `· ${parentCollege.code}` : ''}</MenuItem>;
                     })}
                     <MenuItem value="__new__">+ New Department (enter name manually)</MenuItem>
                   </TextField>
