@@ -6,7 +6,7 @@ import { alpha } from "@mui/material/styles";
 import {
   Key, Assignment, CheckCircle, Delete, Lock
 } from "@mui/icons-material";
-import { doc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp } from "firebase/firestore";
+import { otpsAPI } from "../../../services/api";
 
 const OTPManagementTab = ({
   otpsList,
@@ -51,19 +51,24 @@ const OTPManagementTab = ({
         isUsed: false,
         createdBy: user?.name || "Admin",
         createdById: user?.uid || user?.id || null,
-        createdAt: serverTimestamp()
       };
 
-      // Strip any accidental 'undefined' values that Firebase rejects
+      // Strip any accidental 'undefined' values that might cause issues
       Object.keys(payload).forEach(key => {
         if (payload[key] === undefined) {
           delete payload[key];
         }
       });
       
-      await addDoc(collection(db, "otps"), payload);
+      const newOtpRes = await otpsAPI.create(payload);
+      const newOtp = newOtpRes.data;
 
       logActivity("OTP Generation", `Generated ${otpFormData.type} for "${otpFormData.targetName}"`);
+      
+      // Update local state by mutating the prop list directly to avoid requiring a full refetch here. 
+      // AdminDashboard will refetch eventually, but this provides instant feedback.
+      otpsList.unshift(newOtp);
+
       setOpenOtpDialog(false);
       setOtpFormData({ type: "COLLEGE_CREATE", targetName: "" });
       alert(`OTP Generated Successfully: ${code}\n\nProvide this code to the authorized registrar or dean.`);
@@ -80,8 +85,11 @@ const OTPManagementTab = ({
   const handleDeleteOTP = async (otpId) => {
     if (window.confirm("Are you sure you want to revoke this OTP?")) {
       try {
-        await deleteDoc(doc(db, "otps", otpId));
+        await otpsAPI.delete(otpId);
         logActivity("OTP Revocation", `Revoked OTP ID: ${otpId}`);
+        // Remove from local list for instant feedback
+        const idx = otpsList.findIndex(o => o.id === otpId);
+        if (idx !== -1) otpsList.splice(idx, 1);
       } catch (err) {
         console.error("Error deleting OTP:", err);
       }
@@ -155,7 +163,9 @@ const OTPManagementTab = ({
                   <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
                     <Box>
                       <Typography variant="caption" display="block" fontWeight={800}>{otp.createdBy}</Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={700}>{otp.createdAt?.toDate()?.toLocaleString() || 'N/A'}</Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                        {otp.createdAt ? new Date(otp.createdAt).toLocaleString() : 'N/A'}
+                      </Typography>
                     </Box>
                   </TableCell>
                   <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
@@ -168,8 +178,11 @@ const OTPManagementTab = ({
                       <Tooltip title={otp.isUsed ? 'Mark as Ready (Reset)' : 'Mark as Exhausted'}>
                         <IconButton size="small"
                           onClick={async () => {
-                            await updateDoc(doc(db, 'otps', otp.id), { isUsed: !otp.isUsed });
+                            await otpsAPI.update(otp.id, { isUsed: !otp.isUsed });
+                            otp.isUsed = !otp.isUsed; // Optimistic update
                             logActivity('OTP Status Toggle', `Toggled OTP ${otp.code} → ${!otp.isUsed ? 'READY' : 'EXHAUSTED'}`);
+                            // Force re-render of component by triggering state update indirectly
+                            setOtpFormData({...otpFormData}); 
                           }}
                           sx={{ color: otp.isUsed ? 'success.main' : 'warning.main', bgcolor: 'rgba(255,255,255,0.03)' }}
                         >

@@ -23,7 +23,8 @@ import {
   announcementsAPI,
   collegesAPI,
   departmentsAPI,
-  coursesAPI
+  coursesAPI,
+  otpsAPI
 } from "../../services/api";
 import { useColorMode } from "../../context/ThemeContext";
 import { useTheme, alpha } from "@mui/material/styles";
@@ -178,7 +179,8 @@ const AdminDashboard = () => {
           newsRes,
           securityRes,
           depsRes,
-          collegesRes
+          collegesRes,
+          otpsRes
         ] = await Promise.all([
           usersAPI.getAll(),
           activityLogsAPI.getAll(),
@@ -187,7 +189,8 @@ const AdminDashboard = () => {
           announcementsAPI.getAll(),
           securityLogsAPI.getAll(),
           departmentsAPI.getAll(),
-          collegesAPI.getAll()
+          collegesAPI.getAll(),
+          otpsAPI.getAll()
         ]);
 
         const users = usersRes.data;
@@ -217,6 +220,8 @@ const AdminDashboard = () => {
         
         const resetsRes = await passwordResetsAPI.getAll();
         setPasswordResetsList(resetsRes.data);
+
+        setOtpsList(otpsRes.data);
 
         setDataLoading(false);
       } catch (err) {

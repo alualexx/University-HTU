@@ -43,6 +43,7 @@ app.use("/api/activity-logs", require("./routes/activity_logs"));
 app.use("/api/security-logs", require("./routes/security_logs"));
 app.use("/api/password-resets", require("./routes/password_resets"));
 app.use("/api/system-broadcasts", require("./routes/system_broadcasts"));
+app.use("/api/otps", require("./routes/otps"));
 
 // Health check
 app.get("/api/health", (_req, res) => {

@@ -173,4 +173,12 @@ export const systemBroadcastsAPI = {
   create: (data) => api.post('/system-broadcasts', data),
 };
 
+// OTPs API
+export const otpsAPI = {
+  getAll: () => api.get('/otps'),
+  create: (data) => api.post('/otps', data),
+  update: (id, data) => api.patch(`/otps/${id}`, data),
+  delete: (id) => api.delete(`/otps/${id}`),
+};
+
 export default api;
