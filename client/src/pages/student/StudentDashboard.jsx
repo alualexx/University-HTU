@@ -272,7 +272,7 @@ export default function StudentDashboard() {
   const gradedE = enrollments?.filter(e => e.grade && gradeToPoints[e.grade] !== undefined) || [];
   const gpa = gradedE.length > 0
     ? gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (gradeToPoints[e.grade] || 0) * (c ? (Number(c.credits) || 3) : 3); }, 0) / gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 3); }, 0)
-    : 3.80;
+    : 0;
    const mySchedules = schedules?.filter(s => myActiveCourses?.some(c => c.id === s.courseId || c.name === s.courseName))?.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)) || [];
   
   // Year/Semester Filtering Logic
@@ -476,10 +476,7 @@ export default function StudentDashboard() {
                       {systemConfig.registrationLock ? "REG LOCKED" : "REG OPEN"}
                     </Typography>
                   </Box>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="caption" fontWeight={900} color="text.secondary">LATENCY</Typography>
-                    <Typography variant="body2" fontWeight={1000}>32ms</Typography>
-                  </Box>
+
                 </Stack>
               </Box>
 
