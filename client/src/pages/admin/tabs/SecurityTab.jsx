@@ -11,6 +11,7 @@ const SecurityTab = ({
   threatLogs,
   securityScore,
   securityAlerts,
+  criticalLast24h = 0,
   gradients,
   neonColors,
   glassStyle,
@@ -107,7 +108,9 @@ const SecurityTab = ({
             </Button>
             <Card sx={{ ...glassStyle, borderRadius: 5, p: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
               <Typography variant="subtitle2" fontWeight={900} gutterBottom>Critical Incidents</Typography>
-              <Typography variant="h3" fontWeight={1000} color="error.main">00</Typography>
+              <Typography variant="h3" fontWeight={1000} color={criticalLast24h > 0 ? "error.main" : "success.main"}>
+                {String(criticalLast24h).padStart(2, '0')}
+              </Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={800}>PAST 24 HOURS</Typography>
             </Card>
           </Stack>
@@ -127,13 +130,19 @@ const SecurityTab = ({
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                {["Timestamp", "Severity", "Event Type", "Source IP", "Protocol", "Action State"].map((h) => (
+                {["Timestamp", "Severity", "Event", "User", "Source IP", "Action"].map((h) => (
                   <TableCell key={h} sx={{ bgcolor: 'transparent', borderBottom: '2px solid rgba(255,255,255,0.05)', fontWeight: 900, color: "text.secondary", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: 1.5, p: 3 }}>{h}</TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {threatLogs.map((log) => (
+              {threatLogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6, color: 'text.secondary', fontWeight: 700 }}>
+                    No security events recorded yet.
+                  </TableCell>
+                </TableRow>
+              ) : threatLogs.map((log) => (
                 <TableRow key={log.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                   <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
                     <Typography variant="caption" fontWeight={900} sx={{ fontFamily: 'monospace' }}>{log.timestamp}</Typography>
@@ -149,10 +158,10 @@ const SecurityTab = ({
                     <Typography variant="body2" fontWeight={800}>{log.event}</Typography>
                   </TableCell>
                   <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
-                    <Typography variant="caption" fontWeight={900} sx={{ fontFamily: 'monospace', bgcolor: 'rgba(255,255,255,0.05)', px: 1, py: 0.5, borderRadius: 1 }}>{log.source}</Typography>
+                    <Typography variant="caption" fontWeight={900} sx={{ fontFamily: 'monospace' }}>{log.user}</Typography>
                   </TableCell>
                   <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
-                    <Typography variant="caption" fontWeight={900}>{log.protocol}</Typography>
+                    <Typography variant="caption" fontWeight={900} sx={{ fontFamily: 'monospace', bgcolor: 'rgba(255,255,255,0.05)', px: 1, py: 0.5, borderRadius: 1 }}>{log.source}</Typography>
                   </TableCell>
                   <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)', p: 3 }}>
                     <Chip label={log.action} size="small" variant="outlined" sx={{ fontWeight: 900, fontSize: '0.6rem' }} />

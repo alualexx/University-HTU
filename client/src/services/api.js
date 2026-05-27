@@ -157,6 +157,7 @@ export const schedulesAPI = {
 export const systemAPI = {
   getSettings: (key) => api.get(`/system/${key}`),
   updateSettings: (key, data) => api.post(`/system/${key}`, data),
+  getHealth: () => api.get('/system/health'),
 };
 
 // Password Resets API

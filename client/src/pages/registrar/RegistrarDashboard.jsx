@@ -35,6 +35,7 @@ import {
   collection, query, where, onSnapshot, doc, updateDoc,
   addDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit, setDoc
 } from "firebase/firestore";
+import useCountUp from "../../hooks/useCountUp";
 
 import CollegesTab from "./tabs/CollegesTab";
 import DepartmentsTab from "./tabs/DepartmentsTab";
@@ -42,24 +43,6 @@ import TranscriptsTab from "./tabs/TranscriptsTab";
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
-// --- Custom Hooks & Constants ---
-const useCountUp = (target, duration = 1500) => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const end = parseInt(target);
-    if (start === end) return;
-    let totalMiliseconds = duration;
-    let incrementTime = (totalMiliseconds / end) * 5;
-    let timer = setInterval(() => {
-      start += 1;
-      setCount(start);
-      if (start === end) clearInterval(timer);
-    }, incrementTime);
-    return () => clearInterval(timer);
-  }, [target]);
-  return count;
-};
 
 // Proper component so useCountUp hook is called at top-level, not inside .map()
 const RegistrarStatCard = ({ stat, glassStyle, isDark, alpha }) => {
@@ -3291,7 +3274,7 @@ const RegistrarDashboard = () => {
 
       <Divider sx={{ opacity: 0.5 }} />
 
-      <List sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
+      <List className="hide-scrollbar" sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
         {[
           { label: t("overview"), icon: <Dashboard />, index: 0 },
           { label: t("students"), icon: <People />, index: 1 },

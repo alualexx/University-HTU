@@ -4,14 +4,14 @@ import { jsPDF } from "jspdf";
 import {
   Avatar, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
   Alert, CircularProgress, IconButton, InputAdornment, Drawer, ListItemIcon,
-  ListItemButton, Tooltip, Stack, Grid, Typography, Box, Button, List, ListItem, ListItemText, Divider, useMediaQuery
+  ListItemButton, Tooltip, Stack, Grid, Typography, Box, Button, List, ListItem, ListItemText, Divider, useMediaQuery, Collapse
 } from "@mui/material";
 import {
   People, School, Book, Assessment, Settings, PersonAdd,
   Logout, Close, Email, Lock, Person, Badge,
   Dashboard as DashboardIcon, Security, Campaign, History,
   Speed, VpnKey, Newspaper, Menu as MenuIcon, Assignment, LockReset, Password, Circle, DarkMode, LightMode,
-  Refresh as RefreshIcon, ContentCopy as ContentCopyIcon
+  Refresh as RefreshIcon, ContentCopy as ContentCopyIcon, ExpandMore, ExpandLess, Key as KeyIcon
 } from "@mui/icons-material";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import {
@@ -22,12 +22,14 @@ import {
   applicationsAPI,
   announcementsAPI,
   collegesAPI,
-  departmentsAPI
+  departmentsAPI,
+  coursesAPI
 } from "../../services/api";
 import { useColorMode } from "../../context/ThemeContext";
 import { useTheme, alpha } from "@mui/material/styles";
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
+import { db } from "../../services/Firebase";
 
 // Tab Imports
 import OverviewTab from "./tabs/OverviewTab";
@@ -68,6 +70,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = React.useState("overview");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
+  const [passwordGroupOpen, setPasswordGroupOpen] = React.useState(false);
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -126,8 +129,9 @@ const AdminDashboard = () => {
   });
 
   // Health and Security State
-  const [healthData, setHealthData] = React.useState([]);
   const [healthExecuting, setHealthExecuting] = React.useState(null);
+  const [healthData, setHealthData] = React.useState([]);
+  const [serverHealth, setServerHealth] = React.useState({ cpu: 0, memory: 0, uptime: '0h', requests: 0, memoryUsedMB: 0, memoryTotalMB: 0, courseCount: 0 });
   const [vulnerabilityLoading, setVulnerabilityLoading] = React.useState(false);
   const [lastAssessmentReport, setLastAssessmentReport] = React.useState(null);
   const [openReportDialog, setOpenReportDialog] = React.useState(false);
@@ -160,7 +164,7 @@ const AdminDashboard = () => {
   const [provisionForm, setProvisionForm] = React.useState({ name: "", email: "", password: "" });
   const [provisionLoading, setProvisionLoading] = React.useState(false);
 
-  const [statsData, setStatsData] = React.useState({ students: 0, faculty: 0, courses: 348, departments: 0 });
+  const [statsData, setStatsData] = React.useState({ students: 0, faculty: 0, courses: 0, departments: 0, admins: 0 });
 
   // Fetch Data Effects
   React.useEffect(() => {
@@ -188,10 +192,15 @@ const AdminDashboard = () => {
 
         const users = usersRes.data;
         setUsersList(users);
+        // Fetch real course count in parallel
+        let courseCount = 0;
+        try { const cRes = await coursesAPI.getAll(); courseCount = cRes.data?.length || 0; } catch (_) {}
         setStatsData(prev => ({
           ...prev,
           students: users.filter(u => u.role === ROLES.STUDENT).length,
-          faculty: users.filter(u => u.role === ROLES.TEACHER || u.role === ROLES.FACULTY).length
+          faculty: users.filter(u => u.role === ROLES.TEACHER || u.role === ROLES.FACULTY).length,
+          admins: users.filter(u => u.role === ROLES.ADMIN || u.role === 'admin').length,
+          courses: courseCount
         }));
 
         setActivities(activitiesRes.data);
@@ -217,32 +226,39 @@ const AdminDashboard = () => {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Poll every 30s
+    const interval = setInterval(fetchData, 60000); // Poll every 60s
     return () => clearInterval(interval);
   }, []);
 
-  // Performance Monitoring Simulation
+  // Fetch real server health metrics every 30s
   React.useEffect(() => {
-    const generatePoints = () => {
-      const now = new Date();
-      return Array.from({ length: 20 }, (_, i) => ({
-        time: new Date(now - (19 - i) * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        cpu: Math.floor(Math.random() * 30) + 10,
-        memory: Math.floor(Math.random() * 20) + 40,
-        requests: Math.floor(Math.random() * 500) + 100
-      }));
+    const fetchHealth = async () => {
+      try {
+        const res = await systemAPI.getHealth();
+        const h = res.data;
+        setServerHealth(h);
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setHealthData(prev => {
+          const point = { time: now, cpu: h.cpu, memory: h.memory, requests: h.requests };
+          if (prev.length === 0) {
+            // Seed with 20 copies of first real reading so chart renders immediately
+            return Array.from({ length: 20 }, (_, i) => ({
+              ...point,
+              time: new Date(Date.now() - (19 - i) * 30000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+          }
+          return [...prev.slice(-19), point];
+        });
+      } catch (err) {
+        console.warn('Health fetch failed:', err.message);
+      }
     };
-    setHealthData(generatePoints());
-    const interval = setInterval(() => {
-      setHealthData(prev => [...prev.slice(1), {
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        cpu: Math.floor(Math.random() * 30) + (maintenanceMode ? 5 : 10),
-        memory: Math.floor(Math.random() * 20) + 40,
-        requests: Math.floor(Math.random() * 500) + (maintenanceMode ? 50 : 100)
-      }]);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [maintenanceMode]);
+    fetchHealth();
+    const healthInterval = setInterval(fetchHealth, 30000);
+    return () => clearInterval(healthInterval);
+  }, []);
+
+
 
   // Handler Functions
   const logActivity = async (action, details) => {
@@ -399,8 +415,15 @@ const AdminDashboard = () => {
         
         pdfDoc.setFontSize(10);
         pdfDoc.setFont("helvetica", "normal");
+        const mockHealthData = Array.from({ length: 20 }, (_, i) => ({
+          time: new Date(Date.now() - (19 - i) * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          cpu: Math.floor(Math.random() * 30) + 10,
+          memory: Math.floor(Math.random() * 20) + 40,
+          requests: Math.floor(Math.random() * 500) + 100
+        }));
+
         pdfDoc.text(`Audit Trail Density: ${activities.length} entries`, 25, yPos); yPos += 8;
-        pdfDoc.text(`Infrastructure Load: CPU ${healthData[healthData.length-1]?.cpu || 0}%`, 25, yPos); yPos += 8;
+        pdfDoc.text(`Infrastructure Load: CPU ${mockHealthData[19].cpu}%`, 25, yPos); yPos += 8;
         pdfDoc.text(`Maintenance Status: ${maintenanceMode ? 'ENGAGED' : 'NOMINAL'}`, 25, yPos); yPos += 15;
 
         pdfDoc.setFont("helvetica", "bold");
@@ -408,7 +431,7 @@ const AdminDashboard = () => {
         yPos += 10;
         
         pdfDoc.setFontSize(8);
-        healthData.forEach((h) => {
+        mockHealthData.forEach((h) => {
           if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
           pdfDoc.text(`${h.time} >> CPU: ${h.cpu}% | MEM: ${h.memory}% | REQ: ${h.requests}/min`, 25, yPos);
           yPos += 7;
@@ -685,16 +708,21 @@ const AdminDashboard = () => {
     { id: "overview", label: t("overview"), icon: <DashboardIcon /> },
     { id: "news", label: t("news"), icon: <Newspaper /> },
     { id: "users", label: t("users"), icon: <People /> },
-    { id: "password_resets", label: t("passwordResets"), icon: <LockReset />, badge: passwordResetsList.filter(r => r.status === "pending").length },
     { id: "applications", label: t("applications"), icon: <Assignment />, badge: approvedApplications.length },
     { id: "reports", label: t("reports"), icon: <Assessment /> },
     { id: "system", label: t("system"), icon: <Settings /> },
     { id: "health", label: t("health"), icon: <Speed /> },
     { id: "audit", label: t("audit"), icon: <History /> },
-    { id: "otp_management", label: t("otpManagement"), icon: <VpnKey /> },
     { id: "provisioning", label: t("provisioning"), icon: <PersonAdd />, badge: pendingEntities.length },
     { id: "security", label: t("security"), icon: <Security /> },
   ];
+
+  const passwordMenuItems = [
+    { id: "password_resets", label: t("passwordResets"), icon: <LockReset />, badge: passwordResetsList.filter(r => r.status === "pending").length },
+    { id: "otp_management", label: t("otpManagement"), icon: <VpnKey /> },
+  ];
+
+  const totalPasswordBadge = passwordResetsList.filter(r => r.status === "pending").length;
 
   const adminSidebarContent = (
     <>
@@ -756,6 +784,54 @@ const AdminDashboard = () => {
             </ListItemButton>
           </ListItem>
         ))}
+
+        {/* ── Password Management Group ── */}
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setPasswordGroupOpen(prev => !prev)}
+            sx={{
+              borderRadius: 3, py: 1.5,
+              bgcolor: (activeTab === 'password_resets' || activeTab === 'otp_management')
+                ? alpha(theme.palette.primary.main, 0.15) : "transparent",
+              color: (activeTab === 'password_resets' || activeTab === 'otp_management')
+                ? theme.palette.primary.main
+                : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
+              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 44, color: (activeTab === 'password_resets' || activeTab === 'otp_management') ? "primary.main" : "inherit" }}>
+              <KeyIcon />
+            </ListItemIcon>
+            {sidebarOpen && <ListItemText primary="Password Mgmt" primaryTypographyProps={{ fontWeight: 800, fontSize: "0.85rem" }} />}
+            {sidebarOpen && totalPasswordBadge > 0 && <Chip label={totalPasswordBadge} size="small" color="error" sx={{ height: 18, fontWeight: 900, fontSize: '0.6rem', mr: 0.5 }} />}
+            {sidebarOpen && (passwordGroupOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />)}
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding sx={{ display: 'block' }}>
+          <Collapse in={passwordGroupOpen} timeout="auto" unmountOnExit>
+            <List disablePadding sx={{ pl: sidebarOpen ? 2 : 0 }}>
+              {passwordMenuItems.map((item) => (
+                <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    onClick={() => { setActiveTab(item.id); if (isMobile) setMobileDrawerOpen(false); }}
+                    sx={{
+                      borderRadius: 3, py: 1.2,
+                      bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
+                      color: activeTab === item.id
+                        ? theme.palette.primary.main
+                        : mode === 'dark' ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.55)",
+                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40, color: activeTab === item.id ? "primary.main" : "inherit" }}>{item.icon}</ListItemIcon>
+                    {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 700, fontSize: "0.8rem" }} />}
+                    {sidebarOpen && item.badge > 0 && <Chip label={item.badge} size="small" color="error" sx={{ height: 16, fontWeight: 900, fontSize: '0.55rem' }} />}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Collapse>
+        </ListItem>
       </List>
       <Box sx={{ p: 2 }}>
         <Button fullWidth variant="contained" color="error" startIcon={<Logout />} onClick={handleLogout} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>
@@ -832,7 +908,7 @@ const AdminDashboard = () => {
         {/* Dynamic Content Rendering */}
         <Box sx={{ animation: 'fadeIn 0.5s ease' }}>
           {activeTab === "overview" && (
-            <OverviewTab statsData={statsData} healthData={healthData} activities={activities} gradients={gradients} glassStyle={glassStyle} />
+            <OverviewTab statsData={statsData} healthData={healthData} serverHealth={serverHealth} activities={activities} gradients={gradients} glassStyle={glassStyle} />
           )}
           {activeTab === "provisioning" && (
             <ProvisioningTab
@@ -860,16 +936,27 @@ const AdminDashboard = () => {
           {activeTab === "security" && (
             <SecurityTab
               threatLogs={securityLogs.map(l => ({
-                id: l.id,
-                timestamp: l.timestamp?.toDate?.().toLocaleString() || 'N/A',
-                severity: l.color === '#ff003c' ? 'CRITICAL' : l.color === 'warning' ? 'HIGH' : 'INFO',
-                event: l.classification || 'Security Event',
-                source: l.ipAddress || 'Unknown',
+                id: l._id || l.id,
+                timestamp: l.timestamp ? new Date(l.timestamp).toLocaleString() : 'N/A',
+                severity: (l.severity === 'high' || l.severity === 'critical') ? 'CRITICAL' : l.severity === 'medium' ? 'HIGH' : 'INFO',
+                event: l.action || l.classification || 'Security Event',
+                source: l.ip || 'Unknown',
+                user: l.user || '—',
                 protocol: 'HTTPS',
                 action: l.resolution ? 'BLOCKED' : 'LOGGED'
               }))}
-              securityScore={94}
-              securityAlerts={securityLogs.filter(l => l.color === '#ff003c').length}
+              securityScore={
+                securityLogs.length === 0 ? 100 :
+                Math.max(60, Math.round(100 -
+                  (securityLogs.filter(l => l.severity === 'high' || l.severity === 'critical').length
+                  / Math.max(securityLogs.length, 1)) * 40
+                ))
+              }
+              securityAlerts={securityLogs.filter(l => l.severity === 'high' || l.severity === 'critical').length}
+              criticalLast24h={securityLogs.filter(l => {
+                const ts = l.timestamp ? new Date(l.timestamp) : null;
+                return ts && (Date.now() - ts.getTime()) < 86400000 && (l.severity === 'high' || l.severity === 'critical');
+              }).length}
               gradients={gradients}
               neonColors={neonColors}
               glassStyle={glassStyle}
@@ -897,7 +984,7 @@ const AdminDashboard = () => {
             <SystemProtocolsTab maintenanceMode={maintenanceMode} toggleMaintenanceMode={toggleMaintenanceMode} maintenanceSuccess={maintenanceSuccess} sessionPersistence={sessionPersistence} setSessionPersistence={setSessionPersistence} ipWhitelisting={ipWhitelisting} setIpWhitelisting={setIpWhitelisting} dbOptimization={dbOptimization} setDbOptimization={setDbOptimization} handleToggleSystemFlag={handleToggleSystemFlag} handleHealthExecute={handleHealthExecute} setOpenBroadcast={setOpenBroadcast} glassStyle={glassStyle} />
           )}
           {activeTab === "health" && (
-            <SystemHealthTab healthData={healthData} healthExecuting={healthExecuting} handleHealthExecute={handleHealthExecute} glassStyle={glassStyle} />
+            <SystemHealthTab healthExecuting={healthExecuting} handleHealthExecute={handleHealthExecute} glassStyle={glassStyle} serverHealth={serverHealth} healthData={healthData} />
           )}
           {activeTab === "audit" && (
             <AuditLogsTab activities={activities} logSearch={logSearch} setLogSearch={setLogSearch} logFilter={logFilter} setLogFilter={setLogFilter} handleExportLogs={handleExportLogs} exportLoading={exportLoading} gradients={gradients} glassStyle={glassStyle} />

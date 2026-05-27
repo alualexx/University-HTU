@@ -43,24 +43,35 @@ const OTPManagementTab = ({
 
       const code = generateCode(8);
       
-      await addDoc(collection(db, "otps"), {
-        code,
-        type: otpFormData.type,
+      const payload = {
+        code: code,
+        type: otpFormData.type || "COLLEGE_CREATE",
         targetName: otpFormData.targetName,
         targetId: otpFormData.targetId || null,
         isUsed: false,
         createdBy: user?.name || "Admin",
-        createdById: user?.uid,
+        createdById: user?.uid || user?.id || null,
         createdAt: serverTimestamp()
+      };
+
+      // Strip any accidental 'undefined' values that Firebase rejects
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key];
+        }
       });
+      
+      await addDoc(collection(db, "otps"), payload);
 
       logActivity("OTP Generation", `Generated ${otpFormData.type} for "${otpFormData.targetName}"`);
       setOpenOtpDialog(false);
       setOtpFormData({ type: "COLLEGE_CREATE", targetName: "" });
       alert(`OTP Generated Successfully: ${code}\n\nProvide this code to the authorized registrar or dean.`);
     } catch (err) {
-      console.error("OTP generation error:", err);
-      alert("Failed to generate OTP.");
+      console.error("OTP generation error [FULL]:", err);
+      console.error("Attempted payload:", otpFormData);
+      const errorMessage = err?.message || err || "Unknown database error occurred.";
+      alert(`Failed to generate OTP.\nDetails: ${errorMessage}`);
     } finally {
       setOtpLoading(false);
     }

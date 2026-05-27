@@ -241,7 +241,7 @@ export default function FacultyDashboard() {
       <Divider sx={{ opacity: 0.1 }} />
 
       {/* Nav */}
-      <List sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: "auto" }}>
+      <List className="hide-scrollbar" sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: "auto" }}>
         {TABS.map(item => (
           <ListItem key={item.idx} disablePadding sx={{ mb: 0.5 }}>
             <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">

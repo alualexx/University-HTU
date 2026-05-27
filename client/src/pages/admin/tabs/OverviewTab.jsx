@@ -51,6 +51,7 @@ const StatCard = ({ label, value, icon, gradient, glassStyle }) => (
 const OverviewTab = ({
   statsData,
   healthData,
+  serverHealth = {},
   gradients,
   neonColors: propNeonColors,
   glassStyle,
@@ -62,9 +63,9 @@ const OverviewTab = ({
       {/* High Impact Stats */}
       <Grid container spacing={3} sx={{ mb: 6 }}>
         {[
-          { label: "Total Students", value: statsData.students, icon: <People />, gradient: gradients[0] },
+        { label: "Total Students", value: statsData.students, icon: <People />, gradient: gradients[0] },
           { label: "Academic Faculty", value: statsData.faculty, icon: <School />, gradient: gradients[1] },
-          { label: "Active Modules", value: "348", icon: <Book />, gradient: gradients[2] },
+          { label: "Active Courses", value: statsData.courses || '—', icon: <Book />, gradient: gradients[2] },
           { label: "Departments", value: statsData.departments, icon: <Assessment />, gradient: gradients[3] },
         ].map((stat, i) => (
           <Grid item xs={12} sm={6} md={3} key={i}>
@@ -121,9 +122,9 @@ const OverviewTab = ({
             <Box sx={{ height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
-                  { name: 'Student', count: statsData.students, color: gradients[0] },
-                  { name: 'Faculty', count: statsData.faculty, color: gradients[1] },
-                  { name: 'Admin', count: 4, color: gradients[3] }
+                  { name: 'Student', count: statsData.students },
+                  { name: 'Faculty', count: statsData.faculty },
+                  { name: 'Admin', count: statsData.admins || 0 }
                 ]} barSize={30}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 800 }} />
                   <YAxis hide />
@@ -138,8 +139,8 @@ const OverviewTab = ({
 
             <Stack spacing={1.5} sx={{ mt: 3 }}>
               <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="caption" fontWeight={800}>PEAK</Typography>
-                <Typography variant="caption" fontWeight={900} color="primary">4.2 GB/s</Typography>
+                <Typography variant="caption" fontWeight={800}>UPTIME</Typography>
+                <Typography variant="caption" fontWeight={900} color="primary">{serverHealth.uptime || '—'}</Typography>
               </Box>
             </Stack>
           </Card>
@@ -152,11 +153,11 @@ const OverviewTab = ({
             <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 3, display: 'block' }}>System Efficiency Delta</Typography>
 
             <Box sx={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <CircularProgress variant="determinate" value={88} size={140} thickness={4} sx={{ color: 'primary.main', opacity: 0.1, position: 'absolute' }} />
-              <CircularProgress variant="determinate" value={72} size={140} thickness={4} sx={{ color: '#10b981', filter: 'drop-shadow(0 0 8px #10b981)' }} />
+              <CircularProgress variant="determinate" value={100} size={140} thickness={4} sx={{ color: 'primary.main', opacity: 0.1, position: 'absolute' }} />
+              <CircularProgress variant="determinate" value={serverHealth.memory ?? 0} size={140} thickness={4} sx={{ color: '#10b981', filter: 'drop-shadow(0 0 8px #10b981)' }} />
               <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight={1000}>72%</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={900}>OPTIMIZED</Typography>
+                <Typography variant="h4" fontWeight={1000}>{serverHealth.memory ?? 0}%</Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={900}>MEM USED</Typography>
               </Box>
             </Box>
 

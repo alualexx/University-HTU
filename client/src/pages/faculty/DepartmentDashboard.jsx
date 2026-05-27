@@ -26,6 +26,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
 import { db } from "../../services/Firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, writeBatch, deleteDoc } from "firebase/firestore";
+import useCountUp from "../../hooks/useCountUp";
 
 const gradients = {
   primary: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
@@ -42,21 +43,6 @@ const departmentStats = [
   { name: 'Arts', gpa: 3.6, students: 150, faculty: 6 },
 ];
 
-function useCountUp(target, duration = 1500) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const end = parseInt(target);
-    if (start === end) return;
-    let timer = setInterval(() => {
-      start += 1;
-      setCount(start);
-      if (start === end) clearInterval(timer);
-    }, (duration / end));
-    return () => clearInterval(timer);
-  }, [target]);
-  return count;
-}
 
 const DepartmentDashboard = () => {
   const { user, logout, sendPasswordReset } = useAuth();

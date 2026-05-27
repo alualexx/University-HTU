@@ -26,23 +26,7 @@ import { useColorMode } from "../../context/ThemeContext";
 import { collegesAPI, departmentsAPI, usersAPI } from "../../services/api";
 
 // --- Custom Hooks ---
-const useCountUp = (target, duration = 1500) => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const end = parseInt(target);
-    if (!end || start === end) return;
-    let totalMiliseconds = duration;
-    let incrementTime = (totalMiliseconds / end) * 5;
-    let timer = setInterval(() => {
-      start += 1;
-      setCount(start);
-      if (start === end) clearInterval(timer);
-    }, incrementTime);
-    return () => clearInterval(timer);
-  }, [target]);
-  return count;
-};
+import useCountUp from "../../hooks/useCountUp";
 
 const StatCard = ({ stat, glassStyle }) => {
   const count = useCountUp(stat.value);

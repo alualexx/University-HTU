@@ -32,6 +32,7 @@ import {
     Tooltip as ChartTooltip, ResponsiveContainer, Cell,
     PieChart, Pie, Legend, LineChart, Line,
 } from "recharts";
+import useCountUp from "../../hooks/useCountUp";
 
 /* ─── Constants ────────────────────────────────────────────────────────── */
 const gradients = [
@@ -42,24 +43,6 @@ const gradients = [
 ];
 const courseColors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444"];
 const gradeMap = { A: 4.0, "A-": 3.7, "B+": 3.3, B: 3.0, "B-": 2.7, "C+": 2.3, C: 2.0, F: 0 };
-
-/* ─── useCountUp ──────────────────────────────────────────────────────── */
-function useCountUp(target, duration = 1600) {
-    const [count, setCount] = useState(0);
-    useEffect(() => {
-        let raf;
-        let startTime = null;
-        const step = (ts) => {
-            if (!startTime) startTime = ts;
-            const p = Math.min((ts - startTime) / duration, 1);
-            setCount(Math.floor(p * target));
-            if (p < 1) raf = requestAnimationFrame(step);
-        };
-        raf = requestAnimationFrame(step);
-        return () => cancelAnimationFrame(raf);
-    }, [target, duration]);
-    return count;
-}
 
 /* ─── StatCard ────────────────────────────────────────────────────────── */
 function StatCard({ stat }) {
@@ -323,7 +306,7 @@ export default function TeacherDashboard() {
 
             <Divider sx={{ opacity: 0.1, bgcolor: 'rgba(255,255,255,0.1)' }} />
 
-            <List sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
+            <List className="hide-scrollbar" sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
                 {[
                     { label: "Overview", icon: <Dashboard />, index: 0 },
                     { label: "Attendance", icon: <CalendarMonth />, index: 1 },

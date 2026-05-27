@@ -116,7 +116,7 @@ export default function StudentDashboard() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // 30s polling for "pseudo-realtime"
+    const interval = setInterval(fetchData, 60000); // 60s polling for "pseudo-realtime"
     return () => clearInterval(interval);
   }, [user?.id]);
 
