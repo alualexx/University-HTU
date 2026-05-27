@@ -181,9 +181,32 @@ const AuthProvider = ({ children }) => {
   const logSecurityEvent = useCallback(async (_classification, _details, _color) => {}, []);
   const logAuditActivity = useCallback(async (_action, _details) => {}, []);
 
-  // OTP stubs — implement backend routes if OTP is needed
-  const verifyOTP = useCallback(async () => ({ success: false, message: "Not implemented." }), []);
-  const markOTPUsed = useCallback(async () => false, []);
+  // OTP verification — checks MongoDB via /api/otps
+  const verifyOTP = useCallback(async (code, type) => {
+    try {
+      const res = await api.get('/otps');
+      const otps = res.data;
+      const match = otps.find(
+        o => o.code === code.trim().toUpperCase() && o.type === type && !o.isUsed
+      );
+      if (!match) {
+        return { success: false, message: "Invalid or already-used OTP. Please contact the System Administrator." };
+      }
+      return { success: true, data: match, otpId: match._id || match.id };
+    } catch (err) {
+      return { success: false, message: err?.response?.data?.message || "OTP verification failed. Server error." };
+    }
+  }, []);
+
+  const markOTPUsed = useCallback(async (otpId) => {
+    try {
+      await api.patch(`/otps/${otpId}`, { isUsed: true });
+      return true;
+    } catch (err) {
+      console.error("Failed to mark OTP as used:", err);
+      return false;
+    }
+  }, []);
 
   const isAuthenticated = !!user;
   // maintenanceMode defaults to false; wire to a backend /api/settings route if needed
