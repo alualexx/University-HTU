@@ -29,7 +29,148 @@ import {
 import jsPDF from "jspdf";
 
 /* ─── Constants ───────────────────────────────────────────────────────── */
-// ... (lines 26-174 remain unchanged)
+const TUITION_PER_CREDIT = 100;
+const CURRENT_SEMESTER = "Fall 2026";
+const DAY_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const SIDEBAR_WIDTH = 280;
+const gradeToPoints = { A: 4.0, "A-": 3.7, "B+": 3.3, B: 3.0, "B-": 2.7, "C+": 2.3, C: 2.0, "C-": 1.7, "D+": 1.3, D: 1.0, F: 0.0 };
+const gradients = [
+  "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+  "linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)",
+  "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+  "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
+];
+const courseColors = ["#6366f1", "#a855f7", "#10b981", "#3b82f6", "#f59e0b"];
+
+/* ─── Sidebar Nav Items ────────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  { label: "Dashboard", icon: <Dashboard /> },
+  { label: "My Courses", icon: <MenuBook /> },
+  { label: "My Schedules", icon: <EventNote /> },
+  { label: "Grades & Transcripts", icon: <TrendingUp /> },
+  { label: "Semester Registration", icon: <ShoppingCart /> },
+  { label: "News Feed", icon: <Campaign /> },
+];
+
+/* ─── useCountUp ───────────────────────────────────────────────────────── */
+function useCountUp(target, dur = 1600) {
+  const [c, setC] = useState(0);
+  useEffect(() => {
+    let r, s = null;
+    const f = t => { if (!s) s = t; const p = Math.min((t - s) / dur, 1); setC(Math.floor(p * target)); if (p < 1) r = requestAnimationFrame(f); };
+    r = requestAnimationFrame(f); return () => cancelAnimationFrame(r);
+  }, [target, dur]);
+  return c;
+}
+
+function StatCard({ stat, mode }) {
+  const a = useCountUp(stat.raw);
+  const d = stat.isGpa ? (a / 100).toFixed(2) : a;
+  const isDark = mode === 'dark';
+  return (
+    <Card sx={{ background: isDark ? "rgba(255,255,255,0.04)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 4, overflow: "hidden", position: 'relative', transition: "all 0.3s", "&:hover": { transform: "translateY(-6px)", boxShadow: isDark ? "0 16px 32px rgba(0,0,0,0.4)" : "0 16px 32px rgba(0,0,0,0.07)" } }}>
+      <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: stat.gradient }} />
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: 3, background: stat.gradient, display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+            {React.cloneElement(stat.icon, { sx: { fontSize: 24 } })}
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 1.5, fontSize: '0.6rem' }}>{stat.label}</Typography>
+            <Typography variant="h4" color="text.primary" fontWeight={900} sx={{ letterSpacing: -1 }}>{d}<Typography component="span" variant="caption" color="text.secondary" fontWeight={800} sx={{ ml: 0.5, fontSize: '0.65rem' }}>{stat.suffix}</Typography></Typography>
+          </Box>
+        </Box>
+        <LinearProgress variant="determinate" value={stat.progress || 0} sx={{ height: 4, borderRadius: 2, bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", '& .MuiLinearProgress-bar': { background: stat.gradient, borderRadius: 2 } }} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── PDF Helpers ──────────────────────────────────────────────────────── */
+function drawPDFHeader(pdf, title, subtitle) {
+  pdf.setFillColor(37, 99, 235);
+  pdf.rect(0, 0, 210, 38, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(20); pdf.setFont(undefined, 'bold');
+  pdf.text("ALEX UNIVERSITY", 105, 16, { align: 'center' });
+  pdf.setFontSize(10); pdf.setFont(undefined, 'normal');
+  pdf.text(title, 105, 25, { align: 'center' });
+  if (subtitle) { pdf.setFontSize(8); pdf.text(subtitle, 105, 32, { align: 'center' }); }
+}
+
+function drawPDFTable(pdf, headers, rows, startY) {
+  const colWidths = headers.map(() => Math.floor(160 / headers.length));
+  const startX = 25;
+  let y = startY;
+  pdf.setFillColor(240, 242, 245);
+  pdf.rect(startX, y - 5, 160, 8, 'F');
+  pdf.setFontSize(7); pdf.setFont(undefined, 'bold'); pdf.setTextColor(80, 80, 80);
+  let x = startX;
+  headers.forEach((h, i) => { pdf.text(h.toUpperCase(), x + 2, y); x += colWidths[i]; });
+  y += 6;
+  pdf.setDrawColor(220, 220, 220); pdf.line(startX, y, startX + 160, y); y += 5;
+  pdf.setFont(undefined, 'normal'); pdf.setTextColor(50, 50, 50); pdf.setFontSize(9);
+  rows.forEach((row, ri) => {
+    if (ri % 2 === 0) { pdf.setFillColor(250, 250, 252); pdf.rect(startX, y - 4, 160, 7, 'F'); }
+    x = startX;
+    row.forEach((cell, ci) => { pdf.text(String(cell), x + 2, y); x += colWidths[ci]; });
+    y += 7;
+  });
+  return y;
+}
+
+function drawPDFFooter(pdf, y) {
+  y += 8;
+  pdf.setDrawColor(200, 200, 200); pdf.line(25, y, 185, y); y += 8;
+  pdf.setFontSize(8); pdf.setTextColor(140, 140, 140);
+  pdf.text(`Document generated: ${new Date().toLocaleString()}`, 25, y);
+  pdf.text("Alex University — Official Document", 185, y, { align: 'right' });
+}
+
+function generateSemesterSlipPDF(user, courses) {
+  const pdf = new jsPDF();
+  drawPDFHeader(pdf, "Course Registration Slip", CURRENT_SEMESTER);
+  let y = 50;
+  pdf.setTextColor(50, 50, 50); pdf.setFontSize(10);
+  const info = [["Student Name", user?.name || 'N/A'], ["Student ID", user?.studentId || 'N/A'], ["Email", user?.email || 'N/A'], ["Semester", CURRENT_SEMESTER]];
+  info.forEach(([l, v]) => { pdf.setFont(undefined, 'bold'); pdf.text(`${l}:`, 25, y); pdf.setFont(undefined, 'normal'); pdf.text(v, 75, y); y += 8; });
+  y += 5;
+  pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.setTextColor(37, 99, 235); pdf.text("Registered Courses", 25, y); y += 10;
+  const rows = courses?.map((c, i) => [
+    (i + 1).toString(), c.name, c.code || "—",
+    (c.credits || 3).toString(),
+    `$${(Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT).toLocaleString()}`
+  ]) || [];
+  y = drawPDFTable(pdf, ["#", "Course", "Code", "Credits", "Tuition"], rows, y);
+  y += 5;
+  const totalCredits = courses?.reduce((s, c) => s + (Number(c.credits) || 3), 0) || 0;
+  const totalTuition = courses?.reduce((s, c) => s + (Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT), 0) || 0;
+  pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(50, 50, 50);
+  pdf.text(`Total Credits: ${totalCredits}`, 25, y);
+  pdf.text(`Total Tuition: $${totalTuition.toLocaleString()}`, 120, y);
+  drawPDFFooter(pdf, y);
+  pdf.save(`SemesterSlip_${CURRENT_SEMESTER.replace(/\s+/g, '_')}.pdf`);
+}
+
+function generateReceiptPDF(user, payment) {
+  const pdf = new jsPDF();
+  drawPDFHeader(pdf, "Payment Receipt", `Transaction: TXN-${(payment.id || '').slice(0, 8).toUpperCase()}`);
+  let y = 50;
+  pdf.setTextColor(50, 50, 50); pdf.setFontSize(10);
+  const info = [["Student Name", user?.name || 'N/A'], ["Student ID", user?.studentId || 'N/A'], ["Semester", CURRENT_SEMESTER]];
+  info.forEach(([l, v]) => { pdf.setFont(undefined, 'bold'); pdf.text(`${l}:`, 25, y); pdf.setFont(undefined, 'normal'); pdf.text(v, 75, y); y += 8; });
+  y += 5;
+  pdf.setFontSize(12); pdf.setFont(undefined, 'bold'); pdf.setTextColor(16, 185, 129); pdf.text("Payment Details", 25, y); y += 10;
+  const headers = ["Description", "Amount", "Status"];
+  const rows = [[payment.courseName || 'Course(s)', `$${(payment.amount || 0).toLocaleString()}`, "PAID ✓"]];
+  y = drawPDFTable(pdf, headers, rows, y);
+  y += 5;
+  pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(50, 50, 50);
+  pdf.text(`Total Paid: $${(payment.amount || 0).toLocaleString()}`, 25, y);
+  pdf.text("Status: APPROVED", 120, y);
+  drawPDFFooter(pdf, y);
+  pdf.save(`Receipt_${(payment.courseName || 'payment').replace(/\s+/g, '_')}.pdf`);
+}
 
 /* ─── Main Component ──────────────────────────────────────────────────── */
 export default function StudentDashboard() {
