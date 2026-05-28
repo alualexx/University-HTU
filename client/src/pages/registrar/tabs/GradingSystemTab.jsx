@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Button, Card, CardContent, Stack, Chip, Tooltip,
+  Box, Typography, Stack, Tooltip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, alpha, CircularProgress, Alert, MenuItem
+  TextField, alpha, CircularProgress, Alert, MenuItem
 } from '@mui/material';
 import { Add, Edit, Delete, Grade, RestartAlt, Save } from '@mui/icons-material';
+
+import { Card as ShadcnCard, CardContent as ShadcnCardContent } from "@/components/ui/card";
+import { Button as ShadcnButton } from "@/components/ui/button";
+import { Badge as ShadcnBadge } from "@/components/ui/badge";
+import { Table as ShadcnTable, TableBody as ShadcnTableBody, TableCell as ShadcnTableCell, TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader, TableRow as ShadcnTableRow } from "@/components/ui/table";
 import { db } from '../../../services/Firebase';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
@@ -170,28 +174,23 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
         </Box>
         <Stack direction="row" spacing={1.5}>
           {grades.length === 0 && !loading && (
-            <Button
-              variant="outlined"
-              startIcon={seeding ? <CircularProgress size={16} color="inherit" /> : <RestartAlt />}
+            <ShadcnButton
+              variant="outline"
               onClick={handleSeedDefaults}
               disabled={seeding}
-              sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 900, px: 3 }}
+              className="gap-2"
             >
+              {seeding ? <CircularProgress size={16} color="inherit" /> : <RestartAlt className="w-4 h-4" />}
               Load HTU Defaults
-            </Button>
+            </ShadcnButton>
           )}
-          <Button
-            variant="contained"
-            startIcon={<Add />}
+          <ShadcnButton
             onClick={openAdd}
-            sx={{
-              borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none',
-              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-              boxShadow: '0 10px 20px rgba(99, 102, 241, 0.25)'
-            }}
+            className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 border-0"
           >
+            <Add className="w-4 h-4" />
             Add Grade Band
-          </Button>
+          </ShadcnButton>
         </Stack>
       </Box>
 
@@ -209,8 +208,8 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
       </Box>
 
       {/* Table */}
-      <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${borderColor}` }}>
-        <CardContent sx={{ p: 0 }}>
+      <ShadcnCard className="border-white/10 dark:bg-slate-900/50 bg-white/50 backdrop-blur-md rounded-[20px] overflow-hidden">
+        <ShadcnCardContent className="p-0">
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
               <CircularProgress />
@@ -222,72 +221,71 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
               <Typography variant="body2" sx={{ mt: 1 }}>Use "Load HTU Defaults" to seed the standard scale.</Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
+            <div className="w-full">
+              <ShadcnTable>
+                <ShadcnTableHeader>
+                  <ShadcnTableRow className="hover:bg-transparent border-white/10">
                     {['Raw Mark Range', 'Fixed Grade', 'Letter Grade', 'Status Description', 'Class Description', 'Actions'].map(h => (
-                      <TableCell key={h} sx={headSx}>{h}</TableCell>
+                      <ShadcnTableHead key={h} className="font-black text-xs uppercase tracking-[1.5px] text-muted-foreground py-4">
+                        {h}
+                      </ShadcnTableHead>
                     ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+                  </ShadcnTableRow>
+                </ShadcnTableHeader>
+                <ShadcnTableBody>
                   {grades.map(grade => {
                     const color = LETTER_GRADE_COLORS[grade.letterGrade] || '#6366f1';
                     return (
-                      <TableRow
+                      <ShadcnTableRow
                         key={grade.id}
-                        sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}
+                        className="border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                       >
                         {/* Range */}
-                        <TableCell sx={cellSx}>
-                          <Box sx={{
-                            display: 'inline-flex', alignItems: 'center', gap: 1,
-                            px: 2, py: 0.8, borderRadius: 3,
-                            bgcolor: alpha(color, 0.1), border: `1px solid ${alpha(color, 0.25)}`
-                          }}>
-                            <Typography variant="body2" fontWeight={1000} sx={{ fontFamily: 'monospace', color }}>
+                        <ShadcnTableCell className="py-4">
+                          <div 
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-xl border"
+                            style={{ backgroundColor: alpha(color, 0.1), borderColor: alpha(color, 0.25), color }}
+                          >
+                            <span className="font-mono font-black text-sm">
                               [{grade.minMark} – {grade.maxMark}]
-                            </Typography>
-                          </Box>
-                        </TableCell>
+                            </span>
+                          </div>
+                        </ShadcnTableCell>
 
                         {/* Fixed Grade */}
-                        <TableCell sx={cellSx}>
-                          <Typography variant="body2" fontWeight={1000} sx={{ fontFamily: 'monospace', color }}>
+                        <ShadcnTableCell>
+                          <span className="font-mono font-black text-sm" style={{ color }}>
                             {Number(grade.fixedGrade).toFixed(2)}
-                          </Typography>
-                        </TableCell>
+                          </span>
+                        </ShadcnTableCell>
 
                         {/* Letter Grade */}
-                        <TableCell sx={cellSx}>
-                          <Chip
-                            label={grade.letterGrade}
-                            size="small"
-                            sx={{
-                              fontWeight: 1000, fontSize: '0.85rem', px: 1,
-                              bgcolor: alpha(color, 0.15), color,
-                              border: `1px solid ${alpha(color, 0.3)}`
-                            }}
-                          />
-                        </TableCell>
+                        <ShadcnTableCell>
+                          <ShadcnBadge 
+                            variant="outline" 
+                            className="font-black text-sm px-2.5 py-0.5"
+                            style={{ backgroundColor: alpha(color, 0.15), borderColor: alpha(color, 0.3), color }}
+                          >
+                            {grade.letterGrade}
+                          </ShadcnBadge>
+                        </ShadcnTableCell>
 
                         {/* Status */}
-                        <TableCell sx={cellSx}>
-                          <Typography variant="body2" fontWeight={800} color={grade.status ? 'text.primary' : 'text.disabled'}>
+                        <ShadcnTableCell>
+                          <span className={`font-extrabold text-sm ${grade.status ? 'text-foreground' : 'text-muted-foreground'}`}>
                             {grade.status || '—'}
-                          </Typography>
-                        </TableCell>
+                          </span>
+                        </ShadcnTableCell>
 
                         {/* Class Description */}
-                        <TableCell sx={cellSx}>
-                          <Typography variant="body2" fontWeight={700} color="text.secondary">
+                        <ShadcnTableCell>
+                          <span className="font-bold text-sm text-muted-foreground">
                             {grade.classDesc || '—'}
-                          </Typography>
-                        </TableCell>
+                          </span>
+                        </ShadcnTableCell>
 
                         {/* Actions */}
-                        <TableCell sx={cellSx} align="right">
+                        <ShadcnTableCell className="text-right">
                           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                             <Tooltip title="Edit Band">
                               <IconButton size="small" onClick={() => openEdit(grade)} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
@@ -300,16 +298,16 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
                               </IconButton>
                             </Tooltip>
                           </Stack>
-                        </TableCell>
-                      </TableRow>
+                        </ShadcnTableCell>
+                      </ShadcnTableRow>
                     );
                   })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </ShadcnTableBody>
+              </ShadcnTable>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </ShadcnCardContent>
+      </ShadcnCard>
 
       {/* Add / Edit Dialog */}
       <Dialog
