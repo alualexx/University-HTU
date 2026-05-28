@@ -24,7 +24,9 @@ import {
   collegesAPI,
   departmentsAPI,
   coursesAPI,
-  otpsAPI
+  otpsAPI,
+  passwordResetsAPI,
+  systemBroadcastsAPI
 } from "../../services/api";
 import { useColorMode } from "../../context/ThemeContext";
 import { useTheme, alpha } from "@mui/material/styles";
@@ -269,7 +271,7 @@ const AdminDashboard = () => {
   const logActivity = async (action, details) => {
     try {
       await activityLogsAPI.create({
-        action, details, adminName: user?.name, adminEmail: user?.email,
+        action, details, adminName: user?.name || "Admin", adminEmail: user?.email || "admin@university.edu",
         ipAddress: userIp || "Unknown",
         color: action.includes("Delete") ? "#ff003c" : "#00f0ff"
       });

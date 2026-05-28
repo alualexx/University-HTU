@@ -18,7 +18,7 @@ import {
   AssignmentInd, ExpandMore, ExpandLess, Close, Print,
   Edit, Delete, Add, Schedule, Class, CreditCard, Newspaper, Campaign, AccountBalance, Forum, AccessTime, Person,
   Menu as MenuIcon, ChevronLeft, ChevronRight, MenuBook, Circle, FormatQuote, LockReset, Password, Security, Lock,
-  History, FactCheck, Verified, Save, RemoveCircle, AddCircle
+  History, FactCheck, Verified, Save, RemoveCircle, AddCircle, Grade
 }
 from "@mui/icons-material";
 import {
@@ -40,6 +40,7 @@ import useCountUp from "../../hooks/useCountUp";
 import CollegesTab from "./tabs/CollegesTab";
 import DepartmentsTab from "./tabs/DepartmentsTab";
 import TranscriptsTab from "./tabs/TranscriptsTab";
+import GradingSystemTab from "./tabs/GradingSystemTab";
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
@@ -625,7 +626,11 @@ const RegistrarDashboard = () => {
   };
 
   const handleSaveAdmissionPost = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (!admissionPostForm.title || !admissionPostForm.content) {
+      alert("Please fill out both the Headline and Content Body.");
+      return;
+    }
     try {
       if (editingAdmissionPost) {
         await updateDoc(doc(db, "admissions_posts", editingAdmissionPost.id), { ...admissionPostForm });
@@ -635,6 +640,7 @@ const RegistrarDashboard = () => {
       setOpenAdmissionsDialog(false);
     } catch (error) {
       console.error("Admissions post error:", error);
+      alert("Failed to save post. Please try again.");
     }
   };
 
@@ -865,7 +871,7 @@ const RegistrarDashboard = () => {
       await setDoc(doc(db, "system_settings", "registrar"), { registrationLock: !regLock }, { merge: true });
       await addDoc(collection(db, "audit_logs"), {
         action: regLock ? "Registration Unlock" : "Registration Lock",
-        user: user.email,
+        user: user?.email || "Registrar",
         timestamp: serverTimestamp(),
         ip: userIp || "unknown"
       });
@@ -883,7 +889,7 @@ const RegistrarDashboard = () => {
       }, { merge: true });
       await addDoc(collection(db, "audit_logs"), {
         action: `Registration Opened for Year ${regDialogYear} Semester ${regDialogSemester}`,
-        user: user.email,
+        user: user?.email || "Registrar",
         timestamp: serverTimestamp(),
       });
       setOpenRegDialog(false);
@@ -897,7 +903,7 @@ const RegistrarDashboard = () => {
       await setDoc(doc(db, "system_settings", "registrar"), { registrationLock: true }, { merge: true });
       await addDoc(collection(db, "audit_logs"), {
         action: `Registration Closed (was Year ${targetYear} Sem ${targetSemester})`,
-        user: user.email,
+        user: user?.email || "Registrar",
         timestamp: serverTimestamp(),
       });
     } catch (err) { console.error(err); }
@@ -910,7 +916,7 @@ const RegistrarDashboard = () => {
       await setDoc(doc(db, "system_settings", "registrar"), { admissionWindow: !admissionWindow }, { merge: true });
       await addDoc(collection(db, "audit_logs"), {
         action: admissionWindow ? "Admission Window Closed" : "Admission Window Opened",
-        user: user.email,
+        user: user?.email || "Registrar",
         timestamp: serverTimestamp(),
         ip: userIp || "unknown"
       });
@@ -1766,6 +1772,7 @@ const RegistrarDashboard = () => {
                     variant="contained" 
                     disabled={globalMaintenance}
                     startIcon={<Campaign />}
+                    onClick={() => setOpenNewsDialog(true)}
                     sx={{ 
                       borderRadius: 3, 
                       py: 1.5, 
@@ -2892,7 +2899,7 @@ const RegistrarDashboard = () => {
           <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingAdmissionPost ? 'Calibrate Dispatch' : 'New Admissions Update'}</Typography>
           <Typography variant="caption" color="warning.main" fontWeight={900} sx={{ letterSpacing: 2 }}>REAL-TIME BROADCAST INTERFACE</Typography>
         </DialogTitle>
-        <form onSubmit={handleSaveAdmissionPost}>
+        <Box component="form">
           <DialogContent sx={{ p: 4 }}>
             <Stack spacing={3}>
               <TextField fullWidth label="Headline" value={admissionPostForm.title} onChange={e => setAdmissionPostForm({ ...admissionPostForm, title: e.target.value })} required 
@@ -2902,7 +2909,7 @@ const RegistrarDashboard = () => {
                 InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
               />
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid item xs={12} sm={6}>
                   <TextField fullWidth select label="Categorization" value={admissionPostForm.tag} onChange={e => setAdmissionPostForm({ ...admissionPostForm, tag: e.target.value })}
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}>
                     <MenuItem value="Update">SYSTEM UPDATE</MenuItem>
@@ -2911,8 +2918,9 @@ const RegistrarDashboard = () => {
                     <MenuItem value="Alert">URGENT ALERT</MenuItem>
                   </TextField>
                 </Grid>
-                <Grid item xs={6} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'center' }}>
                   <Button
+                    type="button"
                     fullWidth
                     variant={admissionPostForm.isImportant ? "contained" : "outlined"}
                     color={admissionPostForm.isImportant ? "error" : "primary"}
@@ -2926,12 +2934,12 @@ const RegistrarDashboard = () => {
             </Stack>
           </DialogContent>
           <DialogActions sx={{ p: 4, pt: 0, gap: 2 }}>
-            <Button onClick={() => setOpenAdmissionsDialog(false)} sx={{ fontWeight: 1000, color: 'text.secondary', textTransform: 'none', px: 3 }}>Exit Editor</Button>
-            <Button type="submit" variant="contained" className="btn-premium" sx={{ borderRadius: 3, px: 5, py: 1.2, fontWeight: 1000, textTransform: 'none', bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}>
+            <Button type="button" onClick={() => setOpenAdmissionsDialog(false)} sx={{ fontWeight: 1000, color: 'text.secondary', textTransform: 'none', px: 3 }}>Exit Editor</Button>
+            <Button type="button" onClick={handleSaveAdmissionPost} variant="contained" className="btn-premium" sx={{ borderRadius: 3, px: 5, py: 1.2, fontWeight: 1000, textTransform: 'none', bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}>
               {editingAdmissionPost ? 'Commit Update' : 'Deploy Dispatch'}
             </Button>
           </DialogActions>
-        </form>
+        </Box>
       </Dialog>
     </Box>
   );
@@ -3233,149 +3241,149 @@ const RegistrarDashboard = () => {
     }
               `;
 
-  const Sidebar = () => (
-    <Box sx={{
-      width: sidebarOpen ? 280 : 80,
-      flexShrink: 0,
-      height: "100vh",
-      position: "fixed",
-      left: 0,
-      top: 0,
-      background: isDark
-        ? 'linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.8) 100%)'
-        : 'rgba(255, 255, 255, 0.45)',
-      color: isDark ? 'white' : '#1e293b',
-      backdropFilter: 'blur(32px) saturate(180%)',
-      borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.15)'}`,
-      transition: theme.transitions.create("width", {
-        easing: theme.transitions.easing.sharp,
-        duration: theme.transitions.duration.enteringScreen,
-      }),
-      display: "flex",
-      flexDirection: "column",
-      zIndex: 1200,
-      boxShadow: "10px 0 30px rgba(0,0,0,0.05)"
-    }}>
-      {/* Sidebar Header */}
-      <Box sx={{ p: 3, display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", minHeight: 80 }}>
-        {sidebarOpen && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Avatar sx={{ width: 40, height: 40, bgcolor: "primary.main", fontWeight: 800, border: '2px solid rgba(255,255,255,0.5)' }}>{user?.name?.[0]}</Avatar>
-            <Box>
-              <Typography variant="subtitle2" fontWeight={800} color={isDark ? "#fff" : "#1e293b"} noWrap>{user?.name}</Typography>
-              <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "primary.main" }} fontWeight={700}>{t("registrarAuthority")}</Typography>
-            </Box>
-          </Box>
-        )}
-        <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ color: isDark ? 'white' : 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(99,102,241,0.05)' }}>
-          {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
-        </IconButton>
-      </Box>
-
-      <Divider sx={{ opacity: 0.5 }} />
-
-      <List className="hide-scrollbar" sx={{ px: 2, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {[
-          { label: t("overview"), icon: <Dashboard />, index: 0 },
-          { label: t("students"), icon: <People />, index: 1 },
-          { label: t("colleges"), icon: <Business />, index: 2 },
-          { label: t("courses"), icon: <LibraryBooks />, index: 3 },
-          { label: t("transcripts"), icon: <MenuBook />, index: 14 },
-          { label: t("curriculumApproval"), icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_approval').length },
-          { label: t("schedules"), icon: <Schedule />, index: 4 },
-          { label: t("applications"), icon: <SwapHoriz />, index: 5 },
-          { label: t("pendingIds"), icon: <AssignmentInd />, index: 6, badge: pendingIds.length },
-          { label: t("idRequests"), icon: <CreditCard />, index: 7, badge: idRequests.filter(r => r.status === 'pending').length },
-          { label: t("departments"), icon: <AccountBalance />, index: 8 },
-          { label: t("finance"), icon: <CreditCard />, index: 12, badge: pendingPayments.filter(p => p.status === 'pending_approval').length },
-          { label: t("admissionsPosts"), icon: <Forum />, index: 9 },
-          { label: t("newsFeed"), icon: <Newspaper />, index: 11 },
-          { label: t("analytics"), icon: <Assessment />, index: 10 },
-        ].map((item) => (
-          <ListItem key={item.index} disablePadding sx={{ mb: 0.5 }}>
-            <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
-              <Button
-                fullWidth
-                onClick={() => setActiveTab(item.index)}
-                startIcon={item.icon}
-                sx={{
-                  justifyContent: sidebarOpen ? "flex-start" : "center",
-                  px: sidebarOpen ? 2 : 0,
-                  py: 1.5,
-                  borderRadius: 3,
-                  minWidth: 0,
-                  color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.7)" : "#475569"),
-                  background: activeTab === item.index ? gradients.primary : "transparent",
-                  boxShadow: activeTab === item.index ? "0 8px 25px rgba(99, 102, 241, 0.4)" : "none",
-                  "& .MuiButton-startIcon": {
-                    marginRight: sidebarOpen ? 1.5 : 0,
-                    marginLeft: sidebarOpen ? 0 : 0,
-                    color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.6)" : "#64748b")
-                  },
-                  "&:hover": { 
-                    bgcolor: activeTab === item.index ? "" : (isDark ? "alpha(#fff, 0.08)" : "alpha(#6366f1, 0.08)"),
-                    transform: activeTab === item.index ? 'none' : 'translateX(4px)'
-                  },
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              >
-                {sidebarOpen && (
-                  <Box sx={{ flexGrow: 1, textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <Typography variant="body2" fontWeight={activeTab === item.index ? 800 : 600}>{item.label}</Typography>
-                    {item.badge > 0 && (
-                      <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 900 }} />
-                    )}
-                  </Box>
-                )}
-              </Button>
-            </Tooltip>
-          </ListItem>
-        ))}
-      </List>
-
-      <Box sx={{ p: 2 }}>
-        <Divider sx={{ mb: 2, opacity: 0.5 }} />
-        <Button
-          fullWidth
-          onClick={toggleColorMode}
-          startIcon={mode === "dark" ? <LightMode /> : <DarkMode />}
-          sx={{
-            justifyContent: sidebarOpen ? "flex-start" : "center",
-            color: isDark ? "rgba(255,255,255,0.7)" : "#64748b",
-            py: 1.5,
-            borderRadius: 3,
-            "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.7)" : "#6366f1" },
-            "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.05)" }
-          }}
-        >
-          {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? t("lightMode") : t("darkMode")}</Typography>}
-        </Button>
-        <Button
-          fullWidth
-          onClick={handleLogout}
-          startIcon={<Logout />}
-          sx={{
-            justifyContent: sidebarOpen ? "flex-start" : "center",
-            color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444",
-            bgcolor: isDark ? "rgba(255,255,255,0.1)" : "rgba(239, 68, 68, 0.05)",
-            mt: 1,
-            py: 1.5,
-            borderRadius: 3,
-            "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444" },
-            "&:hover": { bgcolor: isDark ? "rgba(255,68,68,0.2)" : "rgba(239, 68, 68, 0.1)", color: isDark ? "#ff8888" : "#dc2626" }
-          }}
-        >
-          {sidebarOpen && <Typography variant="body2" fontWeight={800}>{t("signOut")}</Typography>}
-        </Button>
-      </Box>
-    </Box>
-  );
 
   return (
     <Box sx={{ display: "flex", bgcolor: isDark ? "#0f172a" : "#f8fafc", minHeight: "100vh", position: 'relative' }}>
       <style>{getPrintStyles()}</style>
-      <AuroraBlobs />
-      <Sidebar />
+      {/* ── SIDEBAR (inline JSX – never remounts) ── */}
+      <Box sx={{
+        width: sidebarOpen ? 280 : 80,
+        flexShrink: 0,
+        height: "100vh",
+        position: "fixed",
+        left: 0,
+        top: 0,
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.8) 100%)'
+          : 'rgba(255, 255, 255, 0.45)',
+        color: isDark ? 'white' : '#1e293b',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.15)'}`,
+        transition: theme.transitions.create("width", {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.enteringScreen,
+        }),
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 1200,
+        overflowX: "hidden",
+        boxShadow: "10px 0 30px rgba(0,0,0,0.05)"
+      }}>
+        {/* Sidebar Header */}
+        <Box sx={{ p: 3, display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", minHeight: 80 }}>
+          {sidebarOpen && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, overflow: "hidden" }}>
+              <Avatar sx={{ width: 40, height: 40, flexShrink: 0, bgcolor: "primary.main", fontWeight: 800, border: '2px solid rgba(255,255,255,0.5)' }}>{user?.name?.[0]}</Avatar>
+              <Box sx={{ overflow: "hidden" }}>
+                <Typography variant="subtitle2" fontWeight={800} color={isDark ? "#fff" : "#1e293b"} noWrap>{user?.name}</Typography>
+                <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "primary.main" }} fontWeight={700} noWrap>{t("registrarAuthority")}</Typography>
+              </Box>
+            </Box>
+          )}
+          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ flexShrink: 0, color: isDark ? 'white' : 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(99,102,241,0.05)' }}>
+            {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+          </IconButton>
+        </Box>
+
+        <Divider sx={{ opacity: 0.5 }} />
+
+        <List className="hide-scrollbar" sx={{ px: sidebarOpen ? 2 : 1, py: 2, flexGrow: 1, overflowY: "auto", overflowX: "hidden" }}>
+          {[
+            { label: t("overview"), icon: <Dashboard />, index: 0 },
+            { label: t("students"), icon: <People />, index: 1 },
+            { label: t("colleges"), icon: <Business />, index: 2 },
+            { label: t("courses"), icon: <LibraryBooks />, index: 3 },
+            { label: "Grading System", icon: <Grade />, index: 15 },
+            { label: t("transcripts"), icon: <MenuBook />, index: 14 },
+            { label: t("curriculumApproval"), icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_approval').length },
+            { label: t("schedules"), icon: <Schedule />, index: 4 },
+            { label: t("applications"), icon: <SwapHoriz />, index: 5 },
+            { label: t("pendingIds"), icon: <AssignmentInd />, index: 6, badge: pendingIds.length },
+            { label: t("idRequests"), icon: <CreditCard />, index: 7, badge: idRequests.filter(r => r.status === 'pending').length },
+            { label: t("departments"), icon: <AccountBalance />, index: 8 },
+            { label: t("finance"), icon: <CreditCard />, index: 12, badge: pendingPayments.filter(p => p.status === 'pending_approval').length },
+            { label: t("admissionsPosts"), icon: <Forum />, index: 9 },
+            { label: t("newsFeed"), icon: <Newspaper />, index: 11 },
+            { label: t("analytics"), icon: <Assessment />, index: 10 },
+          ].map((item) => (
+            <ListItem key={item.index} disablePadding sx={{ mb: 0.5 }}>
+              <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
+                <Button
+                  fullWidth
+                  onClick={() => setActiveTab(item.index)}
+                  startIcon={item.icon}
+                  sx={{
+                    justifyContent: sidebarOpen ? "flex-start" : "center",
+                    px: sidebarOpen ? 2 : 0,
+                    py: 1.5,
+                    borderRadius: 3,
+                    minWidth: 0,
+                    color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.7)" : "#475569"),
+                    background: activeTab === item.index ? gradients.primary : "transparent",
+                    boxShadow: activeTab === item.index ? "0 8px 25px rgba(99, 102, 241, 0.4)" : "none",
+                    "& .MuiButton-startIcon": {
+                      marginRight: sidebarOpen ? 1.5 : 0,
+                      marginLeft: 0,
+                      color: activeTab === item.index ? "#fff" : (isDark ? "rgba(255,255,255,0.6)" : "#64748b")
+                    },
+                    "&:hover": {
+                      bgcolor: isDark ? "rgba(255,255,255,0.08)" : "rgba(99,102,241,0.08)",
+                      transform: activeTab === item.index ? 'none' : 'translateX(4px)'
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  {sidebarOpen && (
+                    <Box sx={{ flexGrow: 1, textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Typography variant="body2" fontWeight={activeTab === item.index ? 800 : 600} noWrap>{item.label}</Typography>
+                      {item.badge > 0 && (
+                        <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 900 }} />
+                      )}
+                    </Box>
+                  )}
+                </Button>
+              </Tooltip>
+            </ListItem>
+          ))}
+        </List>
+
+        <Box sx={{ p: 2 }}>
+          <Divider sx={{ mb: 2, opacity: 0.5 }} />
+          <Button
+            fullWidth
+            onClick={toggleColorMode}
+            startIcon={mode === "dark" ? <LightMode /> : <DarkMode />}
+            sx={{
+              justifyContent: sidebarOpen ? "flex-start" : "center",
+              color: isDark ? "rgba(255,255,255,0.7)" : "#64748b",
+              py: 1.5,
+              borderRadius: 3,
+              "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.7)" : "#6366f1" },
+              "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.05)" }
+            }}
+          >
+            {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? t("lightMode") : t("darkMode")}</Typography>}
+          </Button>
+          <Button
+            fullWidth
+            onClick={handleLogout}
+            startIcon={<Logout />}
+            sx={{
+              justifyContent: sidebarOpen ? "flex-start" : "center",
+              color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444",
+              bgcolor: isDark ? "rgba(255,255,255,0.1)" : "rgba(239,68,68,0.05)",
+              mt: 1,
+              py: 1.5,
+              borderRadius: 3,
+              "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0, color: isDark ? "rgba(255,255,255,0.9)" : "#ef4444" },
+              "&:hover": { bgcolor: isDark ? "rgba(255,68,68,0.2)" : "rgba(239,68,68,0.1)", color: isDark ? "#ff8888" : "#dc2626" }
+            }}
+          >
+            {sidebarOpen && <Typography variant="body2" fontWeight={800}>{t("signOut")}</Typography>}
+          </Button>
+        </Box>
+      </Box>
+      {/* ── END SIDEBAR ── */}
 
       <Box component="main" sx={{
         flexGrow: 1,
@@ -3403,11 +3411,13 @@ const RegistrarDashboard = () => {
           boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.02)'
         }}>
           <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -1, color: isDark ? '#fff' : '#1e293b' }}>
-            {[
-              t("overview"), t("students"), t("colleges"), t("courses"), t("schedules"), t("applications"),
-              t("pendingIds"), t("idRequests"), t("departments"), t("admissionsPosts"),
-              t("analytics"), t("newsFeed"), t("finance"), t("curriculumApproval"), t("transcripts")
-            ][activeTab]}
+            {({
+              0: t("overview"), 1: t("students"), 2: t("colleges"), 3: t("courses"),
+              4: t("schedules"), 5: t("applications"), 6: t("pendingIds"), 7: t("idRequests"),
+              8: t("departments"), 9: t("admissionsPosts"), 10: t("analytics"),
+              11: t("newsFeed"), 12: t("finance"), 13: t("curriculumApproval"),
+              14: t("transcripts"), 15: "Grading System"
+            })[activeTab]}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -3442,6 +3452,7 @@ const RegistrarDashboard = () => {
             {activeTab === 12 && renderFinanceRegistrationsTab()}
             {activeTab === 13 && renderCurriculumApprovalTab()}
             {activeTab === 14 && <TranscriptsTab isDark={isDark} glassStyle={glassStyle} />}
+            {activeTab === 15 && <GradingSystemTab isDark={isDark} glassStyle={glassStyle} />}
           </Box>
         </Container>
       </Box>

@@ -10,42 +10,32 @@ import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, Cell, Tooltip as ChartTooltip
 } from "recharts";
 
+import { Card as ShadcnCard, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge as ShadcnBadge } from "@/components/ui/badge";
+
 const DEFAULT_NEON_COLORS = ["#38bdf8", "#34d399", "#fb7185", "#c084fc", "#fbbf24"];
 
 const StatCard = ({ label, value, icon, gradient, glassStyle }) => (
-  <Card sx={{
-    ...glassStyle,
-    borderRadius: 5,
-    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-    border: '1px solid rgba(255,255,255,0.1)',
-    '&:hover': {
-      transform: 'translateY(-6px)',
-      boxShadow: `0 20px 40px rgba(0,0,0,0.2)`,
-      borderColor: 'primary.main'
-    }
-  }}>
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box>
-          <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: 1.5, mb: 1, display: 'block' }}>
+  <ShadcnCard className="transition-all duration-400 hover:-translate-y-1.5 hover:shadow-2xl border-white/10 dark:bg-slate-900/50 bg-white/50 backdrop-blur-md rounded-[20px]">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-extrabold text-muted-foreground uppercase tracking-[1.5px] mb-2">
             {label}
-          </Typography>
-          <Typography variant="h3" fontWeight={1000} sx={{ letterSpacing: -1 }}>
+          </p>
+          <h3 className="text-4xl font-black tracking-tighter text-foreground">
             {value}
-          </Typography>
-        </Box>
-        <Box sx={{
-          width: 64, height: 64, borderRadius: 3.5,
-          background: gradient,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "white",
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-        }}>
+          </h3>
+        </div>
+        <div 
+          className="w-16 h-16 rounded-[14px] flex items-center justify-center text-white shadow-lg"
+          style={{ background: gradient }}
+        >
           {React.cloneElement(icon, { sx: { fontSize: 32 } })}
-        </Box>
-      </Box>
-    </Box>
-  </Card>
+        </div>
+      </div>
+    </CardContent>
+  </ShadcnCard>
 );
 
 const OverviewTab = ({
@@ -148,26 +138,29 @@ const OverviewTab = ({
 
         {/* NEW: Resource Optimization IQ Card */}
         <Grid item xs={12} md={3}>
-          <Card sx={{ ...glassStyle, borderRadius: 5, p: 3, height: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Typography variant="subtitle1" fontWeight={900} gutterBottom>Resource IQ</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 3, display: 'block' }}>System Efficiency Delta</Typography>
+          <ShadcnCard className="h-full border-white/10 dark:bg-slate-900/50 bg-white/50 backdrop-blur-md rounded-[20px]">
+            <CardHeader className="pb-0">
+              <CardTitle className="font-black text-lg">Resource IQ</CardTitle>
+              <p className="text-sm font-bold text-muted-foreground">System Efficiency Delta</p>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="h-[180px] flex items-center justify-center relative">
+                <CircularProgress variant="determinate" value={100} size={140} thickness={4} sx={{ color: 'primary.main', opacity: 0.1, position: 'absolute' }} />
+                <CircularProgress variant="determinate" value={serverHealth.memory ?? 0} size={140} thickness={4} sx={{ color: '#10b981', filter: 'drop-shadow(0 0 8px #10b981)' }} />
+                <div className="absolute text-center">
+                  <h4 className="text-4xl font-black text-foreground">{serverHealth.memory ?? 0}%</h4>
+                  <p className="text-xs font-black text-muted-foreground mt-1">MEM USED</p>
+                </div>
+              </div>
 
-            <Box sx={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <CircularProgress variant="determinate" value={100} size={140} thickness={4} sx={{ color: 'primary.main', opacity: 0.1, position: 'absolute' }} />
-              <CircularProgress variant="determinate" value={serverHealth.memory ?? 0} size={140} thickness={4} sx={{ color: '#10b981', filter: 'drop-shadow(0 0 8px #10b981)' }} />
-              <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight={1000}>{serverHealth.memory ?? 0}%</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={900}>MEM USED</Typography>
-              </Box>
-            </Box>
-
-            <Stack spacing={1.5} sx={{ mt: 3 }}>
-              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="caption" fontWeight={800}>THREAT BLOCKER</Typography>
-                <Typography variant="caption" fontWeight={900} color="success.main">ACTIVE</Typography>
-              </Box>
-            </Stack>
-          </Card>
+              <div className="mt-6 flex flex-col gap-3">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
+                  <span className="text-xs font-extrabold text-foreground tracking-wider">THREAT BLOCKER</span>
+                  <ShadcnBadge className="bg-emerald-500 hover:bg-emerald-600 font-bold border-none">ACTIVE</ShadcnBadge>
+                </div>
+              </div>
+            </CardContent>
+          </ShadcnCard>
         </Grid>
       </Grid>
 
