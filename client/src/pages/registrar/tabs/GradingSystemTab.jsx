@@ -139,7 +139,7 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
       setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      setError('Failed to save. Please try again.');
+      setError(`Failed to save: ${err.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
