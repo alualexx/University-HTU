@@ -7,7 +7,8 @@ import { alpha } from "@mui/material/styles";
 import {
   Business, Apartment, PersonAdd, Delete, Person, Email, Lock, AssignmentTurnedIn
 } from "@mui/icons-material";
-import { doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { doc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collegesAPI, departmentsAPI } from "../../../services/api";
 
 const ProvisioningTab = ({
   pendingEntities,
@@ -60,12 +61,17 @@ const ProvisioningTab = ({
       if (!result.success) throw new Error(result.error);
 
       // 2. Update the entity (college or department) to active
-      const collectionName = provisioningEntity.type === 'college' ? 'colleges' : 'departments';
-      await updateDoc(doc(db, collectionName, provisioningEntity.id), {
-        status: 'active',
-        provisionedAt: serverTimestamp(),
-        provisionedBy: user?.name || "Admin"
-      });
+      if (provisioningEntity.type === 'college') {
+        await collegesAPI.update(provisioningEntity.id, {
+          status: 'active',
+          provisionedBy: user?.name || "Admin"
+        });
+      } else {
+        await departmentsAPI.update(provisioningEntity.id, {
+          status: 'active',
+          provisionedBy: user?.name || "Admin"
+        });
+      }
 
       logActivity('Provisioning', `Provisioned ${provisioningEntity.type} admin: ${provisionForm.email}`);
       alert(`${provisioningEntity.type} activated successfully!`);
@@ -82,8 +88,11 @@ const ProvisioningTab = ({
     if (!window.confirm(`Are you sure you want to reject and delete this ${entity.type} "${entity.name}"? This action cannot be undone.`)) return;
 
     try {
-      const collectionName = entity.type === 'college' ? 'colleges' : 'departments';
-      await deleteDoc(doc(db, collectionName, entity.id));
+      if (entity.type === 'college') {
+        await collegesAPI.delete(entity.id);
+      } else {
+        await departmentsAPI.delete(entity.id);
+      }
       logActivity('Rejection', `Rejected pending ${entity.type}: ${entity.name}`);
       alert(`${entity.type} rejected and removed from queue.`);
     } catch (err) {

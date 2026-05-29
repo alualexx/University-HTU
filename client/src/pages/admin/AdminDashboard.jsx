@@ -218,7 +218,12 @@ const AdminDashboard = () => {
         setDepartmentsList(deps);
         setStatsData(prev => ({ ...prev, departments: deps.length }));
         
-        setCollegesList(collegesRes.data);
+        const cols = collegesRes.data;
+        setCollegesList(cols);
+        
+        const pendingCols = cols.filter(c => c.status === 'pending').map(c => ({ ...c, type: 'college', id: c._id || c.id }));
+        const pendingDeps = deps.filter(d => d.status === 'pending').map(d => ({ ...d, type: 'department', id: d._id || d.id }));
+        setPendingEntities([...pendingCols, ...pendingDeps]);
         
         const resetsRes = await passwordResetsAPI.getAll();
         setPasswordResetsList(resetsRes.data);
