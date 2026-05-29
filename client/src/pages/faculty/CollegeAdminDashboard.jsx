@@ -10,14 +10,14 @@ import {
   Drawer, List, ListItem, ListItemText, CircularProgress, useMediaQuery
 } from "@mui/material";
 import {
-  AccountBalance, Description, Assessment, Groups, CalendarMonth, 
+  AccountBalance, Description, Assessment, Groups, CalendarMonth,
   MonetizationOn, Email, MoreVert, ArrowForward, Security, Password,
   Add, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Dashboard, Business, People, School, CalendarToday,
   MenuBook, Logout, LightMode, DarkMode, AssignmentInd, Menu as MenuIcon
 } from "@mui/icons-material";
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Legend, 
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Legend,
   Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area
 } from "recharts";
@@ -93,12 +93,12 @@ const CollegeAdminDashboard = () => {
         if (resColleges.data.length > 0) {
           const collegeData = resColleges.data[0];
           setCollege(collegeData);
-          
+
           // Fetch departments for this college
           const resDepts = await departmentsAPI.getAll({ collegeId: collegeData.id });
           const depts = resDepts.data;
           setDepartments(depts);
-          
+
           const deptNames = depts.map(d => d.name);
           if (deptNames.length > 0) {
             // Fetch Students and Faculty counts
@@ -106,7 +106,7 @@ const CollegeAdminDashboard = () => {
               usersAPI.getAll({ role: ROLES.STUDENT, department: deptNames }),
               usersAPI.getAll({ role: "teacher", department: deptNames }),
             ]);
-            
+
             setStudentsCount(resStudents.data.length);
             setFacultyCount(resFaculty.data.length);
             setFacultyList(resFaculty.data);
@@ -143,8 +143,12 @@ const CollegeAdminDashboard = () => {
       // In MongoDB version, we'll bypass OTP for now or implement it later
       await departmentsAPI.create({
         ...deptForm,
-        collegeId: college.id,
+        collegeId: college._id || college.id,
         parentCollege: college.name,
+        description: `Department of ${deptForm.name}`,
+        headName: "Pending Assignment",
+        headEmail: `head.${deptForm.code.toLowerCase()}@university.edu`,
+        requirements: "Standard university admission requirements apply."
       });
 
       logAuditActivity("Department Creation", `Dean created dept: ${deptForm.name} for ${college.name}`);
@@ -155,8 +159,8 @@ const CollegeAdminDashboard = () => {
       const resDepts = await departmentsAPI.getAll({ collegeId: college.id });
       setDepartments(resDepts.data);
     } catch (err) {
-      console.error("Error saving department:", err);
-      alert("Failed to create department.");
+      console.error("Error saving department:", err.response?.data || err);
+      alert(`Failed to create department. ${err.response?.data?.message || ""}`);
     } finally {
       setDeptLoading(false);
     }
@@ -299,10 +303,10 @@ const CollegeAdminDashboard = () => {
               {t("welcomeDean")} {user.name} • {t("governing")} {college.name}
             </Typography>
           </Box>
-          
+
           <Stack direction="row" spacing={2} sx={{ display: 'flex', alignItems: 'center' }}>
             <LanguageSwitcher variant="icon" />
-             <IconButton onClick={toggleColorMode} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+            <IconButton onClick={toggleColorMode} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
               {isDark ? <LightMode /> : <DarkMode />}
             </IconButton>
             <Badge variant="dot" color="error" overlap="circular">
@@ -323,14 +327,14 @@ const CollegeAdminDashboard = () => {
               </Grid>
 
               <Grid container spacing={4}>
-                 <Grid item xs={12} md={8}>
+                <Grid item xs={12} md={8}>
                   <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                       <Typography variant="h6" fontWeight={1000}>{t("deptGrowthMatrix")}</Typography>
                       <Button variant="text" size="small" sx={{ fontWeight: 1000 }}>{t("analyticsHub")}</Button>
                     </Box>
                     <Box sx={{ height: 350 }}>
-                       <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={[
                           { name: 'Jan', val: 4000 },
                           { name: 'Feb', val: 3000 },
@@ -341,8 +345,8 @@ const CollegeAdminDashboard = () => {
                         ]}>
                           <defs>
                             <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={college.color || '#6366f1'} stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor={college.color || '#6366f1'} stopOpacity={0}/>
+                              <stop offset="5%" stopColor={college.color || '#6366f1'} stopOpacity={0.3} />
+                              <stop offset="95%" stopColor={college.color || '#6366f1'} stopOpacity={0} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} />
@@ -356,27 +360,27 @@ const CollegeAdminDashboard = () => {
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                   <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h6" fontWeight={1000} sx={{ mb: 3 }}>{t("globalIntelligence")}</Typography>
-                      <List sx={{ p: 0 }}>
-                        {[
-                          { title: "Budget Audit v2.4", time: "2h ago", icon: <AccountBalance />, color: "#3b82f6" },
-                          { title: "Faculty Review Session", time: "5h ago", icon: <AssignmentInd />, color: "#8b5cf6" },
-                          { title: "Curriculum Synergy", time: "Yesterday", icon: <MenuBook />, color: "#f59e0b" }
-                        ].map((notif, i) => (
-                          <ListItem key={i} sx={{ px: 0, py: 2, borderBottom: i < 2 ? `1px solid ${alpha(theme.palette.divider, 0.5)}` : 'none' }}>
-                            <Avatar sx={{ bgcolor: alpha(notif.color, 0.1), color: notif.color, mr: 2, borderRadius: 2 }}>{notif.icon}</Avatar>
-                            <ListItemText 
-                              primary={notif.title} 
-                              secondary={notif.time} 
-                              primaryTypographyProps={{ fontWeight: 900, fontSize: '0.85rem' }} 
-                              secondaryTypographyProps={{ fontWeight: 700, fontSize: '0.75rem' }}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                      <Button fullWidth variant="outlined" sx={{ mt: 'auto', borderRadius: 3, fontWeight: 1000, textTransform: 'none' }}>{t("viewAllProtocols")}</Button>
-                   </Card>
+                  <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="h6" fontWeight={1000} sx={{ mb: 3 }}>{t("globalIntelligence")}</Typography>
+                    <List sx={{ p: 0 }}>
+                      {[
+                        { title: "Budget Audit v2.4", time: "2h ago", icon: <AccountBalance />, color: "#3b82f6" },
+                        { title: "Faculty Review Session", time: "5h ago", icon: <AssignmentInd />, color: "#8b5cf6" },
+                        { title: "Curriculum Synergy", time: "Yesterday", icon: <MenuBook />, color: "#f59e0b" }
+                      ].map((notif, i) => (
+                        <ListItem key={i} sx={{ px: 0, py: 2, borderBottom: i < 2 ? `1px solid ${alpha(theme.palette.divider, 0.5)}` : 'none' }}>
+                          <Avatar sx={{ bgcolor: alpha(notif.color, 0.1), color: notif.color, mr: 2, borderRadius: 2 }}>{notif.icon}</Avatar>
+                          <ListItemText
+                            primary={notif.title}
+                            secondary={notif.time}
+                            primaryTypographyProps={{ fontWeight: 900, fontSize: '0.85rem' }}
+                            secondaryTypographyProps={{ fontWeight: 700, fontSize: '0.75rem' }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                    <Button fullWidth variant="outlined" sx={{ mt: 'auto', borderRadius: 3, fontWeight: 1000, textTransform: 'none' }}>{t("viewAllProtocols")}</Button>
+                  </Card>
                 </Grid>
               </Grid>
             </Box>
@@ -391,9 +395,9 @@ const CollegeAdminDashboard = () => {
                   <Typography variant="h5" fontWeight={1000}>{t("academicDepartments") || "Academic Departments"}</Typography>
                   <Typography variant="body2" color="text.secondary" fontWeight={700}>Manage existing sectors or initialize new structural units.</Typography>
                 </Box>
-                <Button 
-                  variant="contained" 
-                  startIcon={<Add />} 
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
                   onClick={() => setOpenDeptDialog(true)}
                   sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, bgcolor: college.color || 'primary.main', boxShadow: `0 8px 24px ${alpha(college.color || '#6366f1', 0.25)}` }}
                 >
@@ -404,15 +408,15 @@ const CollegeAdminDashboard = () => {
               <Grid container spacing={3}>
                 {departments.map((dept) => (
                   <Grid item xs={12} sm={6} md={4} key={dept.id}>
-                    <Card sx={{ 
-                      ...glassStyle, borderRadius: 5, p: 3, 
+                    <Card sx={{
+                      ...glassStyle, borderRadius: 5, p: 3,
                       position: 'relative', overflow: 'visible',
                       transition: '0.3s', '&:hover': { transform: 'scale(1.02)' }
                     }}>
                       <Chip label={dept.code} size="small" sx={{ mb: 1, bgcolor: alpha(dept.color || '#6366f1', 0.1), color: dept.color || '#6366f1', fontWeight: 1000 }} />
                       <Typography variant="h6" fontWeight={1000}>{dept.name}</Typography>
                       <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mt: 1 }}>{dept.faculty}</Typography>
-                      
+
                       <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
                         <Button variant="outlined" size="small" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>Metrics</Button>
                         <Button variant="outlined" color="primary" size="small" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>Configure</Button>
@@ -450,7 +454,7 @@ const CollegeAdminDashboard = () => {
                             <Cell fill="#f59e0b" />
                             <Cell fill="#ef4444" />
                           </Pie>
-                          <Legend verticalAlign="bottom" height={36}/>
+                          <Legend verticalAlign="bottom" height={36} />
                           <RechartsTooltip contentStyle={{ ...glassStyle, border: 'none', borderRadius: 12 }} />
                         </PieChart>
                       </ResponsiveContainer>
@@ -512,15 +516,15 @@ const CollegeAdminDashboard = () => {
                         <TableCell sx={{ fontWeight: 700 }}>{faculty.department}</TableCell>
                         <TableCell sx={{ fontWeight: 700 }}>{faculty.email}</TableCell>
                         <TableCell>
-                          <Chip 
-                            label={faculty.status || 'active'} 
-                            size="small" 
-                            sx={{ 
-                              fontWeight: 1000, 
+                          <Chip
+                            label={faculty.status || 'active'}
+                            size="small"
+                            sx={{
+                              fontWeight: 1000,
                               fontSize: '0.7rem',
                               bgcolor: faculty.status === 'active' ? alpha('#10b981', 0.1) : alpha('#f59e0b', 0.1),
                               color: faculty.status === 'active' ? '#10b981' : '#f59e0b'
-                            }} 
+                            }}
                           />
                         </TableCell>
                         <TableCell align="right">
@@ -614,40 +618,40 @@ const CollegeAdminDashboard = () => {
               {t("deptParams")}
             </Typography>
             <Stack spacing={2.5}>
-              <TextField 
-                label={t("deptFullName")} fullWidth 
-                value={deptForm.name} onChange={(e) => setDeptForm({...deptForm, name: e.target.value})}
+              <TextField
+                label={t("deptFullName")} fullWidth
+                value={deptForm.name} onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
                 InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
               />
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <TextField 
-                    label={t("deptCode")} fullWidth 
-                    value={deptForm.code} onChange={(e) => setDeptForm({...deptForm, code: e.target.value})}
+                  <TextField
+                    label={t("deptCode")} fullWidth
+                    value={deptForm.code} onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
                     InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <TextField 
-                    label={t("hexColor")} fullWidth 
-                    value={deptForm.color} onChange={(e) => setDeptForm({...deptForm, color: e.target.value})}
+                  <TextField
+                    label={t("hexColor")} fullWidth
+                    value={deptForm.color} onChange={(e) => setDeptForm({ ...deptForm, color: e.target.value })}
                     InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
                   />
                 </Grid>
               </Grid>
-              <TextField 
-                label={t("facultyGroup")} fullWidth 
-                value={deptForm.faculty} onChange={(e) => setDeptForm({...deptForm, faculty: e.target.value})}
+              <TextField
+                label={t("facultyGroup")} fullWidth
+                value={deptForm.faculty} onChange={(e) => setDeptForm({ ...deptForm, faculty: e.target.value })}
                 InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
               />
               <Divider sx={{ my: 1 }}>
                 <Chip label={t("authorization")} size="small" sx={{ fontWeight: 1000, bgcolor: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.main }} />
               </Divider>
-              <TextField 
+              <TextField
                 label={t("adminOtpCode")} fullWidth required
                 placeholder="X-X-X-X-X-X"
                 value={deptOtp} onChange={(e) => setDeptOtp(e.target.value.toUpperCase())}
-                InputProps={{ 
+                InputProps={{
                   sx: { borderRadius: 3, fontWeight: 1000, textAlign: 'center', letterSpacing: 4 },
                   startAdornment: <Password sx={{ mr: 1, opacity: 0.5 }} />
                 }}
@@ -659,8 +663,8 @@ const CollegeAdminDashboard = () => {
           </DialogContent>
           <DialogActions sx={{ p: 4 }}>
             <Button onClick={() => setOpenDeptDialog(false)} sx={{ fontWeight: 1000, textTransform: 'none' }}>{t("cancel")}</Button>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={handleSaveDept}
               disabled={deptLoading || !deptForm.name || !deptOtp}
               sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, px: 4, bgcolor: college.color || 'primary.main' }}
