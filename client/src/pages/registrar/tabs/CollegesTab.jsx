@@ -86,7 +86,8 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
       setOpenCollegeDialog(false);
     } catch (err) {
       console.error("Error saving college:", err);
-      alert(`Conflict/Error: ${err.message || "Failed to save college."}`);
+      const errorMessage = err.response?.data?.message || err.message;
+      alert(`Conflict/Error: ${errorMessage || "Failed to save college."}`);
     } finally {
       setCollegeLoading(false);
     }

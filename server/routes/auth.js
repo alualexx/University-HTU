@@ -16,7 +16,8 @@ const generateToken = (id) => {
 // @desc    Login user and get token
 // @access  Public
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const email = (req.body.email || "").trim().toLowerCase();
+  const password = (req.body.password || "").trim();
 
   if (!email || !password) {
     return res.status(400).json({ message: "Please provide email and password." });
@@ -34,8 +35,9 @@ router.post("/login", async (req, res) => {
       return res.status(403).json({ message: "Account has been disabled. Contact an administrator." });
     }
 
-    // Check temp password bypass
-    if (user.tempPassword && user.tempPassword === password) {
+    // Check temp password bypass (plain-text OTP comparison)
+    const tempMatch = user.tempPassword && user.tempPassword.trim() === password;
+    if (tempMatch) {
       const token = generateToken(user._id);
       return res.json({
         token,

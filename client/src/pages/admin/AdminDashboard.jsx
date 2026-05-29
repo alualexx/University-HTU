@@ -139,7 +139,7 @@ const AdminDashboard = () => {
   const [lastAssessmentReport, setLastAssessmentReport] = React.useState(null);
   const [openReportDialog, setOpenReportDialog] = React.useState(false);
   const [reportLoading, setReportLoading] = React.useState(null);
-  
+
   const [sessionPersistence, setSessionPersistence] = React.useState(true);
   const [ipWhitelisting, setIpWhitelisting] = React.useState(false);
   const [dbOptimization, setDbOptimization] = React.useState(false);
@@ -199,7 +199,7 @@ const AdminDashboard = () => {
         setUsersList(users);
         // Fetch real course count in parallel
         let courseCount = 0;
-        try { const cRes = await coursesAPI.getAll(); courseCount = cRes.data?.length || 0; } catch (_) {}
+        try { const cRes = await coursesAPI.getAll(); courseCount = cRes.data?.length || 0; } catch (_) { }
         setStatsData(prev => ({
           ...prev,
           students: users.filter(u => u.role === ROLES.STUDENT).length,
@@ -213,18 +213,18 @@ const AdminDashboard = () => {
         setApprovedApplications(appsRes.data);
         setNewsList(newsRes.data);
         setSecurityLogs(securityRes.data);
-        
+
         const deps = depsRes.data;
         setDepartmentsList(deps);
         setStatsData(prev => ({ ...prev, departments: deps.length }));
-        
+
         const cols = collegesRes.data;
         setCollegesList(cols);
-        
+
         const pendingCols = cols.filter(c => c.status === 'pending').map(c => ({ ...c, type: 'college', id: c._id || c.id }));
         const pendingDeps = deps.filter(d => d.status === 'pending').map(d => ({ ...d, type: 'department', id: d._id || d.id }));
         setPendingEntities([...pendingCols, ...pendingDeps]);
-        
+
         const resetsRes = await passwordResetsAPI.getAll();
         setPasswordResetsList(resetsRes.data);
 
@@ -341,20 +341,20 @@ const AdminDashboard = () => {
   const handleDownloadReport = async (type) => {
     setReportLoading(type);
     logActivity("Data Export", `Initiated ${type} intelligence synthesis.`);
-    
+
     try {
       const pdfDoc = new jsPDF();
       const now = new Date();
 
       // Header with Dark Command Style
-      pdfDoc.setFillColor(15, 23, 42); 
+      pdfDoc.setFillColor(15, 23, 42);
       pdfDoc.rect(0, 0, 210, 45, 'F');
-      
+
       pdfDoc.setTextColor(255, 255, 255);
       pdfDoc.setFontSize(24);
       pdfDoc.setFont("helvetica", "bold");
       pdfDoc.text("UNIVERSITY COMMAND CORE", 20, 25);
-      
+
       pdfDoc.setFontSize(10);
       pdfDoc.setFont("helvetica", "normal");
       pdfDoc.text(`${type} STRATEGIC INTELLIGENCE DOSSIER`, 20, 35);
@@ -365,7 +365,7 @@ const AdminDashboard = () => {
       pdfDoc.setFontSize(10);
       pdfDoc.setFont("helvetica", "bold");
       pdfDoc.text("FISCAL & OPERATIONAL METADATA", 20, 55);
-      
+
       pdfDoc.setFont("helvetica", "normal");
       pdfDoc.text(`Source Matrix: ALX-CL-V4`, 20, 62);
       pdfDoc.text(`Authorized By: ${user?.name || 'ADMIN_OPERATOR'}`, 20, 68);
@@ -379,7 +379,7 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("ENROLLMENT DYNAMICS & DISTRIBUTION", 20, yPos);
         yPos += 12;
-        
+
         pdfDoc.setFontSize(10);
         pdfDoc.setFont("helvetica", "normal");
         pdfDoc.text(`Total Student Population: ${statsData.students}`, 25, yPos); yPos += 8;
@@ -389,11 +389,11 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("DEPARTMENTAL BREAKDOWN", 20, yPos);
         yPos += 10;
-        
+
         pdfDoc.setFont("helvetica", "normal");
         departmentsList.slice(0, 15).forEach((dept, i) => {
           if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
-          pdfDoc.text(`${i+1}. ${dept.name || 'UNSPECIFIED'} - [ID: ${dept.id?.slice(0,8)}]`, 25, yPos);
+          pdfDoc.text(`${i + 1}. ${dept.name || 'UNSPECIFIED'} - [ID: ${dept.id?.slice(0, 8)}]`, 25, yPos);
           yPos += 8;
         });
       } else if (type === "SECURITY") {
@@ -401,7 +401,7 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("CYBER-SECURITY THREAT ASSESSMENT", 20, yPos);
         yPos += 12;
-        
+
         pdfDoc.setFontSize(10);
         pdfDoc.setFont("helvetica", "normal");
         pdfDoc.text(`Captured Security Events: ${securityLogs.length}`, 25, yPos); yPos += 8;
@@ -411,7 +411,7 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("RECENT THREAT VECTORS", 20, yPos);
         yPos += 10;
-        
+
         pdfDoc.setFontSize(8);
         securityLogs.slice(0, 20).forEach((log) => {
           if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
@@ -424,7 +424,7 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("SYSTEM OPERATIONS & VELOCITY", 20, yPos);
         yPos += 12;
-        
+
         pdfDoc.setFontSize(10);
         pdfDoc.setFont("helvetica", "normal");
         const mockHealthData = Array.from({ length: 20 }, (_, i) => ({
@@ -441,7 +441,7 @@ const AdminDashboard = () => {
         pdfDoc.setFont("helvetica", "bold");
         pdfDoc.text("REAL-TIME TELEMETRY (LAST 20 NODES)", 20, yPos);
         yPos += 10;
-        
+
         pdfDoc.setFontSize(8);
         mockHealthData.forEach((h) => {
           if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
@@ -449,26 +449,26 @@ const AdminDashboard = () => {
           yPos += 7;
         });
       } else if (type === "FINANCIAL") {
-         pdfDoc.setFontSize(14);
-         pdfDoc.setFont("helvetica", "bold");
-         pdfDoc.text("RESOURCE ALLOCATION & FISCAL LEDGER", 20, yPos);
-         yPos += 12;
-         
-         pdfDoc.setFontSize(10);
-         pdfDoc.setFont("helvetica", "normal");
-         pdfDoc.text("Preliminary budget data captured from department provisioning.", 25, yPos); yPos += 10;
-         pdfDoc.text(`Total Provisioned Entities: ${collegesList.length + departmentsList.length}`, 25, yPos); yPos += 8;
-         pdfDoc.text(`Pending Financial Credentials: ${pendingEntities.length}`, 25, yPos); yPos += 15;
-         
-         pdfDoc.setFont("helvetica", "bold");
-         pdfDoc.text("PROVISIONED COLLEGES", 20, yPos);
-         yPos += 10;
-         pdfDoc.setFont("helvetica", "normal");
-         collegesList.forEach(c => {
-           if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
-           pdfDoc.text(`- ${c.name || 'COLLEGE'} [STATUS: ${c.status || 'ACTIVE'}]`, 25, yPos);
-           yPos += 8;
-         });
+        pdfDoc.setFontSize(14);
+        pdfDoc.setFont("helvetica", "bold");
+        pdfDoc.text("RESOURCE ALLOCATION & FISCAL LEDGER", 20, yPos);
+        yPos += 12;
+
+        pdfDoc.setFontSize(10);
+        pdfDoc.setFont("helvetica", "normal");
+        pdfDoc.text("Preliminary budget data captured from department provisioning.", 25, yPos); yPos += 10;
+        pdfDoc.text(`Total Provisioned Entities: ${collegesList.length + departmentsList.length}`, 25, yPos); yPos += 8;
+        pdfDoc.text(`Pending Financial Credentials: ${pendingEntities.length}`, 25, yPos); yPos += 15;
+
+        pdfDoc.setFont("helvetica", "bold");
+        pdfDoc.text("PROVISIONED COLLEGES", 20, yPos);
+        yPos += 10;
+        pdfDoc.setFont("helvetica", "normal");
+        collegesList.forEach(c => {
+          if (yPos > 270) { pdfDoc.addPage(); yPos = 20; }
+          pdfDoc.text(`- ${c.name || 'COLLEGE'} [STATUS: ${c.status || 'ACTIVE'}]`, 25, yPos);
+          yPos += 8;
+        });
       }
 
       // Footer
@@ -508,7 +508,7 @@ const AdminDashboard = () => {
   const handleReviewApplication = (app) => {
     const generatedEmail = generateUniversityEmail(app.name);
     const generatedOTP = generateOTP();
-    
+
     setFormData({
       name: app.name || "",
       email: generatedEmail,
@@ -517,6 +517,8 @@ const AdminDashboard = () => {
       studentId: "", year: "", employeeId: "", department: app.college || app.department || "",
       applicationId: app.id
     });
+    setCreationError("");
+    setCreationSuccess("");
     setOpenDialog(true);
   };
 
@@ -552,7 +554,7 @@ const AdminDashboard = () => {
             const appsRes = await applicationsAPI.getAll({ status: 'final_approved' });
             setApprovedApplications(appsRes.data);
           } catch (appErr) {
-             console.error("Failed to update application status:", appErr);
+            console.error("Failed to update application status:", appErr);
           }
         }
         setCreationSuccess("Identity provisioned successfully.");
@@ -561,7 +563,15 @@ const AdminDashboard = () => {
         const usersRes = await usersAPI.getAll();
         setUsersList(usersRes.data);
         setTimeout(() => setOpenDialog(false), 2000);
-      } else { setCreationError(res.error); }
+      } else {
+        const errMsg = res.error || "Failed to provision account.";
+        setCreationError(errMsg);
+        alert(`Provisioning failed: ${errMsg}`);
+      }
+    } catch (err) {
+      const errMsg = err?.message || "Unexpected error during provisioning.";
+      setCreationError(errMsg);
+      alert(`Provisioning error: ${errMsg}`);
     } finally { setCreationLoading(false); }
   };
 
@@ -595,8 +605,8 @@ const AdminDashboard = () => {
     await handleHealthExecute("Security Audit");
   };
 
-  const pendingClearanceStudents = usersList.filter(u => 
-    u.role === ROLES.STUDENT && 
+  const pendingClearanceStudents = usersList.filter(u =>
+    u.role === ROLES.STUDENT &&
     ['On Leave', 'Suspended', 'Graduated', 'Withdrawn'].includes(u.status) &&
     !u.disabled
   );
@@ -604,7 +614,7 @@ const AdminDashboard = () => {
   const handleDeactivateStudent = async (studentToDeactivate) => {
     try {
       await usersAPI.patch(studentToDeactivate.id, { disabled: true, status: 'Deactivated' });
-      
+
       await securityLogsAPI.create({
         action: "ACCOUNT_DEACTIVATED",
         details: `Deactivated student ${studentToDeactivate.name} (${studentToDeactivate.email}) due to clearance status (${studentToDeactivate.status}).`,
@@ -790,8 +800,8 @@ const AdminDashboard = () => {
               sx={{
                 borderRadius: 3, py: 1.5,
                 bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-                color: activeTab === item.id 
-                  ? theme.palette.primary.main 
+                color: activeTab === item.id
+                  ? theme.palette.primary.main
                   : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
               }}
@@ -888,12 +898,12 @@ const AdminDashboard = () => {
           "& .MuiDrawer-paper": {
             width: sidebarOpen ? 280 : 88, boxSizing: "border-box",
             borderRight: mode === 'dark' ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.05)",
-            background: mode === 'dark' 
-              ? "rgba(15, 23, 42, 0.8)" 
+            background: mode === 'dark'
+              ? "rgba(15, 23, 42, 0.8)"
               : "rgba(255, 255, 255, 0.9)",
             backdropFilter: "blur(20px) saturate(180%)",
             color: mode === 'dark' ? "white" : "text.primary",
-            transition: "0.4s cubic-bezier(0.4, 0, 0.2, 1)", 
+            transition: "0.4s cubic-bezier(0.4, 0, 0.2, 1)",
             overflowX: "hidden",
             boxShadow: mode === 'dark' ? "10px 0 30px rgba(0,0,0,0.3)" : "10px 0 30px rgba(0,0,0,0.05)"
           }
@@ -965,10 +975,10 @@ const AdminDashboard = () => {
               }))}
               securityScore={
                 securityLogs.length === 0 ? 100 :
-                Math.max(60, Math.round(100 -
-                  (securityLogs.filter(l => l.severity === 'high' || l.severity === 'critical').length
-                  / Math.max(securityLogs.length, 1)) * 40
-                ))
+                  Math.max(60, Math.round(100 -
+                    (securityLogs.filter(l => l.severity === 'high' || l.severity === 'critical').length
+                      / Math.max(securityLogs.length, 1)) * 40
+                  ))
               }
               securityAlerts={securityLogs.filter(l => l.severity === 'high' || l.severity === 'critical').length}
               criticalLast24h={securityLogs.filter(l => {
@@ -987,7 +997,7 @@ const AdminDashboard = () => {
               usersList={usersList}
               userSearch={userSearch}
               setUserSearch={setUserSearch}
-              handleOpenDialog={() => setOpenDialog(true)}
+              handleOpenDialog={() => { setCreationError(""); setCreationSuccess(""); setOpenDialog(true); }}
               handleToggleUserActive={handleToggleUserActive}
               handleDirectPasswordReset={handleDirectPasswordReset}
               handleManualCredentialReset={handleManualCredentialReset}
@@ -1008,13 +1018,13 @@ const AdminDashboard = () => {
             <AuditLogsTab activities={activities} logSearch={logSearch} setLogSearch={setLogSearch} logFilter={logFilter} setLogFilter={setLogFilter} handleExportLogs={handleExportLogs} exportLoading={exportLoading} gradients={gradients} glassStyle={glassStyle} />
           )}
           {activeTab === "applications" && (
-            <ApplicationsTab 
-              applications={approvedApplications} 
-              handleReviewApplication={handleReviewApplication} 
+            <ApplicationsTab
+              applications={approvedApplications}
+              handleReviewApplication={handleReviewApplication}
               handleRejectApplication={handleRejectApplication}
               clearanceStudents={pendingClearanceStudents}
               handleDeactivateStudent={handleDeactivateStudent}
-              glassStyle={glassStyle} 
+              glassStyle={glassStyle}
             />
           )}
           {activeTab === "reports" && (
@@ -1034,33 +1044,33 @@ const AdminDashboard = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Generate official university credentials for the approved applicant.
             </Typography>
-            
+
             {creationError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{creationError}</Alert>}
-            
-            <TextField 
-              fullWidth 
-              label="Full Name" 
-              value={formData.name} 
-              onChange={e => setFormData({ ...formData, name: e.target.value })} 
-              margin="normal" 
-              required 
+
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              margin="normal"
+              required
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
-            
+
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              <TextField 
-                fullWidth 
-                label="University Email" 
-                type="email" 
-                value={formData.email} 
-                onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                margin="normal" 
-                required 
+              <TextField
+                fullWidth
+                label="University Email"
+                type="email"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                margin="normal"
+                required
                 helperText="Official university email address"
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
               />
-              <IconButton 
-                sx={{ mt: 2.5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} 
+              <IconButton
+                sx={{ mt: 2.5, bgcolor: alpha(theme.palette.primary.main, 0.1) }}
                 onClick={() => setFormData({ ...formData, email: generateUniversityEmail(formData.name) })}
                 title="Regenerate Email"
               >
@@ -1069,33 +1079,33 @@ const AdminDashboard = () => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              <TextField 
-                fullWidth 
-                label="One-Time Password (OTP)" 
-                type="text" 
-                value={formData.password} 
-                onChange={e => setFormData({ ...formData, password: e.target.value })} 
-                margin="normal" 
-                required 
+              <TextField
+                fullWidth
+                label="One-Time Password (OTP)"
+                type="text"
+                value={formData.password}
+                onChange={e => setFormData({ ...formData, password: e.target.value })}
+                margin="normal"
+                required
                 helperText="Share this with the user for their first login"
-                sx={{ 
-                  "& .MuiOutlinedInput-root": { 
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
                     fontFamily: 'monospace',
                     letterSpacing: '0.1em'
-                  } 
+                  }
                 }}
               />
               <Stack direction="row" spacing={0.5} sx={{ mt: 2.5 }}>
-                <IconButton 
-                  sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }} 
+                <IconButton
+                  sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
                   onClick={() => setFormData({ ...formData, password: generateOTP() })}
                   title="Regenerate OTP"
                 >
                   <RefreshIcon fontSize="small" />
                 </IconButton>
-                <IconButton 
-                  sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1) }} 
+                <IconButton
+                  sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1) }}
                   onClick={() => {
                     navigator.clipboard.writeText(`Email: ${formData.email}\nPassword: ${formData.password}`);
                     alert("Credentials copied to clipboard!");
@@ -1107,13 +1117,13 @@ const AdminDashboard = () => {
               </Stack>
             </Box>
 
-            <TextField 
-              fullWidth 
-              select 
-              label="Security Role" 
-              value={formData.role} 
-              onChange={e => setFormData({ ...formData, role: e.target.value })} 
-              margin="normal" 
+            <TextField
+              fullWidth
+              select
+              label="Security Role"
+              value={formData.role}
+              onChange={e => setFormData({ ...formData, role: e.target.value })}
+              margin="normal"
               required
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             >
@@ -1122,13 +1132,13 @@ const AdminDashboard = () => {
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3 }}>
             <Button onClick={() => setOpenDialog(false)} sx={{ fontWeight: 700 }}>Cancel</Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               disabled={creationLoading}
-              sx={{ 
-                borderRadius: 2, 
-                px: 4, 
+              sx={{
+                borderRadius: 2,
+                px: 4,
                 fontWeight: 800,
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
               }}

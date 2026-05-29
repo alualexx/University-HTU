@@ -43,8 +43,8 @@ const ChangePassword = () => {
         e.preventDefault();
         setError("");
 
-        if (formData.newPassword.length < 8) {
-            setError("Password must be at least 8 characters long.");
+        if (formData.newPassword.length < 6) {
+            setError("Password must be at least 6 characters long.");
             return;
         }
 
@@ -53,8 +53,8 @@ const ChangePassword = () => {
             return;
         }
 
-        if (strength < 3) {
-            setError("Password is too weak. Please use a mix of uppercase, lowercase, numbers, and symbols.");
+        if (strength < 2) {
+            setError("Password is too weak. Please use a mix of letters and numbers.");
             return;
         }
 
@@ -110,7 +110,7 @@ const ChangePassword = () => {
                                 Action Required
                             </Typography>
                             <Typography variant="body2" color="text.secondary" px={2}>
-                                For security reasons, you must change your auto-generated password before accessing your account.
+                                For security reasons, you must set a new password (min. 6 characters with letters and numbers) before accessing your account.
                             </Typography>
                         </Box>
 
