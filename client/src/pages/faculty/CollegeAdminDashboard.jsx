@@ -68,6 +68,7 @@ const CollegeAdminDashboard = () => {
   const [facultyList, setFacultyList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDeptDialog, setOpenDeptDialog] = useState(false);
+  const [editingDept, setEditingDept] = useState(null);
   const [deptForm, setDeptForm] = useState({ name: "", code: "", faculty: "", color: "#6366f1" });
   const [deptOtp, setDeptOtp] = useState("");
   const [deptLoading, setDeptLoading] = useState(false);
@@ -140,19 +141,26 @@ const CollegeAdminDashboard = () => {
     setDeptLoading(true);
 
     try {
-      // In MongoDB version, we'll bypass OTP for now or implement it later
-      await departmentsAPI.create({
-        ...deptForm,
-        collegeId: college._id || college.id,
-        parentCollege: college.name,
-        description: `Department of ${deptForm.name}`,
-        headName: "Pending Assignment",
-        headEmail: `head.${deptForm.code.toLowerCase()}@university.edu`,
-        requirements: "Standard university admission requirements apply."
-      });
+      if (editingDept) {
+        await departmentsAPI.update(editingDept.id || editingDept._id, {
+          ...deptForm,
+        });
+        logAuditActivity("Department Edit", `Dean updated dept: ${deptForm.name}`);
+      } else {
+        await departmentsAPI.create({
+          ...deptForm,
+          collegeId: college._id || college.id,
+          parentCollege: college.name,
+          description: `Department of ${deptForm.name}`,
+          headName: "Pending Assignment",
+          headEmail: `head.${deptForm.code.toLowerCase()}@university.edu`,
+          requirements: "Standard university admission requirements apply."
+        });
+        logAuditActivity("Department Creation", `Dean created dept: ${deptForm.name} for ${college.name}`);
+      }
 
-      logAuditActivity("Department Creation", `Dean created dept: ${deptForm.name} for ${college.name}`);
       setOpenDeptDialog(false);
+      setEditingDept(null);
       setDeptForm({ name: "", code: "", faculty: "", color: "#6366f1" });
 
       // Refresh data
@@ -398,7 +406,11 @@ const CollegeAdminDashboard = () => {
                 <Button
                   variant="contained"
                   startIcon={<Add />}
-                  onClick={() => setOpenDeptDialog(true)}
+                  onClick={() => {
+                    setEditingDept(null);
+                    setDeptForm({ name: "", code: "", faculty: "", color: "#6366f1" });
+                    setOpenDeptDialog(true);
+                  }}
                   sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, bgcolor: college.color || 'primary.main', boxShadow: `0 8px 24px ${alpha(college.color || '#6366f1', 0.25)}` }}
                 >
                   {t("initializeDept")}
@@ -418,8 +430,21 @@ const CollegeAdminDashboard = () => {
                       <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mt: 1 }}>{dept.faculty}</Typography>
 
                       <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
-                        <Button variant="outlined" size="small" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>Metrics</Button>
-                        <Button variant="outlined" color="primary" size="small" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>Configure</Button>
+                        <Button variant="outlined" size="small" onClick={() => setActiveTab(2)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>Metrics</Button>
+                        <Button variant="outlined" color="primary" size="small"
+                          onClick={() => {
+                            setEditingDept(dept);
+                            setDeptForm({
+                              name: dept.name,
+                              code: dept.code,
+                              faculty: dept.faculty || "",
+                              color: dept.color || "#6366f1"
+                            });
+                            setOpenDeptDialog(true);
+                          }}
+                          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 1000 }}>
+                          Configure
+                        </Button>
                       </Box>
                     </Card>
                   </Grid>
@@ -612,7 +637,7 @@ const CollegeAdminDashboard = () => {
 
         {/* Create Dept Dialog */}
         <Dialog open={openDeptDialog} onClose={() => setOpenDeptDialog(false)} PaperProps={{ sx: { borderRadius: 5, ...glassStyle, maxWidth: 450 } }}>
-          <DialogTitle sx={{ fontWeight: 1000, textAlign: 'center', pt: 4 }}>{t("deptInitialized")}</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 1000, textAlign: 'center', pt: 4 }}>{editingDept ? "Configure Department" : t("deptInitialized")}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 4, fontWeight: 700 }}>
               {t("deptParams")}
