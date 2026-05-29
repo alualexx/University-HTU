@@ -537,8 +537,14 @@ const AdminDashboard = () => {
   const handleUserCreation = async (e) => {
     e.preventDefault();
     setCreationLoading(true);
+    setCreationError("");
+    setCreationSuccess("");
     try {
-      const res = await registerUserByAdmin(formData);
+      const res = await registerUserByAdmin({
+        ...formData,
+        tempPassword: formData.password,  // store plain-text OTP for first-login bypass
+        requiresPasswordChange: true,
+      });
       if (res.success) {
         if (formData.applicationId) {
           try {

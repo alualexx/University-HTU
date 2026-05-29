@@ -67,7 +67,7 @@ const AuthProvider = ({ children }) => {
   // Login
   // ------------------------------------------------------------------
   const login = async (email, password) => {
-    setError(null);
+    setError(null); // always clear stale errors before a fresh login attempt
     try {
       const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", data.token);
@@ -117,13 +117,13 @@ const AuthProvider = ({ children }) => {
   // Register by Admin (creates another user without affecting current session)
   // ------------------------------------------------------------------
   const registerUserByAdmin = async (userData) => {
-    setError(null);
+    setError(null); // clear any stale errors so they don't bleed into other pages
     try {
       await api.post("/users", userData);
       return { success: true };
     } catch (err) {
       const msg = err.response?.data?.message || "Registration failed.";
-      setError(msg);
+      // Do NOT call setError here — this is an admin operation, not a user-facing login error
       return { success: false, error: msg };
     }
   };
