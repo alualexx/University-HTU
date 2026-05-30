@@ -87,8 +87,8 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         delete data.updatedAt;
 
         if (!data.collegeId) {
-          alert("Please select a Parent College before saving.");
-          return;
+          // Don't include empty collegeId in update - keep existing value on server
+          delete data.collegeId;
         }
 
         await departmentsAPI.update(id, data);
@@ -215,9 +215,10 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
                 <Stack spacing={3}>
                   <TextField fullWidth label="Department Name" value={deptForm.name} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} required />
                   <TextField fullWidth label="Code" value={deptForm.code} onChange={e => setDeptForm({ ...deptForm, code: e.target.value })} required />
-                  <FormControl fullWidth required>
-                    <InputLabel>Parent College</InputLabel>
-                    <Select value={deptForm.collegeId} label="Parent College" onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })}>
+                  <FormControl fullWidth required={!editingDept}>
+                    <InputLabel>Parent College{!editingDept ? " *" : ""}</InputLabel>
+                    <Select value={deptForm.collegeId || ""} label={"Parent College" + (!editingDept ? " *" : "")} onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })}>
+                      {editingDept && <MenuItem value=""><em>Keep existing</em></MenuItem>}
                       {colleges?.map(c => {
                         const cId = String(c._id || c.id || "");
                         return <MenuItem key={cId} value={cId}>{c.name}</MenuItem>;
