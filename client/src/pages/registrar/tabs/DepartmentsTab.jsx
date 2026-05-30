@@ -41,7 +41,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
       setEditingDept(dept);
       setDeptForm({
         ...dept,
-        collegeId: dept.collegeId?._id || dept.collegeId?.id || dept.collegeId || ""
+        collegeId: String(dept.collegeId?._id || dept.collegeId?.id || dept.collegeId || "")
       });
     } else {
       setEditingDept(null);
@@ -82,6 +82,14 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         const id = data._id || data.id;
         delete data.id;
         delete data._id;
+        delete data.__v;
+        delete data.createdAt;
+        delete data.updatedAt;
+
+        if (!data.collegeId) {
+          alert("Please select a Parent College before saving.");
+          return;
+        }
 
         await departmentsAPI.update(id, data);
         alert("Academic Sector updated successfully!");
@@ -210,7 +218,10 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
                   <FormControl fullWidth required>
                     <InputLabel>Parent College</InputLabel>
                     <Select value={deptForm.collegeId} label="Parent College" onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })}>
-                      {colleges?.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                      {colleges?.map(c => {
+                        const cId = String(c._id || c.id || "");
+                        return <MenuItem key={cId} value={cId}>{c.name}</MenuItem>;
+                      })}
                     </Select>
                   </FormControl>
                 </Stack>
