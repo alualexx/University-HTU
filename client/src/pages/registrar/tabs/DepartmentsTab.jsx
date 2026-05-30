@@ -1,34 +1,34 @@
 import React, { useState } from 'react';
-import { 
-  Box, Typography, Button, Grid, Card, CardContent, 
+import {
+  Box, Typography, Button, Grid, Card, CardContent,
   Stack, Avatar, Chip, Tooltip, IconButton,
   Dialog, DialogTitle, DialogContent, TextField, alpha,
   MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
-import { 
-  Add, AccountTree, Edit, Delete, School, LocationOn, 
-  Timer, Lock, CheckCircle, Error 
+import {
+  Add, AccountTree, Edit, Delete, School, LocationOn,
+  Timer, Lock, CheckCircle, Error
 } from '@mui/icons-material';
 import { departmentsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
 const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
   const { logAuditActivity, verifyOTP, markOTPUsed } = useAuth();
-  
+
   // Local UI State for Department Dialog
   const [openDeptDialog, setOpenDeptDialog] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
   const [deptForm, setDeptForm] = useState({
-    name: "", 
-    code: "", 
-    description: "", 
-    headName: "", 
+    name: "",
+    code: "",
+    description: "",
+    headName: "",
     headEmail: "",
     collegeId: "",
-    duration: "4 Years", 
-    seats: 100, 
-    requirements: "", 
-    iconUrl: "", 
+    duration: "4 Years",
+    seats: 100,
+    requirements: "",
+    iconUrl: "",
     color: "#1976d2",
     isPublished: true,
     admissionOpen: true,
@@ -39,10 +39,13 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
   const handleOpenDeptDialog = (dept = null) => {
     if (dept) {
       setEditingDept(dept);
-      setDeptForm({ ...dept });
+      setDeptForm({
+        ...dept,
+        collegeId: dept.collegeId?._id || dept.collegeId?.id || dept.collegeId || ""
+      });
     } else {
       setEditingDept(null);
-      setDeptForm({ 
+      setDeptForm({
         name: "", code: "", description: "", headName: "", headEmail: "", collegeId: "",
         duration: "4 Years", seats: 100, requirements: "", iconUrl: "", color: "#1976d2",
         isPublished: true, admissionOpen: true, requiredDocuments: "Transcript, ID/Passport, Photo"
@@ -67,20 +70,22 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         const data = { ...deptForm };
         delete data.id;
         delete data._id; // Ensure no id from previous edits
-        
-        await departmentsAPI.create({ 
-          ...data, 
+
+        await departmentsAPI.create({
+          ...data,
           status: "active" // Changed from pending_credentials for demo ease
         });
         alert("Academic Sector initialized successfully!");
+        window.location.reload();
       } else {
         const data = { ...deptForm };
         const id = data._id || data.id;
         delete data.id;
         delete data._id;
-        // Assuming we have an update method in departmentsAPI
-        // If not, I should add it or use direct api.put
-        await departmentsAPI.create(data); // Using create as a placeholder if Update isn't in api.js yet, but I should probably add Update to api.js
+
+        await departmentsAPI.update(id, data);
+        alert("Academic Sector updated successfully!");
+        window.location.reload();
       }
       setOpenDeptDialog(false);
       setDeptOtp(""); // Reset OTP
@@ -93,11 +98,12 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
   const handleDeleteDept = async (id) => {
     if (window.confirm("Permanently remove this academic sector?")) {
       try {
-        // We'll need a delete method in api.js too
-        // For now I'll just skip the deletion logic or add it to api.js
-        console.log("Delete department:", id);
+        await departmentsAPI.delete(id);
+        alert("Sector removed successfully!");
+        window.location.reload();
       } catch (error) {
         console.error("Delete error:", error);
+        alert(`Failed to delete: ${error.message || error}`);
       }
     }
   };
@@ -128,11 +134,11 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
             <Grid item xs={12} sm={6} md={4} key={dept.id}>
               <Card sx={{ ...glassStyle, borderRadius: 5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Chip 
-                    label={dept.admissionOpen ? "LIVE" : "CLOSED"} 
-                    size="small" 
+                  <Chip
+                    label={dept.admissionOpen ? "LIVE" : "CLOSED"}
+                    size="small"
                     color={dept.admissionOpen ? "primary" : "error"}
-                    sx={{ fontWeight: 1000, fontSize: '0.6rem' }} 
+                    sx={{ fontWeight: 1000, fontSize: '0.6rem' }}
                   />
                   {dept.status === 'pending_credentials' && (
                     <Chip label="PENDING PROVISIONING" size="small" color="warning" sx={{ fontWeight: 1000, fontSize: '0.6rem' }} />
@@ -178,24 +184,24 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         </DialogTitle>
         <form onSubmit={handleSaveDept}>
           <DialogContent sx={{ p: 4 }}>
-             {!editingDept && (
-               <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                  <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHORIZATION REQUIRED</Typography>
-                  <TextField 
-                    fullWidth 
-                    label="One-Time Password (DEPARTMENT_CREATE)" 
-                    placeholder="Enter sector entry key"
-                    value={deptOtp} 
-                    onChange={e => setDeptOtp(e.target.value)} 
-                    required 
-                    InputProps={{ 
-                      sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
-                      startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>A valid OTP from the Administrator is required to establish new academic departments.</Typography>
-               </Box>
-             )}
+            {!editingDept && (
+              <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHORIZATION REQUIRED</Typography>
+                <TextField
+                  fullWidth
+                  label="One-Time Password (DEPARTMENT_CREATE)"
+                  placeholder="Enter sector entry key"
+                  value={deptOtp}
+                  onChange={e => setDeptOtp(e.target.value)}
+                  required
+                  InputProps={{
+                    sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
+                    startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
+                  }}
+                />
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>A valid OTP from the Administrator is required to establish new academic departments.</Typography>
+              </Box>
+            )}
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Stack spacing={3}>
