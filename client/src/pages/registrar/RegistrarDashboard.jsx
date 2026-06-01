@@ -1561,10 +1561,11 @@ const RegistrarDashboard = () => {
       };
     }).slice(0, 6);
 
-    // Aggregation for Intake Pulse (Area Chart)
+    // Aggregation for Intake Pulse (Area Chart) - Supporting MongoDB Date strings/objects
     const intakeData = applications.reduce((acc, app) => {
-      const date = app.date?.toDate?.()?.toLocaleDateString() ||
-        (typeof app.date === 'string' ? app.date : 'Recent');
+      const rawDate = app.createdAt || app.date;
+      const date = rawDate ? new Date(rawDate).toLocaleDateString() : 'Recent';
+
       const existing = acc.find(d => d.name === date);
       if (existing) existing.count += 1;
       else acc.push({ name: date, count: 1 });

@@ -82,7 +82,7 @@ export const translations = {
     faculty: "Faculty",
     research: "Research",
     announcements: "Announcements",
-    settings: "Sign Out",
+    settings: "Settings",
     totalDepts: "Total Departments",
     facultyMembers: "Faculty Members",
     enrolledStudents: "Enrolled Students",
@@ -217,7 +217,6 @@ export const translations = {
     terminateSession: "ክፍለ-ጊዜውን አቋርጥ",
 
     // Tabs
-    overview: "አጠቃላይ እይታ",
     provisioning: "ማዘጋጀት",
     otpManagement: "የመግቢያ ቁልፎች",
     security: "የሳይበር ደህንነት",
@@ -226,11 +225,9 @@ export const translations = {
     system: "ዋና ቁጥጥር",
     health: "የመሰረተ ልማት ምት",
     audit: "የኦዲት ብልህነት",
-    applications: "የማጣሪያ ወረፋ",
     reports: "የመረጃ ሪፖርቶች",
     passwordResets: "የፕሮቶኮል መልሶ ማግኛ",
     dashboard: "ዳሽቦርድ",
-    signOut: "ውጣ",
     collegeAdminDashboard: "የኮሌጅ አስተዳደር ፓነል",
     academicReports: "የትምህርት ሪፖርቶች",
     collegeFaculty: "የኮሌጅ ፋኩልቲ",
