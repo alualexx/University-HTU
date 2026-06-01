@@ -90,6 +90,7 @@ export const applicationsAPI = {
   getAll: (params) => api.get("/applications", { params }),
   updateStatus: (id, status, notes) => api.put(`/applications/${id}/status`, { status, notes }),
   patch: (id, data) => api.patch(`/applications/${id}`, data),
+  track: (referenceId) => api.get(`/applications/track/${referenceId}`),
 };
 
 // Announcements API

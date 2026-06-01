@@ -11,7 +11,7 @@ import {
     Work, Biotech, AccountBalance, LocalHospital
 } from "@mui/icons-material";
 import { db } from "../../services/Firebase";
-import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
+import { departmentsAPI, announcementsAPI } from "../../services/api";
 
 // Helper to map department names to icons/colors if needed, or fallback
 const getDeptStyles = (name) => {
@@ -29,7 +29,7 @@ const getDeptStyles = (name) => {
 const DepartmentCard = ({ dept, onApply }) => {
     const [hovered, setHovered] = useState(false);
     const styles = getDeptStyles(dept.name);
-    
+
     return (
         <Card
             elevation={0}
@@ -66,11 +66,11 @@ const DepartmentCard = ({ dept, onApply }) => {
                         {styles.icon}
                     </Box>
                     <Box sx={{ textAlign: "right" }}>
-                        <Chip 
-                            label={dept.admissionOpen ? "OPEN" : "CLOSED"} 
-                            size="small" 
+                        <Chip
+                            label={dept.admissionOpen ? "OPEN" : "CLOSED"}
+                            size="small"
                             color={dept.admissionOpen ? "success" : "error"}
-                            sx={{ fontWeight: 1000, fontSize: "0.65rem", mb: 1, px: 1 }} 
+                            sx={{ fontWeight: 1000, fontSize: "0.65rem", mb: 1, px: 1 }}
                         />
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end" }}>
                             <People sx={{ fontSize: 16, color: "primary.main" }} />
@@ -143,23 +143,26 @@ const Apply = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch published departments
-        const deptQuery = query(collection(db, "departments"), where("isPublished", "==", true));
-        const unsubDepts = onSnapshot(deptQuery, (snapshot) => {
-            setDepartments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
-        });
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                // Fetch departments from API
+                const deptRes = await departmentsAPI.getAll();
+                // We keep the isPublished check if the API returns all, 
+                // or just show what the API returns in this simplified demo
+                setDepartments(deptRes.data.filter(d => d.isPublished !== false));
 
-        // Fetch admissions posts
-        const postQuery = query(collection(db, "admissions_posts"), orderBy("date", "desc"));
-        const unsubPosts = onSnapshot(postQuery, (snapshot) => {
-            setAdmissionsPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-
-        return () => {
-            unsubDepts();
-            unsubPosts();
+                // Fetch announcements/admissions posts from API
+                const postRes = await announcementsAPI.getAll({ category: "admission" });
+                setAdmissionsPosts(postRes.data);
+            } catch (err) {
+                console.error("Error fetching apply page data:", err);
+            } finally {
+                setLoading(false);
+            }
         };
+
+        fetchData();
     }, []);
 
     const handleApply = (deptId) => {

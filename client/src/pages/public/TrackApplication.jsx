@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../services/Firebase';
+import { applicationsAPI } from '../../services/api';
 
 // Internal status codes used across the system
 const STATUS_STEPS = [
@@ -90,41 +91,42 @@ const TrackApplication = () => {
     const normalizedRef = normalizeReferenceId(applicationId.trim());
 
     try {
-      // Query by the stored referenceId field
-      const applicationsRef = collection(db, 'applications');
-      const q = query(applicationsRef, where('referenceId', '==', normalizedRef), limit(1));
-      const querySnap = await getDocs(q);
+      // Query the API instead of direct Firestore
+      const response = await applicationsAPI.track(normalizedRef);
+      const appData = response.data;
 
-      if (!querySnap.empty) {
-        const docSnap = querySnap.docs[0];
-        const appData = { id: docSnap.id, ...docSnap.data() };
-        
-        // If the application is fully enrolled, check registration status
+      if (appData) {
+        // If the application is fully enrolled, check registration status in Firestore
+        // (Tuition payments are still currently tracked in Firestore)
         if (appData.status === 'enrolled' && appData.studentId) {
-            try {
-                const paymentsRef = collection(db, "tuition_payments");
-                const pq = query(paymentsRef, where("studentId", "==", appData.studentId), orderBy("timestamp", "desc"), limit(1));
-                const paymentSnap = await getDocs(pq);
-                
-                if (!paymentSnap.empty) {
-                    const latestPayment = paymentSnap.docs[0].data();
-                    appData.registrationStatus = latestPayment.status;
-                } else {
-                    appData.registrationStatus = 'not_submitted';
-                }
-            } catch (paymentErr) {
-                console.error("Error fetching registration payments for tracker:", paymentErr);
-                appData.registrationStatus = 'unknown';
+          try {
+            const paymentsRef = collection(db, "tuition_payments");
+            const pq = query(paymentsRef, where("studentId", "==", appData.studentId), orderBy("timestamp", "desc"), limit(1));
+            const paymentSnap = await getDocs(pq);
+
+            if (!paymentSnap.empty) {
+              const latestPayment = paymentSnap.docs[0].data();
+              appData.registrationStatus = latestPayment.status;
+            } else {
+              appData.registrationStatus = 'not_submitted';
             }
+          } catch (paymentErr) {
+            console.error("Error fetching registration payments for tracker:", paymentErr);
+            appData.registrationStatus = 'unknown';
+          }
         }
-        
+
         setApplicationData(appData);
       } else {
         setError('Application not found. Please check your Protocol Reference ID and try again.');
       }
     } catch (err) {
       console.error('Error fetching application:', err);
-      setError('An error occurred while fetching your application. Please try again later.');
+      if (err.response?.status === 404) {
+        setError('Application not found. Please check your Protocol Reference ID and try again.');
+      } else {
+        setError('An error occurred while fetching your application. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ const TrackApplication = () => {
 
   const getActiveStep = (status, registrationStatus) => {
     if (!status) return 0;
-    
+
     switch (status) {
       case 'pending_dept_review':
         return 1; // Submitted, under dept review
@@ -241,7 +243,7 @@ const TrackApplication = () => {
                 {loading ? 'Searching...' : 'Track Application'}
               </Button>
             </Box>
-            
+
             <Collapse in={Boolean(error)}>
               <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
                 {error}
@@ -275,7 +277,7 @@ const TrackApplication = () => {
                     <Typography variant="h5" fontWeight="800" gutterBottom>
                       {applicationData.firstName} {applicationData.lastName}
                     </Typography>
-                    
+
                     <Typography variant="overline" color="text.secondary" fontWeight="700">
                       Prospective Department
                     </Typography>
@@ -287,7 +289,7 @@ const TrackApplication = () => {
                     <Typography variant="overline" color="text.secondary" fontWeight="700" display="block">
                       Current Status
                     </Typography>
-                     <Chip
+                    <Chip
                       label={displayStatus.toUpperCase()}
                       color={isRejected ? 'error' : (applicationData.status === 'enrolled' || applicationData.status === 'approved_by_registrar' ? 'success' : 'primary')}
                       sx={{ fontWeight: 900, fontSize: '0.85rem', px: 2, py: 2.5, borderRadius: 3 }}
@@ -313,7 +315,7 @@ const TrackApplication = () => {
                     const isStepRejected = isRejected && rejectedStep === index;
                     const isActive = activeStep === index;
                     const isCompleted = activeStep > index && !isStepRejected;
-                    
+
                     return (
                       <Step key={step.label} completed={isCompleted} expanded={true}>
                         <StepLabel
@@ -326,7 +328,7 @@ const TrackApplication = () => {
                           }}
                         >
                           <Typography variant="h6" fontWeight={isActive ? 800 : 500}
-                             color={isStepRejected ? 'error.main' : (isActive ? 'primary.main' : 'text.primary')}>
+                            color={isStepRejected ? 'error.main' : (isActive ? 'primary.main' : 'text.primary')}>
                             {step.label}
                           </Typography>
                           {isStepRejected && (
@@ -340,11 +342,11 @@ const TrackApplication = () => {
                                 ? "Awaiting final review by the Registrar's office."
                                 : step.label === "Student Account Issued"
                                   ? "Your account is being provisioned. You will receive an email shortly with your credentials."
-                                : step.label === "Semester Registration"
-                                  ? "Please log in to your Student Portal to complete your semester course registration."
-                                : step.label === "Registration Verified"
-                                  ? "Your registration is under review by the finance/registrar office."
-                                  : "Your application is currently being processed."}
+                                  : step.label === "Semester Registration"
+                                    ? "Please log in to your Student Portal to complete your semester course registration."
+                                    : step.label === "Registration Verified"
+                                      ? "Your registration is under review by the finance/registrar office."
+                                      : "Your application is currently being processed."}
                             </Typography>
                           )}
                           {isCompleted && (

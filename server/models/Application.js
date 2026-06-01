@@ -53,7 +53,7 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending_dept_review", "pending_registrar", "approved", "rejected", "withdrawn"],
+      enum: ["pending_dept_review", "approved_by_dept", "rejected_by_dept", "final_approved", "rejected_by_registrar", "enrolled", "withdrawn"],
       default: "pending_dept_review",
     },
     ipAddress: {

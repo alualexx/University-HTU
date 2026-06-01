@@ -20,7 +20,7 @@ import {
   Menu as MenuIcon, ChevronLeft, ChevronRight, MenuBook, Circle, FormatQuote, LockReset, Password, Security, Lock,
   History, FactCheck, Verified, Save, RemoveCircle, AddCircle, Grade
 }
-from "@mui/icons-material";
+  from "@mui/icons-material";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, Legend,
@@ -46,6 +46,7 @@ import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
 
 // Proper component so useCountUp hook is called at top-level, not inside .map()
+// Proper component so useCountUp hook is called at top-level, not inside .map()
 const RegistrarStatCard = ({ stat, glassStyle, isDark, alpha }) => {
   const count = useCountUp(stat.value);
   return (
@@ -67,6 +68,19 @@ const RegistrarStatCard = ({ stat, glassStyle, isDark, alpha }) => {
       </CardContent>
     </Card>
   );
+};
+
+// --- Student Status Configuration ---
+const STUDENT_STATUS_CONFIG = {
+  'Active': { color: '#10b981', icon: <CheckCircleOutline sx={{ fontSize: '1rem !important' }} />, label: 'Active' },
+  'On Leave': { color: '#f59e0b', icon: <History sx={{ fontSize: '1rem !important' }} />, label: 'On Leave' },
+  'Suspended': { color: '#ef4444', icon: <Cancel sx={{ fontSize: '1rem !important' }} />, label: 'Suspended' },
+  'Graduated': { color: '#6366f1', icon: <School sx={{ fontSize: '1rem !important' }} />, label: 'Graduated' },
+  'Withdrawn': { color: '#94a3b8', icon: <RemoveCircle sx={{ fontSize: '1rem !important' }} />, label: 'Withdrawn' }
+};
+
+const getStatusStyle = (status) => {
+  return STUDENT_STATUS_CONFIG[status] || STUDENT_STATUS_CONFIG['Active'];
 };
 
 const RegistrarDashboard = () => {
@@ -100,12 +114,13 @@ const RegistrarDashboard = () => {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [selectedStudentForPrint, setSelectedStudentForPrint] = useState(null);
   const [students, setStudents] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [courses, setCourses] = useState([]);
   const [schedules, setSchedules] = useState([]);
   // Dialog states
   const [courseDialog, setCourseDialog] = useState({ open: false, mode: 'add', data: { name: '', code: '', department: '', credits: 3, instructor: '', status: 'Active' } });
   const [scheduleDialog, setScheduleDialog] = useState({ open: false, mode: 'add', data: { courseId: '', courseName: '', day: '', startTime: '', endTime: '', room: '', semester: 'Fall 2026' } });
-  const [studentDialog, setStudentDialog] = useState({ open: false, student: null, name: '', status: 'Active', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
+  const [studentDialog, setStudentDialog] = useState({ open: false, student: null, name: '', status: 'Active', statusReason: '', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
   const [idRequests, setIdRequests] = useState([]);
 
   // Sidebar & Notifications State
@@ -158,7 +173,7 @@ const RegistrarDashboard = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [processingDepartment, setProcessingDepartment] = useState(null);
   const [isApprovingCourse, setIsApprovingCourse] = useState(false);
-  
+
   // --- Curriculum Approval State ---
   const [openApprovalDialog, setOpenApprovalDialog] = useState(false);
   const [selectedCourseForApproval, setSelectedCourseForApproval] = useState(null);
@@ -176,32 +191,26 @@ const RegistrarDashboard = () => {
   const [profileEnrollments, setProfileEnrollments] = useState([]);
   const [loadingProfileData, setLoadingProfileData] = useState(false);
 
+  const fetchApplications = async () => {
+    try {
+      const res = await applicationsAPI.getAll();
+      setApplications(res.data.filter(app =>
+        app.status === "approved_by_dept" ||
+        app.status === "pending_dept_review" ||
+        app.status === "rejected_by_registrar" ||
+        app.status === "final_approved"
+      ));
+      setPendingIds(res.data.filter(app => app.status === "setup_completed"));
+    } catch (err) {
+      console.warn("applications fetch failed:", err);
+    }
+  };
+
   // Fetch all real-time data
   useEffect(() => {
     const unsubs = [];
 
-    // Pending applications (Only those approved by Dept Head)
-    const fetchApps = async () => {
-      try {
-        const res = await applicationsAPI.getAll();
-        // Filtering in frontend for now to match the Firebase logic if needed
-        setApplications(res.data.filter(app => app.status === "approved_by_dept" || app.status === "pending_dept_review"));
-      } catch (err) {
-        console.warn("applications fetch failed:", err);
-      }
-    };
-    fetchApps();
-
-    // Pending IDs
-    const fetchPendingIds = async () => {
-      try {
-        const res = await applicationsAPI.getAll();
-        setPendingIds(res.data.filter(app => app.status === "setup_completed"));
-      } catch (err) {
-        console.warn("pendingIds fetch failed:", err);
-      }
-    };
-    fetchPendingIds();
+    fetchApplications();
 
     // Students (users with role=student)
     const fetchStudents = async () => {
@@ -213,6 +222,7 @@ const RegistrarDashboard = () => {
       }
     };
     fetchStudents();
+
 
     // Courses
     const fetchCourses = async () => {
@@ -324,7 +334,7 @@ const RegistrarDashboard = () => {
       setLoadingProfileData(true);
       try {
         const studentId = selectedStudentProfile.id;
-        
+
         // 1. Fetch Transcript
         const transcriptQ = query(collection(db, "transcripts"), where("studentUid", "==", studentId));
         const transcriptSnap = await getDocs(transcriptQ);
@@ -346,7 +356,7 @@ const RegistrarDashboard = () => {
         const enrollQ = query(collection(db, "enrollments"), where("studentId", "==", selectedStudentProfile.studentId || studentId));
         const enrollSnap = await getDocs(enrollQ);
         setProfileEnrollments(enrollSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        
+
       } catch (err) {
         console.error("Error fetching extended profile data:", err);
       } finally {
@@ -363,6 +373,7 @@ const RegistrarDashboard = () => {
       const res = await applicationsAPI.updateStatus(app._id || app.id, "final_approved", "Approved by Registrar");
       if (res.data) {
         alert(`Application for ${app.name} approved. Student ID issued: ${res.data.studentId}`);
+        fetchApplications();
       }
     } catch (err) {
       console.error("Error approving application:", err);
@@ -402,10 +413,10 @@ const RegistrarDashboard = () => {
     e.preventDefault();
     setNewsLoading(true);
     try {
-      const newsData = { 
-        ...newsForm, 
+      const newsData = {
+        ...newsForm,
         date: serverTimestamp(),
-        authorRole: ROLES.REGISTRAR 
+        authorRole: ROLES.REGISTRAR
       };
       if (editingNews) {
         await updateDoc(doc(db, "news", editingNews.id), newsData);
@@ -428,6 +439,7 @@ const RegistrarDashboard = () => {
     try {
       await applicationsAPI.updateStatus(appId, "rejected_by_registrar", reason);
       alert("Application rejected.");
+      fetchApplications();
     } catch (err) {
       console.error("Error rejecting application:", err);
       alert("Failed to reject application.");
@@ -436,13 +448,16 @@ const RegistrarDashboard = () => {
 
   const handleGenerateIdCard = async (appId) => {
     try {
-      await updateDoc(doc(db, "applications", appId), {
+      await applicationsAPI.patch(appId, {
         status: "id_issued",
-        idIssuedAt: serverTimestamp(),
+        idIssuedAt: new Date().toISOString(),
         issuedBy: user?.name,
       });
       setPrintDialogOpen(false);
       setSelectedStudentForPrint(null);
+      // Refresh pending IDs list
+      const res = await applicationsAPI.getAll();
+      setPendingIds(res.data.filter(app => app.status === "setup_completed"));
     } catch (err) {
       console.error("Error issuing ID Card:", err);
     }
@@ -456,17 +471,6 @@ const RegistrarDashboard = () => {
         processedBy: user?.name
       });
 
-      if (action === 'approve') {
-        // Find application doc for this student and reset to setup_completed so it shows in Pending IDs
-        const q = query(collection(db, "applications"), where("uid", "==", studentUid));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          await updateDoc(doc(db, "applications", snap.docs[0].id), {
-            status: "setup_completed",
-            idReissueRequestedAt: serverTimestamp()
-          });
-        }
-      }
     } catch (err) {
       console.error("Error processing ID request:", err);
     }
@@ -482,9 +486,9 @@ const RegistrarDashboard = () => {
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("email", "==", email));
       const qSnap = await getDocs(q);
-      
+
       if (qSnap.empty) throw new Error("Student not found in Firestore.");
-      
+
       const userDoc = qSnap.docs[0];
       await updateDoc(doc(db, "users", userDoc.id), {
         tempPassword: tempPass,
@@ -513,7 +517,7 @@ const RegistrarDashboard = () => {
   const handleExportPDF = () => {
     const doc = new jsPDF();
     const timestamp = new Date().toLocaleString();
-    
+
     // Header
     doc.setFontSize(22);
     doc.setTextColor(99, 102, 241);
@@ -522,34 +526,34 @@ const RegistrarDashboard = () => {
     doc.setTextColor(100);
     doc.text(`Generated on: ${timestamp}`, 20, 28);
     doc.text(`Registrar Authority: ${user?.name || "System"}`, 20, 33);
-    
+
     doc.setDrawColor(200);
     doc.line(20, 38, 190, 38);
-    
+
     // Enrollment Stats
     doc.setFontSize(16);
     doc.setTextColor(15, 23, 42);
     doc.text("1. ENROLLMENT DENSITY", 20, 50);
-    
+
     doc.setFontSize(12);
     doc.text(`Total Active Roster: ${students.length} Students`, 25, 60);
     doc.text(`Strategic Seats Filled: ${((students.length / 5000) * 100).toFixed(1)}%`, 25, 67);
-    
+
     // Departmental Breakdown
     const deptCounts = {};
     students.forEach(s => { const d = s.department || 'General'; deptCounts[d] = (deptCounts[d] || 0) + 1; });
-    
+
     let yPos = 80;
     doc.setFontSize(14);
     doc.text("Departmental Distribution:", 25, yPos);
     yPos += 10;
-    
+
     doc.setFontSize(10);
     Object.entries(deptCounts).forEach(([dept, count]) => {
       doc.text(`${dept}: ${count} Enrolled`, 30, yPos);
       yPos += 7;
     });
-    
+
     // Resource Assets
     yPos += 15;
     doc.setFontSize(16);
@@ -558,12 +562,12 @@ const RegistrarDashboard = () => {
     doc.setFontSize(12);
     doc.text(`Modules Registered: ${courses.length}`, 25, yPos);
     doc.text(`Faculty Sectors: ${departments.length}`, 25, yPos + 7);
-    
+
     // Security Footer
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text("CONFIDENTIAL - FOR AUTHORIZED REGISTRAR USE ONLY", 105, 285, { align: "center" });
-    
+
     doc.save(`ALX_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -576,11 +580,11 @@ const RegistrarDashboard = () => {
       s.highSchoolGrades || "N/A",
       s.status || "Active"
     ]);
-    
-    const csvContent = "data:text/csv;charset=utf-8," 
+
+    const csvContent = "data:text/csv;charset=utf-8,"
       + headers.join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n");
-      
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -594,7 +598,7 @@ const RegistrarDashboard = () => {
     setAssessmentLoading(true);
     // Simulate real scanning latency
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
     const report = {
       score: 84,
       timestamp: new Date().toISOString(),
@@ -607,7 +611,7 @@ const RegistrarDashboard = () => {
       ],
       recommendation: "Upgrade Firestore security rules to version 2 with granular check functions for Registrar-level ops."
     };
-    
+
     setVulnerabilityReport(report);
     setOpenVulnerabilityDialog(true);
     setAssessmentLoading(false);
@@ -824,7 +828,7 @@ const RegistrarDashboard = () => {
   // --- Student Profile Update ---
   const handleUpdateStudentProfile = async () => {
     try {
-      const updateData = { 
+      const updateData = {
         name: studentDialog.name || '',
         status: studentDialog.status,
         gender: studentDialog.gender || '',
@@ -835,19 +839,25 @@ const RegistrarDashboard = () => {
         intellectualIdentity: studentDialog.intellectualIdentity || ''
       };
       await updateDoc(doc(db, "users", studentDialog.student.id), updateData);
-      
+
+      // Update status reason if provided
+      if (studentDialog.statusReason) {
+        updateData.statusReason = studentDialog.statusReason;
+        await updateDoc(doc(db, "users", studentDialog.student.id), { statusReason: studentDialog.statusReason });
+      }
+
       // Update selectedStudentProfile if it's the one we're editing
       if (selectedStudentProfile && selectedStudentProfile.id === studentDialog.student.id) {
         setSelectedStudentProfile({ ...selectedStudentProfile, ...updateData });
       }
-      
-      setStudentDialog({ open: false, student: null, name: '', status: 'Active', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
+
+      setStudentDialog({ open: false, student: null, name: '', status: 'Active', statusReason: '', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
     } catch (err) { console.error("Error updating student profile:", err); }
   };
 
   const handleDirectPasswordReset = async (email, name) => {
     if (!window.confirm(`Are you sure you want to trigger a password reset for ${name} (${email})?`)) return;
-    
+
     try {
       await sendPasswordReset(email);
       // Audit log similar to admin
@@ -968,7 +978,7 @@ const RegistrarDashboard = () => {
       const snap = await getDocs(q);
       const results = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(s => 
+        .filter(s =>
           (s.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
           (s.studentId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
           (s.email || "").toLowerCase().includes(searchQuery.toLowerCase())
@@ -990,9 +1000,9 @@ const RegistrarDashboard = () => {
     if (!profileTranscript) return;
     setLoadingProfileData(true);
     try {
-      const dataToSave = { 
-        ...profileTranscript, 
-        lastUpdated: serverTimestamp() 
+      const dataToSave = {
+        ...profileTranscript,
+        lastUpdated: serverTimestamp()
       };
       if (profileTranscript.id) {
         await updateDoc(doc(db, "transcripts", profileTranscript.id), dataToSave);
@@ -1014,7 +1024,7 @@ const RegistrarDashboard = () => {
     try {
       await deleteDoc(doc(db, "enrollments", enrollId));
       setProfileEnrollments(prev => prev.filter(e => e.id !== enrollId));
-      
+
       // Also log audit
       await addDoc(collection(db, "audit_logs"), {
         action: "Course Dropped (Manual Registrar Override)",
@@ -1054,10 +1064,10 @@ const RegistrarDashboard = () => {
 
     return (
       <Box sx={{ mt: 4 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 4,
           p: 3,
           borderRadius: 4,
@@ -1065,14 +1075,14 @@ const RegistrarDashboard = () => {
           border: '1px solid rgba(255,255,255,0.05)'
         }}>
           <Stack direction="row" spacing={3} alignItems="center">
-            <IconButton 
+            <IconButton
               onClick={() => setSelectedStudentProfile(null)}
               sx={{ bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }}
             >
               <ArrowForward sx={{ transform: 'rotate(180deg)' }} />
             </IconButton>
-            <Avatar 
-              src={s.photoURL} 
+            <Avatar
+              src={s.photoURL}
               sx={{ width: 64, height: 64, border: '3px solid #6366f1', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
             >
               {s.name?.[0]}
@@ -1086,24 +1096,29 @@ const RegistrarDashboard = () => {
               </Stack>
             </Box>
           </Stack>
-          
+
           <Box sx={{ textAlign: 'right' }}>
-            <Chip 
-              icon={<Verified sx={{ fontSize: '1rem !important' }} />}
-              label={s.status?.toUpperCase() || 'ACTIVE'} 
-              sx={{ 
-                fontWeight: 900, 
-                bgcolor: alpha(s.status === 'suspended' ? '#ef4444' : '#10b981', 0.1), 
-                color: s.status === 'suspended' ? '#ef4444' : '#10b981',
+            <Chip
+              icon={getStatusStyle(s.status).icon}
+              label={getStatusStyle(s.status).label.toUpperCase()}
+              sx={{
+                fontWeight: 900,
+                bgcolor: alpha(getStatusStyle(s.status).color, 0.1),
+                color: getStatusStyle(s.status).color,
                 px: 1
-              }} 
+              }}
             />
+            {s.statusReason && (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontWeight: 700 }}>
+                {s.statusReason}
+              </Typography>
+            )}
           </Box>
         </Box>
 
         <Box sx={{ mb: 4, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <Tabs 
-            value={profileSubTab} 
+          <Tabs
+            value={profileSubTab}
             onChange={(e, v) => setProfileSubTab(v)}
             variant="scrollable"
             scrollButtons="auto"
@@ -1164,25 +1179,26 @@ const RegistrarDashboard = () => {
                       <Card sx={{ ...glassStyle, borderRadius: 6, p: 3 }}>
                         <Typography variant="subtitle2" fontWeight={1000} gutterBottom>QUICK ACTIONS</Typography>
                         <Stack spacing={2} sx={{ mt: 2 }}>
-                          <Button 
-              variant="contained" 
-              onClick={() => setStudentDialog({ 
-                open: true, 
-                student: s, 
-                name: s.name || '',
-                status: s.status || 'Active',
-                gender: s.gender || '',
-                year: s.year || 1,
-                department: s.department || s.intendedMajor || '',
-                phone: s.phone || '',
-                email: s.email || ''
-              })}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, background: gradients.primary }}
-            >
-              Update Identity
-            </Button>
-                          <Button 
-                            variant="outlined" startIcon={<AssignmentInd />} 
+                          <Button
+                            variant="contained"
+                            onClick={() => setStudentDialog({
+                              open: true,
+                              student: s,
+                              name: s.name || '',
+                              status: s.status || 'Active',
+                              statusReason: s.statusReason || '',
+                              gender: s.gender || '',
+                              year: s.year || 1,
+                              department: s.department || s.intendedMajor || '',
+                              phone: s.phone || '',
+                              email: s.email || ''
+                            })}
+                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, background: gradients.primary }}
+                          >
+                            Update Identity
+                          </Button>
+                          <Button
+                            variant="outlined" startIcon={<AssignmentInd />}
                             onClick={() => handleGenerateID(s)}
                             sx={{ borderRadius: 3, fontWeight: 800 }}
                           >
@@ -1213,14 +1229,14 @@ const RegistrarDashboard = () => {
                         <Typography variant="caption" color="text.secondary" fontWeight={800}>OFFICIAL GRADES & SEMESTER RECORDS</Typography>
                       </Box>
                       <Stack direction="row" spacing={2}>
-                        <Button 
-                          variant="contained" startIcon={<Save />} 
+                        <Button
+                          variant="contained" startIcon={<Save />}
                           onClick={handleUpdateProfileGrades}
                           sx={{ borderRadius: 3, fontWeight: 800 }}
                         >
                           Sync Records
                         </Button>
-                        <Button 
+                        <Button
                           variant="outlined" startIcon={<Print />}
                           onClick={() => {
                             // Link to TranscriptsTab's logic or implement here
@@ -1237,8 +1253,8 @@ const RegistrarDashboard = () => {
                         <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
                           <LibraryBooks sx={{ fontSize: 60, mb: 2 }} />
                           <Typography variant="h6" fontWeight={800}>No academic records initialized.</Typography>
-                          <Button 
-                            variant="text" startIcon={<Add />} 
+                          <Button
+                            variant="text" startIcon={<Add />}
                             sx={{ mt: 2, fontWeight: 800 }}
                             onClick={() => {
                               const updated = { ...profileTranscript, termRecords: [{ term: 'Fall 2026', courses: [], termGPA: '0.00' }] };
@@ -1254,19 +1270,19 @@ const RegistrarDashboard = () => {
                             <Box key={tIdx}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                 <Typography variant="subtitle1" fontWeight={1000} color="primary.main">{term.term}</Typography>
-                                <Button 
+                                <Button
                                   size="small" startIcon={<Add />}
                                   onClick={() => {
                                     const updated = { ...profileTranscript };
                                     if (!updated.termRecords[tIdx].courses) {
                                       updated.termRecords[tIdx].courses = [];
                                     }
-                                    updated.termRecords[tIdx].courses.push({ 
-                                      code: 'NEW COURSE', 
-                                      title: 'Course Title', 
-                                      credits: 3, 
-                                      grade: 'A', 
-                                      status: 'Active' 
+                                    updated.termRecords[tIdx].courses.push({
+                                      code: 'NEW COURSE',
+                                      title: 'Course Title',
+                                      credits: 3,
+                                      grade: 'A',
+                                      status: 'Active'
                                     });
                                     setProfileTranscript(updated);
                                   }}
@@ -1290,8 +1306,8 @@ const RegistrarDashboard = () => {
                                     {term.courses?.map((course, cIdx) => (
                                       <TableRow key={cIdx}>
                                         <TableCell sx={{ fontWeight: 800 }}>
-                                          <InputBase 
-                                            value={course.code} 
+                                          <InputBase
+                                            value={course.code}
                                             onChange={(e) => {
                                               const updated = { ...profileTranscript };
                                               updated.termRecords[tIdx].courses[cIdx].code = e.target.value;
@@ -1301,8 +1317,8 @@ const RegistrarDashboard = () => {
                                           />
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>
-                                          <InputBase 
-                                            value={course.title} 
+                                          <InputBase
+                                            value={course.title}
                                             onChange={(e) => {
                                               const updated = { ...profileTranscript };
                                               updated.termRecords[tIdx].courses[cIdx].title = e.target.value;
@@ -1312,9 +1328,9 @@ const RegistrarDashboard = () => {
                                           />
                                         </TableCell>
                                         <TableCell>
-                                          <InputBase 
+                                          <InputBase
                                             type="number"
-                                            value={course.credits} 
+                                            value={course.credits}
                                             onChange={(e) => {
                                               const updated = { ...profileTranscript };
                                               updated.termRecords[tIdx].courses[cIdx].credits = parseInt(e.target.value) || 0;
@@ -1324,9 +1340,9 @@ const RegistrarDashboard = () => {
                                           />
                                         </TableCell>
                                         <TableCell>
-                                          <Select 
-                                            size="small" 
-                                            value={course.grade} 
+                                          <Select
+                                            size="small"
+                                            value={course.grade}
                                             onChange={(e) => {
                                               const updated = { ...profileTranscript };
                                               updated.termRecords[tIdx].courses[cIdx].grade = e.target.value;
@@ -1334,11 +1350,11 @@ const RegistrarDashboard = () => {
                                             }}
                                             sx={{ height: 32, borderRadius: 2, fontWeight: 900, minWidth: 60 }}
                                           >
-                                            {['A+','A','A-','B+','B','B-','C+','C','C-','D','F'].map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
+                                            {['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F'].map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
                                           </Select>
                                         </TableCell>
                                         <TableCell align="right">
-                                          <IconButton 
+                                          <IconButton
                                             size="small" color="error"
                                             onClick={() => {
                                               const updated = { ...profileTranscript };
@@ -1370,7 +1386,7 @@ const RegistrarDashboard = () => {
                       <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
                         <Typography variant="h6" fontWeight={1000} gutterBottom>Live Enrollment Protocol</Typography>
                         <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'block', mb: 3 }}>CURRENTLY REGISTERED MODULES</Typography>
-                        
+
                         <Stack spacing={2}>
                           {profileEnrollments.length === 0 ? (
                             <Box sx={{ textAlign: 'center', py: 5, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '2px dashed rgba(255,255,255,0.05)' }}>
@@ -1384,8 +1400,8 @@ const RegistrarDashboard = () => {
                                     <Typography variant="body1" fontWeight={1000}>{en.courseName}</Typography>
                                     <Typography variant="caption" color="primary.main" fontWeight={900}>{en.courseCode} | {en.credits} Credits</Typography>
                                   </Box>
-                                  <Button 
-                                    size="small" color="error" variant="outlined" 
+                                  <Button
+                                    size="small" color="error" variant="outlined"
                                     startIcon={<RemoveCircle />}
                                     onClick={() => handleDropProfileEnrollment(en.id)}
                                     sx={{ borderRadius: 2, fontWeight: 800 }}
@@ -1403,12 +1419,12 @@ const RegistrarDashboard = () => {
                       <Card sx={{ ...glassStyle, borderRadius: 6, p: 3 }}>
                         <Typography variant="subtitle2" fontWeight={1000} gutterBottom>QUICK ENROLLMENT</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>MANUALLY ADD MODULE TO ROSTER</Typography>
-                        
+
                         <Stack spacing={2}>
                           {(courses || []).slice(0, 5).map((c, i) => (
-                            <Box 
-                              key={i} 
-                              sx={{ 
+                            <Box
+                              key={i}
+                              sx={{
                                 p: 1.5, borderRadius: 3, border: '1px solid rgba(255,255,255,0.03)',
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
@@ -1418,8 +1434,8 @@ const RegistrarDashboard = () => {
                                 <Typography variant="caption" fontWeight={1000}>{c.name}</Typography>
                                 <Typography variant="overline" display="block" sx={{ lineHeight: 1 }}>{c.code}</Typography>
                               </Box>
-                              <IconButton 
-                                size="small" color="primary" 
+                              <IconButton
+                                size="small" color="primary"
                                 onClick={() => handleAddProfileEnrollment(c)}
                                 disabled={profileEnrollments?.some(e => e.courseCode === c.code)}
                               >
@@ -1440,9 +1456,9 @@ const RegistrarDashboard = () => {
                     <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
                       <Typography variant="h6" fontWeight={1000} gutterBottom>Physical Credential Identity</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 4 }}>OFFICIAL ID CARD SERVICE</Typography>
-                      
-                      <Box sx={{ 
-                        width: '100%', aspectRatio: '1.58/1', borderRadius: 4, 
+
+                      <Box sx={{
+                        width: '100%', aspectRatio: '1.58/1', borderRadius: 4,
                         background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                         display: 'flex', flexDirection: 'column', color: '#fff', p: 3,
                         boxShadow: '0 12px 32px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden'
@@ -1463,9 +1479,9 @@ const RegistrarDashboard = () => {
                           <Badge color="success" variant="dot"><Verified /></Badge>
                         </Box>
                       </Box>
-                      
-                      <Button 
-                        fullWidth variant="contained" 
+
+                      <Button
+                        fullWidth variant="contained"
                         startIcon={<Print />}
                         onClick={() => handleGenerateID(s)}
                         sx={{ mt: 4, borderRadius: 3, fontWeight: 800, background: gradients.primary }}
@@ -1478,13 +1494,13 @@ const RegistrarDashboard = () => {
                     <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, height: '100%' }}>
                       <Typography variant="h6" fontWeight={1000} gutterBottom>Access Protocols</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 4 }}>CREDENTIAL ROTATION & AUTHENTICATION</Typography>
-                      
+
                       <Stack spacing={3}>
                         <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <Typography variant="body2" fontWeight={800}>Forced Password Rotation</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>Triggers a password reset requirement on next login.</Typography>
-                          <Button 
-                            variant="outlined" color="warning" 
+                          <Button
+                            variant="outlined" color="warning"
                             startIcon={<LockReset />}
                             onClick={() => handleDirectPasswordReset(s.email, s.name)}
                             sx={{ borderRadius: 2, fontWeight: 800 }}
@@ -1492,11 +1508,11 @@ const RegistrarDashboard = () => {
                             Rotate Credentials
                           </Button>
                         </Paper>
-                        
+
                         <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <Typography variant="body2" fontWeight={800}>Intellectual Identity</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>{s.intellectualIdentity || 'No identity protocol established.'}</Typography>
-                          <Button 
+                          <Button
                             variant="outlined" color="secondary"
                             startIcon={<AssignmentInd />}
                             onClick={() => {
@@ -1505,6 +1521,7 @@ const RegistrarDashboard = () => {
                                 student: s,
                                 name: s.name,
                                 status: s.status || 'Active',
+                                statusReason: s.statusReason || '',
                                 gender: s.gender || '',
                                 year: s.year || 1,
                                 department: s.department || '',
@@ -1546,13 +1563,13 @@ const RegistrarDashboard = () => {
 
     // Aggregation for Intake Pulse (Area Chart)
     const intakeData = applications.reduce((acc, app) => {
-      const date = app.date?.toDate?.()?.toLocaleDateString() || 
-                   (typeof app.date === 'string' ? app.date : 'Recent');
+      const date = app.date?.toDate?.()?.toLocaleDateString() ||
+        (typeof app.date === 'string' ? app.date : 'Recent');
       const existing = acc.find(d => d.name === date);
       if (existing) existing.count += 1;
       else acc.push({ name: date, count: 1 });
       return acc;
-    }, []).sort((a,b) => new Date(a.name) - new Date(b.name)).slice(-7);
+    }, []).sort((a, b) => new Date(a.name) - new Date(b.name)).slice(-7);
 
     return (
       <Box sx={{ mt: 5 }}>
@@ -1606,14 +1623,14 @@ const RegistrarDashboard = () => {
                     <AreaChart data={intakeData}>
                       <defs>
                         <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
                       <XAxis dataKey="name" hide />
                       <YAxis hide />
-                      <RechartsTooltip 
+                      <RechartsTooltip
                         contentStyle={{ backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', color: isDark ? '#fff' : '#1e293b' }}
                       />
                       <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
@@ -1632,9 +1649,9 @@ const RegistrarDashboard = () => {
 
           {/* Phase 18: Executive Matrix Vanguards */}
           <Grid item xs={12}>
-            <Card sx={{ 
-              ...glassStyle, 
-              borderRadius: 6, 
+            <Card sx={{
+              ...glassStyle,
+              borderRadius: 6,
               background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.4) 0%, rgba(30, 41, 59, 0.4) 100%)',
               border: `1px solid ${globalMaintenance ? alpha('#f59e0b', 0.2) : 'rgba(255,255,255,0.05)'}`,
               overflow: 'hidden'
@@ -1643,8 +1660,8 @@ const RegistrarDashboard = () => {
                 <Grid container spacing={4} alignItems="center">
                   <Grid item xs={12} md={3}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                      <Box sx={{ 
-                        width: 12, height: 12, borderRadius: '50%', 
+                      <Box sx={{
+                        width: 12, height: 12, borderRadius: '50%',
                         bgcolor: globalMaintenance ? '#f59e0b' : '#10b981',
                         boxShadow: `0 0 15px ${globalMaintenance ? '#f59e0b' : '#10b981'}`
                       }} />
@@ -1681,8 +1698,8 @@ const RegistrarDashboard = () => {
                     </Box>
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <Button 
-                      fullWidth variant="outlined" 
+                    <Button
+                      fullWidth variant="outlined"
                       onClick={() => setActiveTab(9)}
                       startIcon={<Assessment />}
                       sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000, textTransform: 'none', border: '1px solid rgba(255,255,255,0.1)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}
@@ -1697,18 +1714,18 @@ const RegistrarDashboard = () => {
 
           {/* Strategic Control Center */}
           <Grid item xs={12} md={4}>
-            <Card sx={{ 
-              ...glassStyle, 
-              borderRadius: 6, 
+            <Card sx={{
+              ...glassStyle,
+              borderRadius: 6,
               height: '100%',
-              background: isDark 
-                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%)' 
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%)'
                 : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)',
               border: isDark ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid rgba(99, 102, 241, 0.1)'
             }}>
               <CardContent sx={{ p: 4 }}>
                 <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 3, color: '#818cf8' }}>Registrar Control Center</Typography>
-                
+
                 <Stack spacing={3}>
                   <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1716,11 +1733,11 @@ const RegistrarDashboard = () => {
                         <Typography variant="body2" fontWeight={900}>Registration Lock</Typography>
                         <Typography variant="caption" color="text.secondary" fontWeight={700}>PAUSE ALL STUDENT COURSE ENROLLMENTS</Typography>
                       </Box>
-                      <Switch 
-                        checked={regLock} 
+                      <Switch
+                        checked={regLock}
                         onChange={toggleRegLock}
                         disabled={settingsLoading}
-                        color="error" 
+                        color="error"
                       />
                     </Box>
                   </Box>
@@ -1731,11 +1748,11 @@ const RegistrarDashboard = () => {
                         <Typography variant="body2" fontWeight={900}>Admission Window</Typography>
                         <Typography variant="caption" color="text.secondary" fontWeight={700}>TOGGLE VISIBILITY OF APPLICATION FORM</Typography>
                       </Box>
-                      <Switch 
-                        checked={admissionWindow} 
+                      <Switch
+                        checked={admissionWindow}
                         onChange={toggleAdmissionWindow}
                         disabled={settingsLoading}
-                        color="success" 
+                        color="success"
                       />
                     </Box>
                   </Box>
@@ -1749,14 +1766,14 @@ const RegistrarDashboard = () => {
                           {regLock ? "Students cannot register" : "Target cohorts currently enrolling"}
                         </Typography>
                       </Box>
-                      <Button 
-                        size="small" 
-                        variant="contained" 
+                      <Button
+                        size="small"
+                        variant="contained"
                         onClick={regLock ? () => setOpenRegDialog(true) : handleCloseRegistration}
                         disabled={settingsLoading}
-                        sx={{ 
-                          borderRadius: 2, 
-                          fontWeight: 900, 
+                        sx={{
+                          borderRadius: 2,
+                          fontWeight: 900,
                           textTransform: 'none',
                           bgcolor: regLock ? 'primary.main' : 'error.main',
                           '&:hover': { bgcolor: regLock ? 'primary.dark' : 'error.dark' }
@@ -1767,16 +1784,16 @@ const RegistrarDashboard = () => {
                     </Box>
                   </Box>
 
-                  <Button 
-                    fullWidth 
-                    variant="contained" 
+                  <Button
+                    fullWidth
+                    variant="contained"
                     disabled={globalMaintenance}
                     startIcon={<Campaign />}
                     onClick={() => setOpenNewsDialog(true)}
-                    sx={{ 
-                      borderRadius: 3, 
-                      py: 1.5, 
-                      textTransform: 'none', 
+                    sx={{
+                      borderRadius: 3,
+                      py: 1.5,
+                      textTransform: 'none',
                       fontWeight: 1000,
                       background: globalMaintenance ? 'grey' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                       boxShadow: globalMaintenance ? 'none' : '0 8px 16px rgba(99, 102, 241, 0.3)'
@@ -1803,9 +1820,9 @@ const RegistrarDashboard = () => {
                 <Box sx={{ height: 350, mt: 4 }}>
                   {(() => {
                     const deptCounts = {};
-                    students.forEach(s => { 
-                      const d = s.department || s.intendedMajor || 'Other'; 
-                      deptCounts[d] = (deptCounts[d] || 0) + 1; 
+                    students.forEach(s => {
+                      const d = s.department || s.intendedMajor || 'Other';
+                      deptCounts[d] = (deptCounts[d] || 0) + 1;
                     });
                     const chartData = Object.entries(deptCounts).map(([name, count]) => ({ name, count }));
                     return chartData.length > 0 ? (
@@ -1930,10 +1947,12 @@ const RegistrarDashboard = () => {
   };
 
   const renderStudentsTab = () => {
-    const filtered = students.filter(s =>
-      (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.email || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = students.filter(s => {
+      const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
 
     // Group students by department
     const groupedStudents = filtered.reduce((groups, student) => {
@@ -1961,22 +1980,43 @@ const RegistrarDashboard = () => {
               }}
               sx={{ width: 350 }}
             />
-            <Button 
-               variant="contained" 
-               onClick={handleStudentSearch}
-               disabled={isSearchingStudents}
-               sx={{ 
-                 borderRadius: 3, px: 3, fontWeight: 800, textTransform: 'none',
-                 background: gradients.primary,
-                 boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)'
-               }}
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel sx={{ fontWeight: 800, fontSize: '0.75rem', transform: 'translate(14px, 9px) scale(1)' }}>Status Protocol</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status Protocol"
+                onChange={(e) => setStatusFilter(e.target.value)}
+                sx={{ borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', fontWeight: 800, '& .MuiSelect-select': { py: 1.1 } }}
+              >
+                <MenuItem value="all" sx={{ fontWeight: 700 }}>All Statuses</MenuItem>
+                {Object.keys(STUDENT_STATUS_CONFIG).map(status => (
+                  <MenuItem key={status} value={status} sx={{ fontWeight: 700 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Box sx={{ color: STUDENT_STATUS_CONFIG[status].color, display: 'flex' }}>
+                        {React.cloneElement(STUDENT_STATUS_CONFIG[status].icon, { sx: { fontSize: 16 } })}
+                      </Box>
+                      {status}
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={handleStudentSearch}
+              disabled={isSearchingStudents}
+              sx={{
+                borderRadius: 3, px: 3, fontWeight: 800, textTransform: 'none',
+                background: gradients.primary,
+                boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)'
+              }}
             >
               {isSearchingStudents ? <CircularProgress size={20} color="inherit" /> : "Lookup Search"}
             </Button>
           </Box>
         </Box>
 
-        { (studentSearchResults.length > 0 || searchQuery.trim() !== '') ? (
+        {(studentSearchResults.length > 0 || searchQuery.trim() !== '') ? (
           <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none', borderRadius: 4, overflow: 'hidden' }}>
             <Table>
               <TableHead>
@@ -1989,9 +2029,9 @@ const RegistrarDashboard = () => {
               </TableHead>
               <TableBody>
                 {(studentSearchResults.length > 0 ? studentSearchResults : students.filter(s => (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()))).map((student) => (
-                  <TableRow 
-                    key={student.id} 
-                    hover 
+                  <TableRow
+                    key={student.id}
+                    hover
                     onClick={() => setSelectedStudentProfile(student)}
                     sx={{ cursor: 'pointer', '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } }}
                   >
@@ -2008,10 +2048,15 @@ const RegistrarDashboard = () => {
                       <Typography variant="caption" fontWeight={700}>{student.department || student.intendedMajor || 'Undeclared'}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={student.status || 'Active'} 
-                        size="small" 
-                        sx={{ fontWeight: 900, bgcolor: alpha(student.status === 'suspended' ? '#ef4444' : '#10b981', 0.1), color: student.status === 'suspended' ? '#ef4444' : '#10b981' }} 
+                      <Chip
+                        icon={getStatusStyle(student.status).icon}
+                        label={(student.status || 'Active').toUpperCase()}
+                        size="small"
+                        sx={{
+                          fontWeight: 900,
+                          bgcolor: alpha(getStatusStyle(student.status).color, 0.1),
+                          color: getStatusStyle(student.status).color
+                        }}
                       />
                     </TableCell>
                     <TableCell align="right">
@@ -2024,90 +2069,100 @@ const RegistrarDashboard = () => {
           </TableContainer>
         ) : (
           filtered.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 10 }}>
-            <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.2 }} />
-            <Typography color="text.secondary" fontWeight={900}>NO MATCHING RECORDS FOUND</Typography>
-          </Box>
-        ) : (
-          Object.entries(groupedStudents).map(([dept, deptStudents]) => (
-            <Card key={dept} sx={{ ...glassStyle, borderRadius: 6, mb: 4, overflow: 'hidden' }}>
-              <Box sx={{ px: 4, py: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                <Typography variant="subtitle1" fontWeight={1000} color="primary.main">{dept?.toUpperCase()}</Typography>
-              </Box>
-              <CardContent sx={{ p: 0 }}>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                       <TableRow>
-                        {["Student Identity", "Credential ID", "Year", "Status", "Operations"].map((h) => (
-                          <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 2, borderBottom: '2px solid rgba(255,255,255,0.05)' }}>{h}</TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {deptStudents.map((student) => (
-                        <TableRow 
-                          key={student.id} 
-                          hover 
-                          onClick={() => setSelectedStudentProfile(student)}
-                          sx={{ 
-                            cursor: 'pointer',
-                            '&:last-child td': { border: 0 }, 
-                            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' } 
-                          }}
-                        >
-                          <TableCell sx={{ py: 3, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                              <Avatar src={student.photoURL} sx={{ width: 44, height: 44, borderRadius: 3 }}>{(student.name || '?')[0]}</Avatar>
-                              <Box>
-                                <Typography variant="body2" fontWeight={800}>{student.name}</Typography>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700}>{student.email}</Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                           <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                            <Typography variant="body2" fontWeight={1000} color="primary.main" sx={{ fontFamily: 'monospace' }}>{student.studentId || 'N/A'}</Typography>
-                          </TableCell>
-                          <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                            <Chip label={`Y${student.year || 1}`} size="small" variant="outlined" sx={{ fontWeight: 1000, color: 'text.secondary' }} />
-                          </TableCell>
-                          <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                            <Chip label={student.status?.toUpperCase() || 'ACTIVE'} size="small" sx={{ fontWeight: 1000, fontSize: '0.55rem' }} />
-                          </TableCell>
-                          <TableCell align="right" sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                              <Tooltip title="Update Status">
-                                <IconButton size="small" onClick={() => setStudentDialog({ open: true, student, status: student.status || 'Active' })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                                  <Edit sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Emergency Reset (Manual)">
-                                <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'warning.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                                  <Password sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Reset Password (Standard)">
-                                <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'info.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                                  <LockReset sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Generate ID Card">
-                                <IconButton size="small" onClick={() => handleGenerateID(student)} sx={{ color: 'success.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                                  <AssignmentInd sx={{ fontSize: 18 }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </TableCell>
+            <Box sx={{ textAlign: 'center', py: 10 }}>
+              <People sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.2 }} />
+              <Typography color="text.secondary" fontWeight={900}>NO MATCHING RECORDS FOUND</Typography>
+            </Box>
+          ) : (
+            Object.entries(groupedStudents).map(([dept, deptStudents]) => (
+              <Card key={dept} sx={{ ...glassStyle, borderRadius: 6, mb: 4, overflow: 'hidden' }}>
+                <Box sx={{ px: 4, py: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                  <Typography variant="subtitle1" fontWeight={1000} color="primary.main">{dept?.toUpperCase()}</Typography>
+                </Box>
+                <CardContent sx={{ p: 0 }}>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          {["Student Identity", "Credential ID", "Year", "Status", "Operations"].map((h) => (
+                            <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 2, borderBottom: '2px solid rgba(255,255,255,0.05)' }}>{h}</TableCell>
+                          ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          ))
-        )
-      )}
+                      </TableHead>
+                      <TableBody>
+                        {deptStudents.map((student) => (
+                          <TableRow
+                            key={student.id}
+                            hover
+                            onClick={() => setSelectedStudentProfile(student)}
+                            sx={{
+                              cursor: 'pointer',
+                              '&:last-child td': { border: 0 },
+                              '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }
+                            }}
+                          >
+                            <TableCell sx={{ py: 3, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                                <Avatar src={student.photoURL} sx={{ width: 44, height: 44, borderRadius: 3 }}>{(student.name || '?')[0]}</Avatar>
+                                <Box>
+                                  <Typography variant="body2" fontWeight={800}>{student.name}</Typography>
+                                  <Typography variant="caption" color="text.secondary" fontWeight={700}>{student.email}</Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                              <Typography variant="body2" fontWeight={1000} color="primary.main" sx={{ fontFamily: 'monospace' }}>{student.studentId || 'N/A'}</Typography>
+                            </TableCell>
+                            <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                              <Chip label={`Y${student.year || 1}`} size="small" variant="outlined" sx={{ fontWeight: 1000, color: 'text.secondary' }} />
+                            </TableCell>
+                            <TableCell sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                              <Chip
+                                icon={getStatusStyle(student.status).icon}
+                                label={(student.status || 'Active').toUpperCase()}
+                                size="small"
+                                sx={{
+                                  fontWeight: 1000,
+                                  fontSize: '0.55rem',
+                                  bgcolor: alpha(getStatusStyle(student.status).color, 0.1),
+                                  color: getStatusStyle(student.status).color
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell align="right" sx={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                <Tooltip title="Update Status">
+                                  <IconButton size="small" onClick={() => setStudentDialog({ open: true, student, name: student.name || '', status: student.status || 'Active', statusReason: student.statusReason || '', gender: student.gender || '', year: student.year || 1, department: student.department || '', phone: student.phone || '', email: student.email || '', intellectualIdentity: student.intellectualIdentity || '' })} sx={{ color: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                    <Edit sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Emergency Reset (Manual)">
+                                  <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'warning.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                    <Password sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Reset Password (Standard)">
+                                  <IconButton size="small" onClick={() => handleDirectPasswordReset(student.email, student.name)} sx={{ color: 'info.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                    <LockReset sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Generate ID Card">
+                                  <IconButton size="small" onClick={() => handleGenerateID(student)} sx={{ color: 'success.main', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                                    <AssignmentInd sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            ))
+          )
+        )}
       </Box>
     );
   };
@@ -2139,9 +2194,9 @@ const RegistrarDashboard = () => {
         ) : (
           schedules.map((s) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={s.id}>
-              <Card sx={{ 
-                ...glassStyle, 
-                borderRadius: 5, 
+              <Card sx={{
+                ...glassStyle,
+                borderRadius: 5,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 transition: '0.3s',
                 '&:hover': { transform: 'scale(1.02)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)', boxShadow: '0 15px 30px rgba(0,0,0,0.1)' }
@@ -2189,7 +2244,7 @@ const RegistrarDashboard = () => {
         </DialogTitle>
         <DialogContent sx={{ px: 4, py: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontWeight: 700 }}>
-            You are about to formally reject the admission dossier of <strong style={{color: isDark ? '#fff' : '#1e293b'}}>{rejectDialog.app?.name || "Applicant"}</strong> for the <strong style={{color: isDark ? '#fff' : '#1e293b'}}>{rejectDialog.app?.intendedMajor || "Selected"}</strong> sector.
+            You are about to formally reject the admission dossier of <strong style={{ color: isDark ? '#fff' : '#1e293b' }}>{rejectDialog.app?.name || "Applicant"}</strong> for the <strong style={{ color: isDark ? '#fff' : '#1e293b' }}>{rejectDialog.app?.intendedMajor || "Selected"}</strong> sector.
           </Typography>
           <TextField
             fullWidth multiline rows={4}
@@ -2227,8 +2282,8 @@ const RegistrarDashboard = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} md={8.5}>
           <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
-            <Box sx={{ 
-              p: 4, 
+            <Box sx={{
+              p: 4,
               background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 100%)',
               borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -2237,14 +2292,38 @@ const RegistrarDashboard = () => {
                 <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Admissions Dossier</Typography>
                 <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 2, opacity: 0.7 }}>AWAITING REGISTRAR VALIDATION</Typography>
               </Box>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box sx={{ textAlign: 'right', mr: 2 }}>
+              <Stack direction="row" spacing={3} alignItems="center">
+                <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="h6" fontWeight={1000} sx={{ lineHeight: 1 }}>{applications.length}</Typography>
                   <Typography variant="caption" fontWeight={900} color="text.secondary">PENDING</Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: alpha('#6366f1', 0.1), color: 'primary.main', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                  <Assignment />
-                </Avatar>
+                <Divider orientation="vertical" flexItem sx={{ height: 40, opacity: 0.1 }} />
+                <Stack direction="row" spacing={1}>
+                  <Tooltip title="Refresh Application Data">
+                    <IconButton
+                      onClick={fetchApplications}
+                      sx={{ bgcolor: alpha('#6366f1', 0.05), color: 'primary.main', '&:hover': { bgcolor: alpha('#6366f1', 0.1) } }}
+                    >
+                      <History />
+                    </IconButton>
+                  </Tooltip>
+                  <Button
+                    variant="contained"
+                    startIcon={<PersonAdd />}
+                    onClick={() => window.open('/apply', '_blank')}
+                    sx={{
+                      borderRadius: 3,
+                      fontWeight: 1000,
+                      textTransform: 'none',
+                      px: 3,
+                      bgcolor: '#6366f1',
+                      boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
+                      '&:hover': { bgcolor: '#4f46e5' }
+                    }}
+                  >
+                    Initiate Application
+                  </Button>
+                </Stack>
               </Stack>
             </Box>
 
@@ -2267,7 +2346,7 @@ const RegistrarDashboard = () => {
                       }}>
                         {/* Summary Header */}
                         <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} 
+                          <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                             badgeContent={<Circle sx={{ fontSize: 12, color: '#10b981', border: `2px solid ${isDark ? '#0f172a' : '#fff'}`, borderRadius: '50%' }} />}>
                             <Avatar sx={{
                               width: 52, height: 52, borderRadius: 2.5,
@@ -2286,14 +2365,14 @@ const RegistrarDashboard = () => {
                             </Stack>
                           </Box>
                           <Stack direction="row" spacing={1} alignItems="center">
-                             <Chip label={app.level || "Year 1"} size="small" sx={{ fontWeight: 900, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }} />
-                             <IconButton onClick={() => setExpandedApp(isExpanded ? null : app.id)} sx={{ 
-                                bgcolor: isExpanded ? 'primary.main' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'), 
-                                color: isExpanded ? 'white' : 'text.secondary',
-                                transform: isExpanded ? 'rotate(180deg)' : 'none', 
-                                transition: '0.4s',
-                                '&:hover': { bgcolor: isExpanded ? 'primary.dark' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') }
-                             }}>
+                            <Chip label={app.level || "Year 1"} size="small" sx={{ fontWeight: 900, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }} />
+                            <IconButton onClick={() => setExpandedApp(isExpanded ? null : app.id)} sx={{
+                              bgcolor: isExpanded ? 'primary.main' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
+                              color: isExpanded ? 'white' : 'text.secondary',
+                              transform: isExpanded ? 'rotate(180deg)' : 'none',
+                              transition: '0.4s',
+                              '&:hover': { bgcolor: isExpanded ? 'primary.dark' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') }
+                            }}>
                               <ExpandMore sx={{ fontSize: 20 }} />
                             </IconButton>
                           </Stack>
@@ -2393,18 +2472,18 @@ const RegistrarDashboard = () => {
                         </Box>
                         <Typography variant="subtitle2" fontWeight={1000} color={item.color}>{item.value}%</Typography>
                       </Box>
-                      <LinearProgress variant="determinate" value={item.value} 
-                        sx={{ 
+                      <LinearProgress variant="determinate" value={item.value}
+                        sx={{
                           height: 8, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
                           '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: item.color, backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%)' }
-                        }} 
+                        }}
                       />
                     </Box>
                   ))}
                 </Stack>
                 <Divider sx={{ my: 4, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
                 <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1, mb: 2, display: 'block' }}>ID GENERATION PROTOCOL</Typography>
-                <Box sx={{ 
+                <Box sx={{
                   background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%)',
                   p: 2.5, borderRadius: 4, border: '1px solid rgba(99, 102, 241, 0.2)',
                   display: 'flex', alignItems: 'center', gap: 2.5, mb: 3
@@ -2426,22 +2505,22 @@ const RegistrarDashboard = () => {
                 <Typography variant="subtitle2" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>System Status</Typography>
               </Box>
               <CardContent sx={{ p: 2.5 }}>
-                 <Stack spacing={2.5}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 10px #10b981' }} />
-                      <Box>
-                        <Typography variant="caption" fontWeight={1000} display="block">AUTHENTICATION SERVER</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={900}>OPERATIONAL • 42ms LATENCY</Typography>
-                      </Box>
+                <Stack spacing={2.5}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+                    <Box>
+                      <Typography variant="caption" fontWeight={1000} display="block">AUTHENTICATION SERVER</Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={900}>OPERATIONAL • 42ms LATENCY</Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#3b82f6', boxShadow: '0 0 10px #3b82f6' }} />
-                      <Box>
-                        <Typography variant="caption" fontWeight={1000} display="block">ID FABRICATION NODE</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={900}>READY • IDLE</Typography>
-                      </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#3b82f6', boxShadow: '0 0 10px #3b82f6' }} />
+                    <Box>
+                      <Typography variant="caption" fontWeight={1000} display="block">ID FABRICATION NODE</Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={900}>READY • IDLE</Typography>
                     </Box>
-                 </Stack>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
           </Stack>
@@ -2455,7 +2534,7 @@ const RegistrarDashboard = () => {
       <Grid container spacing={4}>
         <Grid item xs={12}>
           <Card sx={{ ...glassStyle, borderRadius: 7, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
-            <Box sx={{ 
+            <Box sx={{
               p: 5, pb: 4,
               background: 'linear-gradient(215deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 100%)',
               borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
@@ -2485,7 +2564,7 @@ const RegistrarDashboard = () => {
                   pendingIds.map((student) => (
                     <Grid item xs={12} sm={6} md={4} key={student.id}>
                       <Card sx={{
-                        borderRadius: 6, overflow: 'hidden', 
+                        borderRadius: 6, overflow: 'hidden',
                         bgcolor: isDark ? 'rgba(15, 23, 42, 0.95)' : '#fff',
                         border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
                         position: 'relative',
@@ -2536,7 +2615,7 @@ const RegistrarDashboard = () => {
                                 <Typography variant="body2" fontWeight={1000} color={isDark ? "rgba(255,255,255,0.9)" : "#334155"}>AUG 2030</Typography>
                               </Box>
                             </Box>
-                            
+
                             <Button
                               fullWidth variant="contained" startIcon={<Print />}
                               className="btn-premium"
@@ -2550,10 +2629,10 @@ const RegistrarDashboard = () => {
                             </Button>
                           </Stack>
                         </Box>
-                        
+
                         {/* Security Hologram Simulation */}
-                        <Box sx={{ 
-                          position: 'absolute', bottom: 15, right: 15, width: 30, height: 30, 
+                        <Box sx={{
+                          position: 'absolute', bottom: 15, right: 15, width: 30, height: 30,
                           borderRadius: '50%', background: 'linear-gradient(45deg, #fbbf24, #ef4444, #3b82f6, #10b981)',
                           opacity: 0.2, mixBlendMode: 'overlay'
                         }} />
@@ -2593,9 +2672,9 @@ const RegistrarDashboard = () => {
         ) : (
           idRequests.map((req) => (
             <Grid item xs={12} md={6} key={req.id}>
-              <Card sx={{ 
-                ...glassStyle, 
-                borderRadius: 5, 
+              <Card sx={{
+                ...glassStyle,
+                borderRadius: 5,
                 background: req.status === 'pending' ? 'linear-gradient(215deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%)' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.8)'),
                 position: 'relative',
                 overflow: 'hidden'
@@ -2648,7 +2727,7 @@ const RegistrarDashboard = () => {
           <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Course Modules</Typography>
           <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, opacity: 0.7 }}>ACADEMIC UNIT REPOSITORY</Typography>
         </Box>
-        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenCourseDialog()} 
+        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenCourseDialog()}
           sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)' }}>
           Register New Module
         </Button>
@@ -2663,7 +2742,7 @@ const RegistrarDashboard = () => {
             </Typography>
             <Box sx={{ height: 2, flex: 3, background: `linear-gradient(90deg, transparent 0%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 100%)` }} />
           </Box>
-          
+
           <Grid container spacing={3}>
             {courses.filter(c => c.departmentId === dept.id).length === 0 ? (
               <Grid item xs={12}>
@@ -2672,9 +2751,9 @@ const RegistrarDashboard = () => {
             ) : (
               courses.filter(c => c.departmentId === dept.id).map((course) => (
                 <Grid item xs={12} sm={6} md={4} key={course.id}>
-                  <Card sx={{ 
-                    ...glassStyle, 
-                    borderRadius: 5, 
+                  <Card sx={{
+                    ...glassStyle,
+                    borderRadius: 5,
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                     transition: '0.3s',
                     '&:hover': { transform: 'translateY(-5px)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }
@@ -2695,7 +2774,7 @@ const RegistrarDashboard = () => {
                           <Typography variant="caption" fontWeight={1000} color="warning.main">REVIEW REQUIRED: NEW SEMESTER PROPOSAL</Typography>
                         </Box>
                       )}
-                      
+
                       <Stack spacing={1.5} sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="caption" color="text.secondary" fontWeight={900}>CREDIT VALUE</Typography>
@@ -2712,7 +2791,7 @@ const RegistrarDashboard = () => {
                       </Stack>
 
                       <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                      
+
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                         {course.status === 'pending_approval' ? (
                           <>
@@ -2764,9 +2843,9 @@ const RegistrarDashboard = () => {
           ) : (
             pendingCourses.map((course) => (
               <Grid item xs={12} sm={6} md={4} key={course.id}>
-                <Card sx={{ 
-                  ...glassStyle, 
-                  borderRadius: 5, 
+                <Card sx={{
+                  ...glassStyle,
+                  borderRadius: 5,
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                   transition: '0.3s',
                   '&:hover': { transform: 'translateY(-5px)', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }
@@ -2781,7 +2860,7 @@ const RegistrarDashboard = () => {
                         <MenuBook sx={{ fontSize: 20 }} />
                       </Avatar>
                     </Box>
-                    
+
                     <Stack spacing={1.5} sx={{ mb: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={900}>CREDIT VALUE</Typography>
@@ -2798,23 +2877,23 @@ const RegistrarDashboard = () => {
                     </Stack>
 
                     <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                    
+
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                      <Button 
-                        size="small" 
-                        variant="outlined" 
-                        color="error" 
-                        onClick={() => handleCourseAction(course.id, 'reject')} 
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleCourseAction(course.id, 'reject')}
                         sx={{ borderRadius: 2, fontWeight: 900, textTransform: 'none' }}
                         disabled={isApprovingCourse}
                       >
                         {isApprovingCourse ? <CircularProgress size={16} color="inherit" /> : 'Reject'}
                       </Button>
-                      <Button 
-                        size="small" 
-                        variant="contained" 
-                        color="success" 
-                        onClick={() => { setSelectedCourseForApproval(course); setOpenApprovalDialog(true); }} 
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => { setSelectedCourseForApproval(course); setOpenApprovalDialog(true); }}
                         sx={{ borderRadius: 2, fontWeight: 900, textTransform: 'none' }}
                         disabled={isApprovingCourse}
                       >
@@ -2834,8 +2913,8 @@ const RegistrarDashboard = () => {
   const renderAdmissionsPostsTab = () => (
     <Box sx={{ mt: 4 }}>
       <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
-        <Box sx={{ 
-          p: 4, 
+        <Box sx={{
+          p: 4,
           background: `linear-gradient(90deg, ${alpha('#f59e0b', 0.08)} 0%, transparent 100%)`,
           borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -2844,7 +2923,7 @@ const RegistrarDashboard = () => {
             <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Admissions Announcements</Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, opacity: 0.7 }}>PROSPECTIVE STUDENT UPDATES</Typography>
           </Box>
-          <Button variant="contained" className="btn-premium" startIcon={<Campaign />} onClick={() => handleOpenAdmissionsDialog()} 
+          <Button variant="contained" className="btn-premium" startIcon={<Campaign />} onClick={() => handleOpenAdmissionsDialog()}
             sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none', bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}>
             Dispatch Global Update
           </Button>
@@ -2893,7 +2972,7 @@ const RegistrarDashboard = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={openAdmissionsDialog} onClose={() => setOpenAdmissionsDialog(false)} maxWidth="sm" fullWidth 
+      <Dialog open={openAdmissionsDialog} onClose={() => setOpenAdmissionsDialog(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none', p: 1 } }}>
         <DialogTitle sx={{ p: 4, pb: 1 }}>
           <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingAdmissionPost ? 'Calibrate Dispatch' : 'New Admissions Update'}</Typography>
@@ -2902,10 +2981,10 @@ const RegistrarDashboard = () => {
         <Box component="form">
           <DialogContent sx={{ p: 4 }}>
             <Stack spacing={3}>
-              <TextField fullWidth label="Headline" value={admissionPostForm.title} onChange={e => setAdmissionPostForm({ ...admissionPostForm, title: e.target.value })} required 
+              <TextField fullWidth label="Headline" value={admissionPostForm.title} onChange={e => setAdmissionPostForm({ ...admissionPostForm, title: e.target.value })} required
                 InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
               />
-              <TextField fullWidth multiline rows={5} label="Content Body (Markdown Supported)" value={admissionPostForm.content} onChange={e => setAdmissionPostForm({ ...admissionPostForm, content: e.target.value })} required 
+              <TextField fullWidth multiline rows={5} label="Content Body (Markdown Supported)" value={admissionPostForm.content} onChange={e => setAdmissionPostForm({ ...admissionPostForm, content: e.target.value })} required
                 InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
               />
               <Grid container spacing={2}>
@@ -2949,14 +3028,14 @@ const RegistrarDashboard = () => {
     const deptCounts = {};
     students.forEach(s => { const d = s.department || s.intendedMajor || 'General'; deptCounts[d] = (deptCounts[d] || 0) + 1; });
     const deptData = Object.entries(deptCounts).map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }));
-    
+
     return (
       <Box sx={{ mt: 4 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={7}>
             <Card sx={{ ...glassStyle, borderRadius: 7, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
-              <Box sx={{ 
-                p: 4, 
+              <Box sx={{
+                p: 4,
                 background: `linear-gradient(215deg, ${alpha('#6366f1', 0.1)} 0%, transparent 100%)`,
                 borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`
               }}>
@@ -2971,15 +3050,15 @@ const RegistrarDashboard = () => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-30} textAnchor="end" tick={{ fill: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 11, fontWeight: 700 }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 12, fontWeight: 700 }} />
-                        <RechartsTooltip 
+                        <RechartsTooltip
                           cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
-                          contentStyle={{ 
-                            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', 
-                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, 
-                            borderRadius: '15px', 
-                            color: isDark ? '#fff' : '#1e293b', 
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.1)' 
-                          }} 
+                          contentStyle={{
+                            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                            borderRadius: '15px',
+                            color: isDark ? '#fff' : '#1e293b',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                          }}
                           itemStyle={{ fontWeight: 1000, color: isDark ? '#fff' : '#1e293b' }}
                         />
                         <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
@@ -3001,18 +3080,18 @@ const RegistrarDashboard = () => {
           </Grid>
 
           <Grid item xs={12} md={5}>
-            <Card sx={{ 
-              ...glassStyle, 
-              borderRadius: 7, 
+            <Card sx={{
+              ...glassStyle,
+              borderRadius: 7,
               height: '100%',
               background: `linear-gradient(135deg, ${alpha('#6366f1', 0.15)} 0%, ${alpha('#8b5cf6', 0.05)} 100%)`,
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.1)'}`,
               display: 'flex', flexDirection: 'column', textAlign: 'center', p: 5
             }}>
               <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                <Box sx={{ 
-                  width: 120, height: 120, borderRadius: '40%', 
-                  background: 'linear-gradient(45deg, #6366f1, #a855f7)', 
+                <Box sx={{
+                  width: 120, height: 120, borderRadius: '40%',
+                  background: 'linear-gradient(45deg, #6366f1, #a855f7)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)',
                   mb: 4
@@ -3024,33 +3103,33 @@ const RegistrarDashboard = () => {
                   Synthesize high-fidelity university audits, longitudinal enrollment dossiers, and predictive departmental growth vectors.
                 </Typography>
                 <Stack spacing={2} sx={{ width: '100%' }}>
-                  <Button variant="contained" className="btn-premium" 
+                  <Button variant="contained" className="btn-premium"
                     disabled={students.length === 0}
                     onClick={handleExportPDF}
                     startIcon={<Assignment />}
                     sx={{ borderRadius: 4, py: 2, textTransform: 'none', fontWeight: 1000, fontSize: '1rem', boxShadow: '0 15px 30px rgba(99, 102, 241, 0.25)' }}>
                     Export Executive PDF Dossier
                   </Button>
-                  <Button variant="outlined" 
+                  <Button variant="outlined"
                     onClick={handleExportCSV}
                     sx={{ borderRadius: 4, py: 2, textTransform: 'none', fontWeight: 1000, color: isDark ? 'white' : 'primary.main', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.2)'}`, '&:hover': { border: `1px solid ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(99,102,241,0.4)'}`, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.03)' } }}>
                     Raw Macro-Data CSV Export
                   </Button>
                 </Stack>
-                
+
                 <Box sx={{ mt: 6, width: '100%', pt: 4, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                   <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, display: 'block', mb: 2 }}>SECURITY PROTOCOL STATUS</Typography>
-                   <Button 
-                    fullWidth 
-                    variant="outlined" 
+                  <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, display: 'block', mb: 2 }}>SECURITY PROTOCOL STATUS</Typography>
+                  <Button
+                    fullWidth
+                    variant="outlined"
                     color={vulnerabilityReport ? "success" : "warning"}
                     onClick={handleVulnerabilityAssessment}
                     disabled={assessmentLoading}
                     startIcon={assessmentLoading ? <CircularProgress size={20} color="inherit" /> : <Warning />}
                     sx={{ borderRadius: 3.5, fontWeight: 1000, textTransform: 'none', py: 1.5, border: '1px solid rgba(245, 158, 11, 0.3)' }}
-                   >
-                     {assessmentLoading ? "Executing Neural Audit..." : vulnerabilityReport ? "Re-Run Vulnerability Scan" : "Initiate System Vulnerability Scan"}
-                   </Button>
+                  >
+                    {assessmentLoading ? "Executing Neural Audit..." : vulnerabilityReport ? "Re-Run Vulnerability Scan" : "Initiate System Vulnerability Scan"}
+                  </Button>
                 </Box>
               </CardContent>
             </Card>
@@ -3058,7 +3137,7 @@ const RegistrarDashboard = () => {
         </Grid>
 
         {/* Vulnerability Report Dialog */}
-        <Dialog open={openVulnerabilityDialog} onClose={() => setOpenVulnerabilityDialog(false)} maxWidth="md" fullWidth 
+        <Dialog open={openVulnerabilityDialog} onClose={() => setOpenVulnerabilityDialog(false)} maxWidth="md" fullWidth
           PaperProps={{ sx: { ...glassStyle, borderRadius: 8, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
           <DialogTitle sx={{ p: 5, pb: 2, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3089,7 +3168,7 @@ const RegistrarDashboard = () => {
                   ))}
                 </Stack>
               </Box>
-              
+
               <Box sx={{ p: 4, borderRadius: 5, background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                 <Typography variant="subtitle1" fontWeight={1000} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Info sx={{ color: 'primary.main' }} /> Strategic Recommendation
@@ -3127,12 +3206,12 @@ const RegistrarDashboard = () => {
             { label: "Gross Capital", value: `$${totalRevenue.toLocaleString()}`, color: '#6366f1', icon: <CreditCard /> },
           ].map((stat, i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
-              <Card sx={{ 
-                ...glassStyle, borderRadius: 5, p: 2.5, 
+              <Card sx={{
+                ...glassStyle, borderRadius: 5, p: 2.5,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 background: `linear-gradient(135deg, ${alpha(stat.color, 0.08)} 0%, transparent 100%)`,
-                transition: '0.4s', 
-                '&:hover': { transform: 'scale(1.02)' } 
+                transition: '0.4s',
+                '&:hover': { transform: 'scale(1.02)' }
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar sx={{ bgcolor: alpha(stat.color, 0.1), color: stat.color, width: 44, height: 44, boxShadow: `0 8px 16px ${alpha(stat.color, 0.2)}` }}>{stat.icon}</Avatar>
@@ -3159,11 +3238,11 @@ const RegistrarDashboard = () => {
             pendingPayments.map((payment) => {
               const isPending = payment.status === 'pending_approval';
               const isProcessing = processingFinanceAction === payment.id;
-              
+
               return (
                 <Grid item xs={12} md={6} lg={4} key={payment.id}>
-                  <Card sx={{ 
-                    ...glassStyle, borderRadius: 4, 
+                  <Card sx={{
+                    ...glassStyle, borderRadius: 4,
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
                     position: 'relative',
                     background: isPending ? `linear-gradient(215deg, ${alpha('#6366f1', 0.03)} 0%, transparent 100%)` : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)')
@@ -3174,14 +3253,14 @@ const RegistrarDashboard = () => {
                           <Typography variant="subtitle2" fontWeight={1000}>{payment.studentName}</Typography>
                           <Typography variant="caption" color="primary.main" fontWeight={1000} sx={{ fontFamily: 'monospace' }}>{payment.studentId}</Typography>
                         </Box>
-                        <Chip 
-                          label={payment.status.replace(/_/g, ' ').toUpperCase()} 
-                          size="small" 
-                          sx={{ 
+                        <Chip
+                          label={payment.status.replace(/_/g, ' ').toUpperCase()}
+                          size="small"
+                          sx={{
                             fontWeight: 1000, fontSize: '0.6rem',
                             bgcolor: alpha(payment.status === 'approved' ? '#10b981' : isPending ? '#f59e0b' : '#ef4444', 0.1),
                             color: payment.status === 'approved' ? '#10b981' : isPending ? '#f59e0b' : '#ef4444'
-                          }} 
+                          }}
                         />
                       </Box>
                       <Box sx={{ mb: 2, p: 1.5, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
@@ -3458,8 +3537,8 @@ const RegistrarDashboard = () => {
       </Box>
 
       {/* Curriculum Approval Dialog */}
-      <Dialog 
-        open={openApprovalDialog} 
+      <Dialog
+        open={openApprovalDialog}
         onClose={() => setOpenApprovalDialog(false)}
         maxWidth="sm"
         fullWidth
@@ -3475,7 +3554,7 @@ const RegistrarDashboard = () => {
               <Typography variant="h6" sx={{ color: isDark ? '#fff' : 'text.primary', fontWeight: 700 }}>{selectedCourseForApproval?.name} ({selectedCourseForApproval?.code})</Typography>
               <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.8)' : 'text.secondary' }}>Credits: {selectedCourseForApproval?.credits} | Dept: {selectedCourseForApproval?.department}</Typography>
             </Box>
-            
+
             <TextField
               label="Tuition Fee (Total for Course)"
               type="number"
@@ -3502,8 +3581,8 @@ const RegistrarDashboard = () => {
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setOpenApprovalDialog(false)} sx={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'text.secondary' }}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             color="success"
             onClick={() => handleCourseAction(selectedCourseForApproval.id, 'approve', approvalForm)}
             sx={{ borderRadius: 2, fontWeight: 900 }}
@@ -3519,15 +3598,15 @@ const RegistrarDashboard = () => {
         anchor="right"
         open={notifDrawerOpen}
         onClose={() => setNotifDrawerOpen(false)}
-        PaperProps={{ 
-          sx: { 
-            width: { xs: '100vw', sm: 400 }, 
-            p: 3, 
+        PaperProps={{
+          sx: {
+            width: { xs: '100vw', sm: 400 },
+            p: 3,
             borderRadius: '24px 0 0 24px',
             bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
             backdropFilter: 'blur(10px)',
             borderLeft: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.1)'}`
-          } 
+          }
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
@@ -3689,55 +3768,55 @@ const RegistrarDashboard = () => {
 
 
 
-      <Dialog open={courseDialog.open} onClose={() => setCourseDialog(p => ({ ...p, open: false }))} maxWidth="sm" fullWidth 
+      <Dialog open={courseDialog.open} onClose={() => setCourseDialog(p => ({ ...p, open: false }))} maxWidth="sm" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>{courseDialog.mode === 'add' ? 'Add New Course' : 'Edit Course'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <TextField 
-              fullWidth label="Module Full Name" 
-              value={courseDialog.data.name} 
-              onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
+            <TextField
+              fullWidth label="Module Full Name"
+              value={courseDialog.data.name}
+              onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
               error={!!courseErrors.name} helperText={courseErrors.name}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
             />
             <Stack direction="row" spacing={2.5}>
-              <TextField 
-                fullWidth label="Module Code" 
-                value={courseDialog.data.code} 
-                onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, code: e.target.value } }))} 
+              <TextField
+                fullWidth label="Module Code"
+                value={courseDialog.data.code}
+                onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, code: e.target.value } }))}
                 error={!!courseErrors.code} helperText={courseErrors.code}
                 InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
                 InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
               />
-              <TextField 
-                fullWidth label="Credits" type="number" 
-                value={courseDialog.data.credits} 
-                onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, credits: parseInt(e.target.value) } }))} 
+              <TextField
+                fullWidth label="Credits" type="number"
+                value={courseDialog.data.credits}
+                onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, credits: parseInt(e.target.value) } }))}
                 error={!!courseErrors.credits} helperText={courseErrors.credits}
                 InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
                 InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
               />
             </Stack>
-            <TextField 
-              fullWidth label="Department Authority" 
-              value={courseDialog.data.department} 
-              onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, department: e.target.value } }))} 
+            <TextField
+              fullWidth label="Department Authority"
+              value={courseDialog.data.department}
+              onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, department: e.target.value } }))}
               error={!!courseErrors.department} helperText={courseErrors.department}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
             />
-            <TextField 
-              fullWidth label="Primary Instructor" 
-              value={courseDialog.data.instructor} 
+            <TextField
+              fullWidth label="Primary Instructor"
+              value={courseDialog.data.instructor}
               onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, instructor: e.target.value } }))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
             />
-            <TextField 
-              fullWidth select label="Status" 
-              value={courseDialog.data.status} 
+            <TextField
+              fullWidth select label="Status"
+              value={courseDialog.data.status}
               onChange={e => setCourseDialog(p => ({ ...p, data: { ...p.data, status: e.target.value } }))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
@@ -3756,14 +3835,14 @@ const RegistrarDashboard = () => {
       </Dialog>
 
       {/* Schedule Add/Edit Dialog */}
-      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog(p => ({ ...p, open: false }))} maxWidth="sm" fullWidth 
+      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog(p => ({ ...p, open: false }))} maxWidth="sm" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>{scheduleDialog.mode === 'add' ? 'Add Class Schedule' : 'Edit Schedule'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <TextField 
-              fullWidth select label="Target Module" 
-              value={scheduleDialog.data.courseName} error={!!scheduleErrors.courseId} helperText={scheduleErrors.courseId} 
+            <TextField
+              fullWidth select label="Target Module"
+              value={scheduleDialog.data.courseName} error={!!scheduleErrors.courseId} helperText={scheduleErrors.courseId}
               onChange={e => {
                 const selected = courses.find(c => c.name === e.target.value);
                 setScheduleDialog(p => ({ ...p, data: { ...p.data, courseName: e.target.value, courseId: selected?.id || '' } }));
@@ -3773,9 +3852,9 @@ const RegistrarDashboard = () => {
             >
               {courses.map(c => <MenuItem key={c.id} value={c.name}>{c.name} ({c.code})</MenuItem>)}
             </TextField>
-            <TextField 
-              fullWidth select label="Instruction Day" 
-              value={scheduleDialog.data.day} error={!!scheduleErrors.day} helperText={scheduleErrors.day} 
+            <TextField
+              fullWidth select label="Instruction Day"
+              value={scheduleDialog.data.day} error={!!scheduleErrors.day} helperText={scheduleErrors.day}
               onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, day: e.target.value } }))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
@@ -3783,31 +3862,31 @@ const RegistrarDashboard = () => {
               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
             </TextField>
             <Stack direction="row" spacing={2.5}>
-              <TextField 
-                fullWidth label="Start Time" type="time" 
-                value={scheduleDialog.data.startTime} error={!!scheduleErrors.startTime} helperText={scheduleErrors.startTime} 
-                onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, startTime: e.target.value } }))} 
+              <TextField
+                fullWidth label="Start Time" type="time"
+                value={scheduleDialog.data.startTime} error={!!scheduleErrors.startTime} helperText={scheduleErrors.startTime}
+                onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, startTime: e.target.value } }))}
                 InputLabelProps={{ shrink: true, sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
                 InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               />
-              <TextField 
-                fullWidth label="End Time" type="time" 
-                value={scheduleDialog.data.endTime} error={!!scheduleErrors.endTime} helperText={scheduleErrors.endTime} 
-                onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, endTime: e.target.value } }))} 
+              <TextField
+                fullWidth label="End Time" type="time"
+                value={scheduleDialog.data.endTime} error={!!scheduleErrors.endTime} helperText={scheduleErrors.endTime}
+                onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, endTime: e.target.value } }))}
                 InputLabelProps={{ shrink: true, sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
                 InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               />
             </Stack>
-            <TextField 
-              fullWidth label="Logical Room Assignment" 
-              value={scheduleDialog.data.room} error={!!scheduleErrors.room} helperText={scheduleErrors.room} 
+            <TextField
+              fullWidth label="Logical Room Assignment"
+              value={scheduleDialog.data.room} error={!!scheduleErrors.room} helperText={scheduleErrors.room}
               onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, room: e.target.value } }))} placeholder="e.g. B-201"
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
             />
-            <TextField 
-              fullWidth label="Academic Semester" 
-              value={scheduleDialog.data.semester} 
+            <TextField
+              fullWidth label="Academic Semester"
+              value={scheduleDialog.data.semester}
               onChange={e => setScheduleDialog(p => ({ ...p, data: { ...p.data, semester: e.target.value } }))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
@@ -3822,40 +3901,57 @@ const RegistrarDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={studentDialog.open} onClose={() => setStudentDialog({ open: false, student: null })} maxWidth="sm" fullWidth 
+      <Dialog open={studentDialog.open} onClose={() => setStudentDialog({ open: false, student: null })} maxWidth="sm" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Calibrate Academic Identity</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>
+          Calibrate Academic Identity
+          <Chip
+            icon={getStatusStyle(studentDialog.status).icon}
+            label={getStatusStyle(studentDialog.status).label.toUpperCase()}
+            size="small"
+            sx={{
+              fontWeight: 900,
+              bgcolor: alpha(getStatusStyle(studentDialog.status).color, 0.1),
+              color: getStatusStyle(studentDialog.status).color
+            }}
+          />
+        </DialogTitle>
         <DialogContent>
           <Typography variant="caption" sx={{ mb: 3, display: 'block', color: 'primary.main', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1.5 }}>
             MANAGING PROFILE FOR: {studentDialog.student?.name}
           </Typography>
-          
+
           <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <TextField 
-              fullWidth label="Full Legal Name" 
-              value={studentDialog.name} 
+            <TextField
+              fullWidth label="Full Legal Name"
+              value={studentDialog.name}
               onChange={e => setStudentDialog(p => ({ ...p, name: e.target.value }))}
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
             />
             <Grid container spacing={2}>
               <Grid item xs={6}>
-                <TextField 
-                  fullWidth select label="Account Status" 
-                  value={studentDialog.status} 
+                <TextField
+                  fullWidth select label="Account Status"
+                  value={studentDialog.status}
                   onChange={e => setStudentDialog(p => ({ ...p, status: e.target.value }))}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                 >
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="On Leave">On Leave</MenuItem>
-                  <MenuItem value="Suspended">Suspended</MenuItem>
-                  <MenuItem value="Graduated">Graduated</MenuItem>
-                  <MenuItem value="Withdrawn">Withdrawn</MenuItem>
+                  {Object.keys(STUDENT_STATUS_CONFIG).map(status => (
+                    <MenuItem key={status} value={status}>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{ color: STUDENT_STATUS_CONFIG[status].color, display: 'flex' }}>
+                          {React.cloneElement(STUDENT_STATUS_CONFIG[status].icon, { sx: { fontSize: 18 } })}
+                        </Box>
+                        <Typography sx={{ fontWeight: 700 }}>{status}</Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               <Grid item xs={6}>
-                <TextField 
-                  fullWidth select label="Gender / Identity" 
-                  value={studentDialog.gender} 
+                <TextField
+                  fullWidth select label="Gender / Identity"
+                  value={studentDialog.gender}
                   onChange={e => setStudentDialog(p => ({ ...p, gender: e.target.value }))}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                 >
@@ -3867,11 +3963,21 @@ const RegistrarDashboard = () => {
               </Grid>
             </Grid>
 
+            {studentDialog.status !== 'Active' && (
+              <TextField
+                fullWidth label="Status Message / Reason"
+                placeholder="e.g. Medical reasons, Graduation year, etc."
+                value={studentDialog.statusReason}
+                onChange={e => setStudentDialog(p => ({ ...p, statusReason: e.target.value }))}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+              />
+            )}
+
             <Grid container spacing={2}>
               <Grid item xs={6}>
-                <TextField 
-                  fullWidth select label="Academic Year" 
-                  value={studentDialog.year} 
+                <TextField
+                  fullWidth select label="Academic Year"
+                  value={studentDialog.year}
                   onChange={e => setStudentDialog(p => ({ ...p, year: parseInt(e.target.value) }))}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                 >
@@ -3879,33 +3985,33 @@ const RegistrarDashboard = () => {
                 </TextField>
               </Grid>
               <Grid item xs={6}>
-                <TextField 
-                  fullWidth label="Department / Major" 
-                  value={studentDialog.department} 
+                <TextField
+                  fullWidth label="Department / Major"
+                  value={studentDialog.department}
                   onChange={e => setStudentDialog(p => ({ ...p, department: e.target.value }))}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                 />
               </Grid>
             </Grid>
 
-            <TextField 
-              fullWidth label="Contact Email" 
-              value={studentDialog.email} 
+            <TextField
+              fullWidth label="Contact Email"
+              value={studentDialog.email}
               onChange={e => setStudentDialog(p => ({ ...p, email: e.target.value }))}
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
             />
-            
-            <TextField 
-              fullWidth label="Phone Protocol" 
-              value={studentDialog.phone} 
+
+            <TextField
+              fullWidth label="Phone Protocol"
+              value={studentDialog.phone}
               onChange={e => setStudentDialog(p => ({ ...p, phone: e.target.value }))}
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
             />
 
-            <TextField 
-              fullWidth label="Intellectual Identity" 
+            <TextField
+              fullWidth label="Intellectual Identity"
               multiline rows={2}
-              value={studentDialog.intellectualIdentity} 
+              value={studentDialog.intellectualIdentity}
               onChange={e => setStudentDialog(p => ({ ...p, intellectualIdentity: e.target.value }))}
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
             />
@@ -3919,7 +4025,7 @@ const RegistrarDashboard = () => {
         </DialogActions>
       </Dialog>
       {/* Open Registration Selection Dialog */}
-      <Dialog open={openRegDialog} onClose={() => setOpenRegDialog(false)} maxWidth="xs" fullWidth 
+      <Dialog open={openRegDialog} onClose={() => setOpenRegDialog(false)} maxWidth="xs" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 4, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1e293b' }}>Open Registration Window</DialogTitle>
         <DialogContent>
@@ -3927,18 +4033,18 @@ const RegistrarDashboard = () => {
             Select the target academic cohort and semester to allow registration for.
           </Typography>
           <Stack spacing={2.5}>
-            <TextField 
-              fullWidth select label="Target Academic Year" 
-              value={regDialogYear} 
+            <TextField
+              fullWidth select label="Target Academic Year"
+              value={regDialogYear}
               onChange={e => setRegDialogYear(parseInt(e.target.value))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
             >
               {[1, 2, 3, 4].map(y => <MenuItem key={y} value={y}>Academic Year {y}</MenuItem>)}
             </TextField>
-            <TextField 
-              fullWidth select label="Target Semester" 
-              value={regDialogSemester} 
+            <TextField
+              fullWidth select label="Target Semester"
+              value={regDialogSemester}
               onChange={e => setRegDialogSemester(parseInt(e.target.value))}
               InputProps={{ sx: { color: isDark ? '#fff' : '#1e293b' } }}
               InputLabelProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' } }}
@@ -3949,9 +4055,9 @@ const RegistrarDashboard = () => {
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setOpenRegDialog(false)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' }}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleOpenRegistration} 
+          <Button
+            variant="contained"
+            onClick={handleOpenRegistration}
             disabled={settingsLoading}
             sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 3, boxShadow: "0 8px 25px rgba(16, 185, 129, 0.4)" }}
           >

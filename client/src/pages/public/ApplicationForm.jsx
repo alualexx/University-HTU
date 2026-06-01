@@ -11,8 +11,12 @@ import {
     AssignmentInd, Email, Phone, CalendarToday, Public,
     Male, Female, ArticleOutlined,
 } from "@mui/icons-material";
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+    collection, doc, setDoc, serverTimestamp, addDoc
+} from "firebase/firestore";
 import { db } from "../../services/Firebase";
+import { applicationsAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 /* ── Department lookup ─────────────────────────────────── */
 const DEPARTMENTS = {
@@ -193,14 +197,13 @@ const ApplicationForm = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
-            // Pre-generate the document reference to get the ID upfront
-            const newDocRef = doc(collection(db, "applications"));
-            const newId = newDocRef.id;
-            const refId = newId.slice(0, 4).toUpperCase() + "\u2014" + newId.slice(4, 10).toUpperCase();
+            // Generate valid Protocol Reference ID: ABCD—123456 (em-dash \u2014)
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * 26)]).join('');
+            const part2 = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            const refId = `${part1}\u2014${part2}`;
 
-            await setDoc(newDocRef, {
-                // Identity
-                name: `${form.firstName} ${form.lastName}`,
+            const submissionData = {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 email: form.email,
@@ -209,35 +212,42 @@ const ApplicationForm = () => {
                 gender: form.gender,
                 nationality: form.nationality,
                 address: form.address,
-                // Academic
                 highSchoolName: form.highSchoolName,
                 graduationYear: form.graduationYear,
                 highSchoolGrades: form.gpa,
                 gradeSystem: form.gradeSystem,
                 previousQualification: form.previousQualification,
                 extraCurricular: form.extraCurricular,
-                // Statements
                 personalStatement: form.personalStatement,
                 whyThisDepartment: form.whyThisDepartment,
-                // Documents (names only in this demo)
                 documents: {
                     idDocument: form.idDocumentName,
                     transcript: form.transcriptName,
                     photo: form.photoName,
                 },
-                // Application meta
                 intendedMajor: dept.name,
                 departmentId,
                 departmentCode: dept.code,
-                status: "pending_dept_review",
-                submittedAt: serverTimestamp(),
-                // Searchable Protocol Reference ID stored as field
                 referenceId: refId,
-            });
-            setApplicationId(newId);
-            setSubmitted(true);
+                status: "pending_dept_review"
+            };
+
+            const response = await applicationsAPI.submit(submissionData);
+
+            if (response.data.success) {
+                // Also save to Firestore for redundancy/legacy tracking if needed
+                // But we mainly need it for the ID the server returns
+                const newDocRef = await addDoc(collection(db, "applications"), {
+                    ...submissionData,
+                    submittedAt: serverTimestamp(),
+                });
+
+                setApplicationId(newDocRef.id);
+                setSubmitted(true);
+            }
         } catch (err) {
             console.error("Submission error:", err);
+            setErrors({ submit: "An error occurred during submission. Please try again." });
         } finally {
             setSubmitting(false);
         }

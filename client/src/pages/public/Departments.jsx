@@ -8,8 +8,7 @@ import {
     Close, School, MenuBook, People, ArrowForward, AutoStories,
     BusinessCenter, ExpandMore, AccessTime,
 } from "@mui/icons-material";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "../../services/Firebase";
+import { departmentsAPI } from "../../services/api";
 import { Link as RouterLink } from "react-router-dom";
 
 /* ── Detail Dialog ─────────────────────────────────────────── */
@@ -183,12 +182,18 @@ export default function Departments() {
     const [dialogOpen, setDialogOpen] = useState(false);
 
     useEffect(() => {
-        const q = query(collection(db, "departments"), orderBy("name", "asc"));
-        const unsub = onSnapshot(q, (snap) => {
-            setDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, () => setLoading(false));
-        return unsub;
+        const fetchDepts = async () => {
+            setLoading(true);
+            try {
+                const res = await departmentsAPI.getAll();
+                setDepartments(res.data);
+            } catch (err) {
+                console.error("Error fetching departments:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDepts();
     }, []);
 
     const handleViewDetails = (dept) => {
