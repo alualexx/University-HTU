@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
     Box, Container, Typography, Grid, Card, CardContent, Button,
     TextField, MenuItem, Chip, Avatar, Stepper, Step, StepLabel,
-    StepContent, Alert, Divider, IconButton, LinearProgress, alpha, Stack,
+    StepContent, Alert, Divider, IconButton, LinearProgress, alpha, Stack, CircularProgress,
 } from "@mui/material";
 import {
     Person, School, Description, CloudUpload, CheckCircle,
@@ -15,17 +15,25 @@ import {
     collection, doc, setDoc, serverTimestamp, addDoc
 } from "firebase/firestore";
 import { db } from "../../services/Firebase";
-import { applicationsAPI } from "../../services/api";
+import { applicationsAPI, departmentsAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
 /* ── Department lookup ─────────────────────────────────── */
-const DEPARTMENTS = {
-    "computer-science": { name: "Computer Science", code: "CS", color: "#1976d2", gradient: "linear-gradient(135deg,#1976d2,#42a5f5)" },
-    "electrical-engineering": { name: "Electrical Engineering", code: "EE", color: "#f59e0b", gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)" },
-    "business-administration": { name: "Business Administration", code: "BBA", color: "#2e7d32", gradient: "linear-gradient(135deg,#2e7d32,#66bb6a)" },
-    "medicine": { name: "Medicine & Surgery", code: "MBBS", color: "#e53935", gradient: "linear-gradient(135deg,#e53935,#ef9a9a)" },
-    "law": { name: "Law & Jurisprudence", code: "LLB", color: "#6a1b9a", gradient: "linear-gradient(135deg,#6a1b9a,#ba68c8)" },
-    "architecture": { name: "Architecture & Design", code: "ARCH", color: "#e65100", gradient: "linear-gradient(135deg,#e65100,#ff8a65)" },
+const DEPT_COLORS = {
+    default: { color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", code: "DEPT" },
+};
+
+const getDeptMeta = (dept) => {
+    if (!dept) return DEPT_COLORS.default;
+    const n = (dept.name || "").toLowerCase();
+    if (n.includes("computer") || n.includes("software") || n.includes("it")) return { color: "#3b82f6", gradient: "linear-gradient(135deg,#3b82f6,#2563eb)", code: dept.code || "CS" };
+    if (n.includes("engineering")) return { color: "#f59e0b", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", code: dept.code || "ENG" };
+    if (n.includes("science")) return { color: "#10b981", gradient: "linear-gradient(135deg,#10b981,#059669)", code: dept.code || "SCI" };
+    if (n.includes("business") || n.includes("management") || n.includes("finance")) return { color: "#8b5cf6", gradient: "linear-gradient(135deg,#8b5cf6,#7c3aed)", code: dept.code || "BBA" };
+    if (n.includes("art") || n.includes("design") || n.includes("architecture")) return { color: "#ec4899", gradient: "linear-gradient(135deg,#ec4899,#db2777)", code: dept.code || "ART" };
+    if (n.includes("law")) return { color: "#64748b", gradient: "linear-gradient(135deg,#64748b,#475569)", code: dept.code || "LAW" };
+    if (n.includes("medicine") || n.includes("medical")) return { color: "#e53935", gradient: "linear-gradient(135deg,#e53935,#ef9a9a)", code: dept.code || "MED" };
+    return { color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", code: dept.code || "DEPT" };
 };
 
 const STEPS = ["Personal Information", "Academic Background", "Documents & Statement", "Review & Submit"];
@@ -48,7 +56,6 @@ const PendingScreen = ({ applicationId, applicantName, department }) => (
             }}>
                 <Box sx={{ height: 8, background: "linear-gradient(90deg, #6366f1, #a855f7)" }} />
                 <CardContent sx={{ p: { xs: 4, md: 8 } }}>
-                    {/* Premium Animated Icon */}
                     <Box sx={{
                         width: 120, height: 120, borderRadius: 5, mx: "auto", mb: 5,
                         background: "rgba(255,255,255,0.03)", border: '1px solid rgba(255,255,255,0.1)',
@@ -70,45 +77,20 @@ const PendingScreen = ({ applicationId, applicantName, department }) => (
                         Greetings, <strong>{applicantName}</strong>. Your application for <strong>{department}</strong> has been encrypted and securely transmitted to the Office of the Registrar.
                     </Typography>
 
-                    <Box sx={{
-                        p: 4, borderRadius: 6, bgcolor: "rgba(0,0,0,0.2)",
-                        border: "1px solid rgba(255,255,255,0.05)", mb: 6, textAlign: "center"
-                    }}>
-                        <Typography variant="caption" fontWeight={1000} color="rgba(255,255,255,0.3)" sx={{ textTransform: "uppercase", letterSpacing: 2, display: "block", mb: 2 }}>
-                            Protocol Reference ID
-                        </Typography>
+                    <Box sx={{ p: 4, borderRadius: 6, bgcolor: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)", mb: 6, textAlign: "center" }}>
+                        <Typography variant="caption" fontWeight={1000} color="rgba(255,255,255,0.3)" sx={{ textTransform: "uppercase", letterSpacing: 2, display: "block", mb: 2 }}>Protocol Reference ID</Typography>
                         <Typography variant="h4" fontWeight={900} sx={{ fontFamily: 'monospace', color: 'primary.main', letterSpacing: 4 }}>
                             {applicationId?.slice(0, 4).toUpperCase()}—{applicationId?.slice(4, 10).toUpperCase()}
                         </Typography>
                     </Box>
 
-                    <Box sx={{ bgcolor: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.1)', borderRadius: 5, p: 3, textAlign: 'left', mb: 6 }}>
-                        <Stack direction="row" spacing={2} alignItems="flex-start">
-                            <Email sx={{ color: 'primary.main', mt: 0.5 }} />
-                            <Box>
-                                <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>Communication Dispatch</Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                                    A confirmation has been sent to your registered email. Standard review protocols take <strong>3–7 academic cycles</strong>.
-                                </Typography>
-                            </Box>
-                        </Stack>
-                    </Box>
-
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-                        <Button
-                            variant="contained"
-                            component={RouterLink}
-                            to="/"
-                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', bgcolor: 'primary.main', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'primary.dark', transform: 'translateY(-4px)' } }}
-                        >
+                        <Button variant="contained" component={RouterLink} to="/"
+                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', bgcolor: 'primary.main', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', '&:hover': { bgcolor: 'primary.dark', transform: 'translateY(-4px)' } }}>
                             Return to Nexus
                         </Button>
-                        <Button
-                            variant="outlined"
-                            component={RouterLink}
-                            to="/apply"
-                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', color: 'white', borderColor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'white' } }}
-                        >
+                        <Button variant="outlined" component={RouterLink} to="/apply"
+                            sx={{ borderRadius: 4, textTransform: "none", fontWeight: 1000, px: 5, py: 2, fontSize: '1rem', color: 'white', borderColor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'white' } }}>
                             Review Domains
                         </Button>
                     </Stack>
@@ -122,7 +104,41 @@ const PendingScreen = ({ applicationId, applicantName, department }) => (
 const ApplicationForm = () => {
     const { departmentId } = useParams();
     const navigate = useNavigate();
-    const dept = DEPARTMENTS[departmentId];
+
+    const [deptData, setDeptData] = useState(null);
+    const [deptLoading, setDeptLoading] = useState(true);
+    const [deptError, setDeptError] = useState(false);
+
+    useEffect(() => {
+        const fetchDept = async () => {
+            setDeptLoading(true);
+            try {
+                const res = await departmentsAPI.getAll();
+                const all = res.data;
+                // Match by _id, id, or slug
+                const found = all.find(d =>
+                    d._id === departmentId ||
+                    d.id === departmentId ||
+                    d.slug === departmentId ||
+                    (d.name || "").toLowerCase().replace(/\s+/g, "-") === departmentId
+                );
+                if (found) {
+                    const meta = getDeptMeta(found);
+                    setDeptData({ ...found, ...meta, name: found.name, code: found.code || meta.code });
+                } else {
+                    setDeptError(true);
+                }
+            } catch (err) {
+                console.error("Error fetching department:", err);
+                setDeptError(true);
+            } finally {
+                setDeptLoading(false);
+            }
+        };
+        fetchDept();
+    }, [departmentId]);
+
+    const dept = deptData;
 
     const [activeStep, setActiveStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
@@ -142,7 +158,15 @@ const ApplicationForm = () => {
         idDocumentName: "", transcriptName: "", photoName: "",
     });
 
-    if (!dept) {
+    if (deptLoading) {
+        return (
+            <Box sx={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (deptError || !dept) {
         return (
             <Box sx={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Box textAlign="center">
