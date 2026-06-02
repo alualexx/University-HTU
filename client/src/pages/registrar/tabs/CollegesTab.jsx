@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  Box, Typography, Button, Grid, Card, CardContent, 
+import {
+  Box, Typography, Button, Grid, Card, CardContent,
   Stack, Avatar, Chip, Divider, Tooltip, IconButton,
   Dialog, DialogTitle, DialogContent, TextField, alpha,
-  CircularProgress
+  CircularProgress, Snackbar, Alert
 } from '@mui/material';
-import { 
-  Add, Business, Edit, Delete, Person, Email, Lock 
+import {
+  Add, Business, Edit, Delete, Person, Email, Lock
 } from '@mui/icons-material';
 import { collegesAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
 const CollegesTab = ({ colleges, isDark, glassStyle }) => {
   const { logAuditActivity, verifyOTP, markOTPUsed } = useAuth();
-  
+
   // Local UI State for College Dialog
   const [openCollegeDialog, setOpenCollegeDialog] = useState(false);
   const [editingCollege, setEditingCollege] = useState(null);
@@ -28,6 +28,11 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
   });
   const [collegeOtp, setCollegeOtp] = useState("");
   const [collegeLoading, setCollegeLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   const handleOpenCollegeDialog = (college = null) => {
     if (college) {
@@ -58,36 +63,36 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
         // Verify OTP for new colleges
         const otpResult = await verifyOTP(collegeOtp, "COLLEGE_CREATE");
         if (!otpResult.success) {
-          alert(otpResult.message || "Invalid or expired OTP. Please contact Administrator.");
+          showSnackbar(otpResult.message || "Invalid or expired OTP.", "error");
           setCollegeLoading(false);
           return;
         }
 
         // Security reinforcement: Check if college name matches the OTP target
         if (otpResult.data.targetName.toLowerCase() !== collegeForm.name.toLowerCase()) {
-           if(!window.confirm(`OTP was issued for "${otpResult.data.targetName}", but you are creating "${collegeForm.name}". Proceed anyway?`)) {
-             setCollegeLoading(false);
-             return;
-           }
+          if (!window.confirm(`OTP was issued for "${otpResult.data.targetName}", but you are creating "${collegeForm.name}". Proceed anyway?`)) {
+            setCollegeLoading(false);
+            return;
+          }
         }
 
-        await collegesAPI.create({ 
-          ...collegeForm, 
-          status: "active" 
+        await collegesAPI.create({
+          ...collegeForm,
+          status: "active"
         });
-        
+
         await markOTPUsed(otpResult.otpId);
         logAuditActivity("College Creation", `Created new college: ${collegeForm.name}`);
-        alert("College created successfully! It is now pending Administrator provisioning for credentials.");
-      } else {
+        showSnackbar("College created successfully! Pending Administrator provisioning.", "success");
         await collegesAPI.update(editingCollege.id || editingCollege._id, collegeForm);
         logAuditActivity("College Update", `Updated college: ${collegeForm.name}`);
+        showSnackbar("College updated successfully", "success");
       }
       setOpenCollegeDialog(false);
     } catch (err) {
       console.error("Error saving college:", err);
       const errorMessage = err.response?.data?.message || err.message;
-      alert(`Conflict/Error: ${errorMessage || "Failed to save college."}`);
+      showSnackbar(`Conflict/Error: ${errorMessage || "Failed to save college."}`, "error");
     } finally {
       setCollegeLoading(false);
     }
@@ -98,9 +103,10 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
       try {
         await collegesAPI.delete(collegeId);
         logAuditActivity("College Deletion", `Deleted college with ID: ${collegeId}`);
+        showSnackbar("College removed successfully", "success");
       } catch (err) {
         console.error("Error deleting college:", err);
-        alert("Failed to delete college.");
+        showSnackbar("Failed to delete college.", "error");
       }
     }
   };
@@ -112,7 +118,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
           <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>University Colleges</Typography>
           <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2, opacity: 0.7 }}>CORE ACADEMIC PILLARS</Typography>
         </Box>
-        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenCollegeDialog()} 
+        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenCollegeDialog()}
           sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)' }}>
           Initialize new College
         </Button>
@@ -129,9 +135,9 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
         ) : (
           colleges?.map((college) => (
             <Grid item xs={12} sm={6} md={4} key={college.id}>
-              <Card sx={{ 
-                ...glassStyle, 
-                borderRadius: 5, 
+              <Card sx={{
+                ...glassStyle,
+                borderRadius: 5,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 height: '100%',
                 display: 'flex',
@@ -139,8 +145,8 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
                 transition: '0.4s',
                 '&:hover': { transform: 'translateY(-8px)', borderColor: college.color || 'primary.main', boxShadow: `0 20px 40px ${alpha(college.color || '#6366f1', 0.15)}` }
               }}>
-                <Box sx={{ 
-                  p: 3, 
+                <Box sx={{
+                  p: 3,
                   background: `linear-gradient(135deg, ${alpha(college.color || '#6366f1', 0.2)} 0%, transparent 100%)`,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
                 }}>
@@ -182,7 +188,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
       </Grid>
 
       {/* College Dialog */}
-      <Dialog open={openCollegeDialog} onClose={() => setOpenCollegeDialog(false)} maxWidth="sm" fullWidth 
+      <Dialog open={openCollegeDialog} onClose={() => setOpenCollegeDialog(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', backgroundImage: 'none', p: 1 } }}>
         <DialogTitle sx={{ p: 4, pb: 1 }}>
           <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingCollege ? 'Modify College' : 'Initialize College'}</Typography>
@@ -191,52 +197,52 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
         <form onSubmit={handleSaveCollege}>
           <DialogContent sx={{ p: 4 }}>
             {!editingCollege && (
-               <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                  <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHENTICATION REQUIRED</Typography>
-                  <TextField 
-                    fullWidth 
-                    label="One-Time Password (COLLEGE_CREATE)" 
-                    placeholder="Enter hierarchy expansion key"
-                    value={collegeOtp} 
-                    onChange={e => setCollegeOtp(e.target.value)} 
-                    required 
-                    InputProps={{ 
-                      sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
-                      startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>Creators must provide a valid OTP generated by the System Administrator to initialize new colleges.</Typography>
-               </Box>
+              <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHENTICATION REQUIRED</Typography>
+                <TextField
+                  fullWidth
+                  label="One-Time Password (COLLEGE_CREATE)"
+                  placeholder="Enter hierarchy expansion key"
+                  value={collegeOtp}
+                  onChange={e => setCollegeOtp(e.target.value)}
+                  required
+                  InputProps={{
+                    sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
+                    startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
+                  }}
+                />
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>Creators must provide a valid OTP generated by the System Administrator to initialize new colleges.</Typography>
+              </Box>
             )}
             <Stack spacing={3}>
               <Grid container spacing={2}>
                 <Grid item xs={8}>
-                  <TextField fullWidth label="College Name" value={collegeForm.name} onChange={e => setCollegeForm({ ...collegeForm, name: e.target.value })} required 
+                  <TextField fullWidth label="College Name" value={collegeForm.name} onChange={e => setCollegeForm({ ...collegeForm, name: e.target.value })} required
                     InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
                   />
                 </Grid>
                 <Grid item xs={4}>
-                  <TextField fullWidth label="Code" value={collegeForm.code} onChange={e => setCollegeForm({ ...collegeForm, code: e.target.value })} required 
+                  <TextField fullWidth label="Code" value={collegeForm.code} onChange={e => setCollegeForm({ ...collegeForm, code: e.target.value })} required
                     InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
                   />
                 </Grid>
               </Grid>
-              <TextField fullWidth multiline rows={3} label="Vision & Description" value={collegeForm.description} onChange={e => setCollegeForm({ ...collegeForm, description: e.target.value })} required 
+              <TextField fullWidth multiline rows={3} label="Vision & Description" value={collegeForm.description} onChange={e => setCollegeForm({ ...collegeForm, description: e.target.value })} required
                 InputProps={{ sx: { borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
               />
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <TextField fullWidth label="Dean Name" value={collegeForm.deanName} onChange={e => setCollegeForm({ ...collegeForm, deanName: e.target.value })} required 
+                  <TextField fullWidth label="Dean Name" value={collegeForm.deanName} onChange={e => setCollegeForm({ ...collegeForm, deanName: e.target.value })} required
                     InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <TextField fullWidth label="Dean Email" type="email" value={collegeForm.deanEmail} onChange={e => setCollegeForm({ ...collegeForm, deanEmail: e.target.value })} required 
+                  <TextField fullWidth label="Dean Email" type="email" value={collegeForm.deanEmail} onChange={e => setCollegeForm({ ...collegeForm, deanEmail: e.target.value })} required
                     InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
                   />
                 </Grid>
               </Grid>
-              <TextField fullWidth label="Theme Color (HEX)" value={collegeForm.color} onChange={e => setCollegeForm({ ...collegeForm, color: e.target.value })} 
+              <TextField fullWidth label="Theme Color (HEX)" value={collegeForm.color} onChange={e => setCollegeForm({ ...collegeForm, color: e.target.value })}
                 InputProps={{ sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' } }}
               />
             </Stack>
@@ -249,6 +255,22 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
           </Box>
         </form>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ borderRadius: 2, fontWeight: 700 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

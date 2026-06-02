@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Container, Grid, Card, CardContent, Typography, Box, Button,
@@ -7,7 +7,7 @@ import {
   Tabs, Tab, Fade, Paper, LinearProgress, useTheme, Tooltip,
   Stack, Badge, Menu, MenuItem, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Collapse, Slide, Select, FormControl, FormControlLabel, InputLabel, alpha,
-  Drawer, List, ListItem, ListItemText, Switch, CircularProgress
+  Drawer, List, ListItem, ListItemText, Switch, CircularProgress, Snackbar
 } from "@mui/material";
 import {
   People, School, Book, Assignment, CheckCircle, PersonAdd,
@@ -98,11 +98,13 @@ const RegistrarDashboard = () => {
     border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.1)'}`,
     boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.05)',
   };
+
   const gradients = {
-    primary: isDark ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-    success: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    danger: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-    warning: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    primary: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+    secondary: 'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
+    success: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+    warning: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+    error: 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
   };
 
   const [activeTab, setActiveTab] = useState(0);
@@ -173,6 +175,11 @@ const RegistrarDashboard = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [processingDepartment, setProcessingDepartment] = useState(null);
   const [isApprovingCourse, setIsApprovingCourse] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // --- Curriculum Approval State ---
   const [openApprovalDialog, setOpenApprovalDialog] = useState(false);
@@ -885,7 +892,11 @@ const RegistrarDashboard = () => {
         timestamp: serverTimestamp(),
         ip: userIp || "unknown"
       });
-    } catch (err) { console.error(err); }
+      showSnackbar(`Registration ${regLock ? 'Unlocked' : 'Locked'} Successfully`, 'info');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to update registration status', 'error');
+    }
     finally { setSettingsLoading(false); }
   };
 
@@ -903,7 +914,11 @@ const RegistrarDashboard = () => {
         timestamp: serverTimestamp(),
       });
       setOpenRegDialog(false);
-    } catch (err) { console.error(err); }
+      showSnackbar(`Registration Window Launched for Y${regDialogYear} S${regDialogSemester}`, 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to launch registration window', 'error');
+    }
     finally { setSettingsLoading(false); }
   };
 
@@ -916,7 +931,11 @@ const RegistrarDashboard = () => {
         user: user?.email || "Registrar",
         timestamp: serverTimestamp(),
       });
-    } catch (err) { console.error(err); }
+      showSnackbar('Registration Window Terminated', 'info');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to terminate window', 'error');
+    }
     finally { setSettingsLoading(false); }
   };
 
@@ -930,7 +949,11 @@ const RegistrarDashboard = () => {
         timestamp: serverTimestamp(),
         ip: userIp || "unknown"
       });
-    } catch (err) { console.error(err); }
+      showSnackbar(`Applicant Portal ${admissionWindow ? 'Deactivated' : 'Activated'}`, admissionWindow ? 'info' : 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Portal update failed', 'error');
+    }
     finally { setSettingsLoading(false); }
   };
 
@@ -1730,30 +1753,52 @@ const RegistrarDashboard = () => {
                 <Stack spacing={3}>
                   <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="body2" fontWeight={900}>Registration Lock</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>PAUSE ALL STUDENT COURSE ENROLLMENTS</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{
+                          width: 32, height: 32, borderRadius: 1.5,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: !regLock ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
+                          color: !regLock ? '#10b981' : '#ef4444'
+                        }}>
+                          <CheckCircleOutline fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography variant="body2" fontWeight={900}>Student Course Enrolment</Typography>
+                          <Typography variant="caption" color="text.secondary" fontWeight={800}>{!regLock ? 'Registration Open' : 'Enrolment Locked'}</Typography>
+                        </Box>
                       </Box>
                       <Switch
-                        checked={regLock}
+                        checked={!regLock}
                         onChange={toggleRegLock}
                         disabled={settingsLoading}
-                        color="error"
+                        color="success"
+                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#10b981' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#10b981' } }}
                       />
                     </Box>
                   </Box>
 
                   <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body2" fontWeight={900}>Admission Window</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>TOGGLE VISIBILITY OF APPLICATION FORM</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{
+                          width: 32, height: 32, borderRadius: 1.5,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: admissionWindow ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
+                          color: admissionWindow ? '#10b981' : '#ef4444'
+                        }}>
+                          <PersonAdd fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography variant="body2" fontWeight={900}>New Applicant Portal</Typography>
+                          <Typography variant="caption" color="text.secondary" fontWeight={800}>{admissionWindow ? 'Accepting Applications' : 'Portal Closed'}</Typography>
+                        </Box>
                       </Box>
                       <Switch
                         checked={admissionWindow}
                         onChange={toggleAdmissionWindow}
                         disabled={settingsLoading}
                         color="success"
+                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#10b981' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#10b981' } }}
                       />
                     </Box>
                   </Box>
@@ -2280,167 +2325,191 @@ const RegistrarDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8.5}>
-          <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={8}>
+          <Card sx={{
+            ...glassStyle,
+            borderRadius: 6,
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(99, 102, 241, 0.3)'}`,
+            overflow: 'hidden',
+            boxShadow: `0 24px 48px ${isDark ? 'rgba(0,0,0,0.6)' : 'rgba(99, 102, 241, 0.15)'}`,
+            position: 'relative',
+            '&::before': {
+              content: '""', position: 'absolute', top: 0, left: 0, width: '100%', height: '4px',
+              background: 'linear-gradient(90deg, #6366f1, #a855f7, #6366f1)',
+              backgroundSize: '200% 100%', animation: 'gradientMove 3s linear infinite'
+            }
+          }}>
             <Box sx={{
-              p: 4,
-              background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 100%)',
-              borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+              position: 'absolute', top: '-20%', left: '-10%', width: '60%', height: '60%',
+              background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 60%)',
+              filter: 'blur(40px)', animation: 'pulse 4s infinite alternate', zIndex: 0
+            }} />
+            <Box sx={{
+              p: 4, position: 'relative', zIndex: 1,
+              borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99, 102, 241, 0.1)'}`,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center'
             }}>
               <Box>
-                <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Admissions Dossier</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 2, opacity: 0.7 }}>AWAITING REGISTRAR VALIDATION</Typography>
+                <Typography variant="h4" fontWeight={1000} sx={{
+                  fontFamily: 'Outfit, sans-serif', mb: 0.5,
+                  background: 'linear-gradient(90deg, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  textShadow: isDark ? '0 0 30px rgba(99,102,241,0.3)' : 'none'
+                }}>Admissions Dossier</Typography>
+                <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 3, opacity: 0.8 }}>AWAITING REGISTRAR VALIDATION</Typography>
               </Box>
               <Stack direction="row" spacing={3} alignItems="center">
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="h6" fontWeight={1000} sx={{ lineHeight: 1 }}>{applications.length}</Typography>
-                  <Typography variant="caption" fontWeight={900} color="text.secondary">PENDING</Typography>
+                <Box sx={{ textAlign: 'center', p: 1.5, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.2)'}`, boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                  <Typography variant="h5" fontWeight={1000} color="primary.main" sx={{ lineHeight: 1 }}>{applications.length}</Typography>
+                  <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1 }}>PENDING</Typography>
                 </Box>
-                <Divider orientation="vertical" flexItem sx={{ height: 40, opacity: 0.1 }} />
-                <Stack direction="row" spacing={1}>
+                <Divider orientation="vertical" flexItem sx={{ height: 40, opacity: 0.2 }} />
+                <Stack direction="row" spacing={1.5}>
                   <Tooltip title="Refresh Application Data">
                     <IconButton
                       onClick={fetchApplications}
-                      sx={{ bgcolor: alpha('#6366f1', 0.05), color: 'primary.main', '&:hover': { bgcolor: alpha('#6366f1', 0.1) } }}
+                      sx={{ bgcolor: isDark ? alpha('#6366f1', 0.15) : alpha('#6366f1', 0.1), color: 'primary.main', '&:hover': { bgcolor: alpha('#6366f1', 0.2) } }}
                     >
                       <History />
                     </IconButton>
                   </Tooltip>
-                  <Button
-                    variant="contained"
-                    startIcon={<PersonAdd />}
-                    onClick={() => window.open('/apply', '_blank')}
-                    sx={{
-                      borderRadius: 3,
-                      fontWeight: 1000,
-                      textTransform: 'none',
-                      px: 3,
-                      bgcolor: '#6366f1',
-                      boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
-                      '&:hover': { bgcolor: '#4f46e5' }
-                    }}
-                  >
-                    Initiate Application
-                  </Button>
                 </Stack>
               </Stack>
             </Box>
 
-            <CardContent sx={{ p: 3 }}>
-              <Stack spacing={2}>
+
+            <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+              <Stack spacing={3}>
                 {applications.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 12, opacity: 0.5 }}>
-                    <CheckCircle sx={{ fontSize: 80, color: '#10b981', mb: 2, filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.3))' }} />
-                    <Typography variant="h6" color="text.secondary" fontWeight={1000}>SYSTEM CLEAR: ALL DOSSIERS PROCESSED</Typography>
+                  <Box sx={{ textAlign: 'center', py: 12, position: 'relative' }}>
+                    <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 200, height: 200, bgcolor: alpha('#10b981', 0.05), borderRadius: '50%', filter: 'blur(40px)', zIndex: 0 }} />
+                    <Box sx={{ position: 'relative', zIndex: 1 }}>
+                      <Box sx={{
+                        width: 120, height: 120, borderRadius: '50%',
+                        bgcolor: alpha('#10b981', 0.1), border: `2px solid ${alpha('#10b981', 0.3)}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', mb: 4,
+                        boxShadow: `0 0 40px ${alpha('#10b981', 0.2)}`,
+                        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                      }}>
+                        <CheckCircle sx={{ fontSize: 70, color: '#10b981', filter: 'drop-shadow(0 0 15px rgba(16, 185, 129, 0.6))' }} />
+                      </Box>
+                      <Typography variant="h4" color="text.primary" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>System Clear</Typography>
+                      <Typography variant="body1" color="text.secondary" fontWeight={800} sx={{ mt: 1.5, opacity: 0.8, letterSpacing: 1.5 }}>ALL DOSSIERS SUCCESSFULLY PROCESSED</Typography>
+                    </Box>
                   </Box>
                 ) : (
                   applications.map((app) => {
                     const isExpanded = expandedApp === app.id;
                     return (
-                      <Paper key={app.id} variant="outlined" sx={{
-                        borderRadius: 5, border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-                        bgcolor: isExpanded ? (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)') : (isDark ? 'rgba(255,255,255,0.01)' : 'transparent'),
-                        overflow: 'hidden', transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                        '&:hover': { borderColor: 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)', transform: 'translateX(4px)' }
+                      <Paper key={app.id} elevation={0} sx={{
+                        borderRadius: 5, border: `1px solid ${isExpanded ? 'rgba(99, 102, 241, 0.4)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)')}`,
+                        background: isExpanded ? (isDark ? 'rgba(99, 102, 241, 0.05)' : 'rgba(99, 102, 241, 0.02)') : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.6)'),
+                        overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: isExpanded ? '0 12px 24px rgba(99, 102, 241, 0.1)' : 'none',
+                        '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)' }
                       }}>
-                        {/* Summary Header */}
-                        <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                            badgeContent={<Circle sx={{ fontSize: 12, color: '#10b981', border: `2px solid ${isDark ? '#0f172a' : '#fff'}`, borderRadius: '50%' }} />}>
+                        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }} onClick={() => setExpandedApp(isExpanded ? null : app.id)}>
+                          <Box sx={{ position: 'relative' }}>
                             <Avatar sx={{
-                              width: 52, height: 52, borderRadius: 2.5,
+                              width: 56, height: 56, borderRadius: '16px',
                               background: gradients.primary, color: 'white', fontWeight: 1000,
-                              fontSize: '1.2rem', boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)'
+                              fontSize: '1.4rem', boxShadow: '0 8px 16px rgba(99, 102, 241, 0.3)'
                             }}>
                               {app.name?.[0] || '?'}
                             </Avatar>
-                          </Badge>
-                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                            <Typography variant="subtitle1" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: 0.5 }}>{app.name}</Typography>
-                            <Stack direction="row" spacing={2} sx={{ mt: 0.5 }} alignItems="center">
-                              <Typography variant="caption" color="primary.main" fontWeight={1000} sx={{ letterSpacing: 1 }}>{app.intendedMajor?.toUpperCase() || "GENERAL"}</Typography>
-                              <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
+                            <Box sx={{ position: 'absolute', bottom: -4, right: -4, width: 14, height: 14, borderRadius: '50%', bgcolor: '#f59e0b', border: `2px solid ${isDark ? '#0f172a' : '#fff'}`, animation: 'pulse 2s infinite' }} />
+                          </Box>
+
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="h6" fontWeight={900} sx={{ fontFamily: 'Outfit, sans-serif' }}>{app.name}</Typography>
+                            <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }} alignItems="center">
+                              <Chip label={app.intendedMajor?.toUpperCase() || "GENERAL"} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: 'primary.main', fontSize: '0.7rem' }} />
+                              <Circle sx={{ fontSize: 4, color: 'text.secondary', opacity: 0.5 }} />
                               <Typography variant="caption" color="text.secondary" fontWeight={800}>{app.email}</Typography>
                             </Stack>
                           </Box>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Chip label={app.level || "Year 1"} size="small" sx={{ fontWeight: 900, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }} />
-                            <IconButton onClick={() => setExpandedApp(isExpanded ? null : app.id)} sx={{
-                              bgcolor: isExpanded ? 'primary.main' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
-                              color: isExpanded ? 'white' : 'text.secondary',
+
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+                              <Typography variant="subtitle2" fontWeight={900} color="text.primary">{app.highSchoolGrades || '85.5%'}</Typography>
+                              <Typography variant="caption" color="text.secondary" fontWeight={800}>GRADE AVG</Typography>
+                            </Box>
+                            <IconButton sx={{
+                              bgcolor: isExpanded ? 'primary.main' : alpha('#6366f1', 0.1),
+                              color: isExpanded ? 'white' : 'primary.main',
                               transform: isExpanded ? 'rotate(180deg)' : 'none',
-                              transition: '0.4s',
-                              '&:hover': { bgcolor: isExpanded ? 'primary.dark' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') }
+                              transition: 'all 0.3s',
                             }}>
-                              <ExpandMore sx={{ fontSize: 20 }} />
+                              <ExpandMore />
                             </IconButton>
                           </Stack>
                         </Box>
 
                         <Collapse in={isExpanded}>
-                          <Divider sx={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                          <Box sx={{ p: 4, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
-                            <Grid container spacing={3} sx={{ mb: 4 }}>
+                          <Box sx={{ p: 4, pt: 0 }}>
+                            <Divider sx={{ mb: 3, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                            <Grid container spacing={2} sx={{ mb: 4 }}>
                               {[
-                                { label: "Performance Metric", value: app.highSchoolGrades || '85.5%', icon: <TrendingUp sx={{ fontSize: 16 }} /> },
-                                { label: "Origin Institution", value: app.highSchoolName || 'Global Academy', icon: <School sx={{ fontSize: 16 }} /> },
-                                { label: "Application ID", value: `APP-${app.id?.slice(-6)?.toUpperCase() || "XXXXXX"}`, icon: <Badge sx={{ fontSize: 16 }} /> },
-                                { label: "Submission Date", value: new Date().toLocaleDateString(), icon: <CalendarToday sx={{ fontSize: 16 }} /> },
+                                { label: "Performance Metric", value: app.highSchoolGrades || '85.5%', icon: <TrendingUp /> },
+                                { label: "Origin Institution", value: app.highSchoolName || 'Global Academy', icon: <School /> },
+                                { label: "Application ID", value: `APP-${app.id?.slice(-6)?.toUpperCase() || "XXXXXX"}`, icon: <Badge /> },
+                                { label: "Access Level", value: app.level || "Undergraduate Year 1", icon: <Verified /> },
                               ].map((item, idx) => (
                                 <Grid item xs={12} sm={6} md={3} key={idx}>
-                                  <Box sx={{ p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
-                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, opacity: 0.6 }}>
-                                      {item.icon}
-                                      <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 0.5 }}>{item.label.toUpperCase()}</Typography>
+                                  <Box sx={{
+                                    p: 2.5, borderRadius: 4,
+                                    bgcolor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                                    border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+                                    transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' }
+                                  }}>
+                                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1, opacity: 0.7 }}>
+                                      {React.cloneElement(item.icon, { sx: { fontSize: 18, color: 'text.secondary' } })}
+                                      <Typography variant="caption" color="text.secondary" fontWeight={900}>{item.label.toUpperCase()}</Typography>
                                     </Stack>
-                                    <Typography variant="body2" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary' }}>{item.value}</Typography>
+                                    <Typography variant="subtitle2" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary' }}>{item.value}</Typography>
                                   </Box>
                                 </Grid>
                               ))}
                               {app.personalStatement && (
                                 <Grid item xs={12}>
-                                  <Typography variant="caption" color="text.secondary" fontWeight={900} display="block" sx={{ letterSpacing: 1.5, opacity: 0.6, mb: 1.5 }}>STATEMENT OF INTENT</Typography>
                                   <Box sx={{
-                                    p: 3, borderRadius: 4,
-                                    bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+                                    p: 3, borderRadius: 4, mt: 2,
+                                    bgcolor: alpha('#6366f1', 0.05),
+                                    border: `1px solid ${alpha('#6366f1', 0.1)}`,
                                     position: 'relative'
                                   }}>
-                                    <Typography variant="body2" sx={{ lineHeight: 1.8, color: isDark ? 'rgba(255,255,255,0.75)' : 'text.primary', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>
+                                    <Typography variant="caption" color="primary.main" fontWeight={900} display="block" sx={{ letterSpacing: 1.5, mb: 1.5 }}>STATEMENT OF INTENT</Typography>
+                                    <Typography variant="body2" sx={{ lineHeight: 1.8, color: isDark ? 'rgba(255,255,255,0.8)' : 'text.primary', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>
                                       "{app.personalStatement}"
                                     </Typography>
-                                    <FormatQuote sx={{ position: 'absolute', top: 10, right: 10, opacity: 0.05, fontSize: 48, color: 'primary.main' }} />
+                                    <FormatQuote sx={{ position: 'absolute', top: 15, right: 15, opacity: 0.1, fontSize: 50, color: 'primary.main' }} />
                                   </Box>
                                 </Grid>
                               )}
                             </Grid>
 
-                            <Box sx={{ p: 2.5, borderRadius: 4, bgcolor: alpha('#3b82f6', 0.05), border: '1px solid rgba(59, 130, 246, 0.15)', mb: 4, display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                              <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Info sx={{ color: 'primary.main', fontSize: 20 }} />
-                              </Box>
-                              <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 0.3, lineHeight: 1.6 }}>
-                                <strong>PROTOCOL INFO:</strong> UPON AUTHORIZATION, A PERMANENT ACADEMIC CREDENTIAL (ALX-XXXX/{new Date().getFullYear()}) WILL BE SECURED IN THE MAIN ROSTER AND NOTIFICATION DISPATCHED TO THE APPLICANT.
+                            <Box sx={{ p: 3, borderRadius: 4, background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)', border: '1px dashed rgba(16, 185, 129, 0.3)', mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Info sx={{ color: '#10b981', fontSize: 24 }} />
+                              <Typography variant="caption" color="text.primary" fontWeight={800} sx={{ lineHeight: 1.6 }}>
+                                AUTHORIZATION PROTOCOL ALIGNED. CONFIRMING WILL GENERATE PERMANENT ACADEMIC CREDENTIAL <span style={{ color: '#10b981', fontWeight: 1000 }}>(ALX-XXXX/{new Date().getFullYear()})</span> AND INITIATE REGISTRY DEPLOYMENT.
                               </Typography>
                             </Box>
 
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
                               <Button
                                 variant="outlined" color="error" startIcon={<Cancel />}
-                                sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, px: 4, py: 1.2, border: '1px solid rgba(239, 68, 68, 0.3)', '&:hover': { border: '1px solid #ef4444', bgcolor: 'rgba(239, 68, 68, 0.05)' } }}
+                                sx={{ borderRadius: 4, textTransform: 'none', fontWeight: 1000, px: 3, py: 1.2, border: '2px solid rgba(239, 68, 68, 0.3)', '&:hover': { border: '2px solid #ef4444', bgcolor: 'rgba(239, 68, 68, 0.05)' } }}
                                 onClick={() => setRejectDialog({ open: true, app, reason: '' })}
                               >
-                                Reject Dossier
+                                Reject
                               </Button>
                               <Button
-                                variant="contained" color="success" className="btn-premium"
+                                variant="contained" color="success"
                                 startIcon={<CheckCircleOutline />}
-                                sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, px: 4, py: 1.2, boxShadow: '0 10px 25px rgba(16, 185, 129, 0.2)' }}
+                                sx={{ borderRadius: 4, textTransform: 'none', fontWeight: 1000, px: 4, py: 1.2, background: gradients.success, boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 25px rgba(16, 185, 129, 0.4)' } }}
                                 onClick={() => handleApproveApplication(app)}
                               >
-                                Authorize & Issue ID
+                                Authorize & Deploy Credential
                               </Button>
                             </Stack>
                           </Box>
@@ -2454,71 +2523,107 @@ const RegistrarDashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3.5}>
-          <Stack spacing={3}>
-            <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
-              <CardContent sx={{ p: 3.5 }}>
-                <Typography variant="subtitle1" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 3 }}>Intake Metrics</Typography>
-                <Stack spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Stack spacing={4}>
+            <Card sx={{
+              ...glassStyle,
+              borderRadius: 6,
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99, 102, 241, 0.1)'}`,
+              boxShadow: `0 15px 35px ${isDark ? 'rgba(0,0,0,0.5)' : 'rgba(99, 102, 241, 0.05)'}`
+            }}>
+              <Box sx={{ p: 4, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 3 }}>Intake Metrics</Typography>
+                <Stack spacing={4}>
                   {[
-                    { label: "Acceptance Rate", value: 82, color: "#10b981", sub: "Target: 75%+" },
-                    { label: "Pending Validation", value: 64, color: "#3b82f6", sub: "Avg Time: 2.4 days" },
-                    { label: "Rejected dossiers", value: 12, color: "#ef4444", sub: "Quality Control" },
+                    { label: "Acceptance Target", value: 82, color: "#10b981", sub: "Currently Above 75% Goal" },
+                    { label: "Pending Workflow", value: 64, color: "#6366f1", sub: "Est. Time: 2.1 days" },
+                    { label: "Quality Rejections", value: 12, color: "#ef4444", sub: "Below standard threshold" },
                   ].map((item, i) => (
                     <Box key={i}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'flex-end' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, alignItems: 'center' }}>
                         <Box>
-                          <Typography variant="body2" fontWeight={800}>{item.label}</Typography>
-                          <Typography variant="caption" color="text.secondary" fontWeight={900}>{item.sub}</Typography>
+                          <Typography variant="subtitle2" fontWeight={900}>{item.label}</Typography>
+                          <Typography variant="caption" color="text.secondary" fontWeight={800}>{item.sub}</Typography>
                         </Box>
-                        <Typography variant="subtitle2" fontWeight={1000} color={item.color}>{item.value}%</Typography>
+                        <Box sx={{ bgcolor: alpha(item.color, 0.1), px: 1.5, py: 0.5, borderRadius: 2 }}>
+                          <Typography variant="subtitle2" fontWeight={1000} color={item.color}>{item.value}%</Typography>
+                        </Box>
                       </Box>
                       <LinearProgress variant="determinate" value={item.value}
                         sx={{
-                          height: 8, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                          '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: item.color, backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%)' }
+                          height: 10, borderRadius: 5, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                          '& .MuiLinearProgress-bar': { borderRadius: 5, bgcolor: item.color, backgroundImage: `linear-gradient(90deg, ${alpha(item.color, 0.5)} 0%, ${item.color} 100%)` }
                         }}
                       />
                     </Box>
                   ))}
                 </Stack>
-                <Divider sx={{ my: 4, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1, mb: 2, display: 'block' }}>ID GENERATION PROTOCOL</Typography>
+                <Divider sx={{ my: 4, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderStyle: 'dashed' }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="overline" fontWeight={1000} sx={{ letterSpacing: 2, background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ID FABRICATION ENGINE</Typography>
+                </Box>
                 <Box sx={{
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%)',
-                  p: 2.5, borderRadius: 4, border: '1px solid rgba(99, 102, 241, 0.2)',
-                  display: 'flex', alignItems: 'center', gap: 2.5, mb: 3
+                  background: isDark ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%)' : 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)',
+                  p: 3.5, borderRadius: 5, border: `1px solid ${alpha('#8b5cf6', 0.4)}`,
+                  display: 'flex', alignItems: 'center', gap: 3, mb: 3, position: 'relative', overflow: 'hidden',
+                  boxShadow: `0 10px 30px ${alpha('#6366f1', 0.15)}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:before': {
+                    content: '""', position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                    animation: 'shimmer 3s infinite'
+                  }
                 }}>
-                  <AssignmentInd sx={{ color: 'primary.main', fontSize: 32 }} />
-                  <Box>
-                    <Typography variant="body2" fontWeight={1000} color={isDark ? "white" : "#1e293b"}>Sequential Encoding</Typography>
-                    <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', fontFamily: 'monospace', fontWeight: 900 }}>ALX-XXXX/{new Date().getFullYear()}</Typography>
+                  <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 120, height: 120, bgcolor: 'primary.main', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)', animation: 'pulse 3s infinite alternate' }} />
+                  <AssignmentInd sx={{ color: 'primary.main', fontSize: 40, position: 'relative', zIndex: 1, filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.5))' }} />
+                  <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                      <Typography variant="body2" fontWeight={1000} color="primary.main" sx={{ textShadow: isDark ? '0 0 10px rgba(99,102,241,0.5)' : 'none' }}>Sequential Encoding</Typography>
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 8px #10b981', animation: 'ping 1.5s infinite' }} />
+                    </Box>
+                    <Typography variant="caption" sx={{ color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)', fontFamily: 'monospace', fontWeight: 1000, fontSize: '0.9rem', letterSpacing: 1 }}>ALX-XXXX/{new Date().getFullYear()}</Typography>
                   </Box>
                 </Box>
-                <Button fullWidth variant="outlined" sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000, textTransform: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, color: isDark ? 'white' : 'text.primary' }}>
-                  Manage Credentials
+                <Button fullWidth variant="outlined" color="primary" sx={{
+                  borderRadius: 4, py: 1.5, fontWeight: 900, textTransform: 'none',
+                  border: `2px solid ${alpha('#6366f1', 0.2)}`,
+                  '&:hover': { border: `2px solid #6366f1`, bgcolor: alpha('#6366f1', 0.05) }
+                }}>
+                  Manage Credential Policy
                 </Button>
-              </CardContent>
+              </Box>
             </Card>
 
-            <Card sx={{ ...glassStyle, borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, overflow: 'hidden' }}>
-              <Box sx={{ p: 2.5, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                <Typography variant="subtitle2" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>System Status</Typography>
+            <Card sx={{
+              ...glassStyle, borderRadius: 6,
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99, 102, 241, 0.1)'}`,
+              boxShadow: `0 10px 30px ${isDark ? 'rgba(0,0,0,0.4)' : 'rgba(99, 102, 241, 0.05)'}`,
+              overflow: 'hidden'
+            }}>
+              <Box sx={{ p: 3, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                <Typography variant="subtitle1" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>System Status</Typography>
               </Box>
-              <CardContent sx={{ p: 2.5 }}>
-                <Stack spacing={2.5}>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+              <CardContent sx={{ p: 3 }}>
+                <Stack spacing={3}>
+                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'center' }}>
+                    <Box sx={{ position: 'relative' }}>
+                      <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: '#10b981', position: 'relative', zIndex: 1 }} />
+                      <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: '#10b981', borderRadius: '50%', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                    </Box>
                     <Box>
-                      <Typography variant="caption" fontWeight={1000} display="block">AUTHENTICATION SERVER</Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={900}>OPERATIONAL • 42ms LATENCY</Typography>
+                      <Typography variant="caption" fontWeight={1000} display="block" color="text.primary">AUTHENTICATION SERVER</Typography>
+                      <Typography variant="caption" color="success.main" fontWeight={900}>OPERATIONAL • 42ms LATENCY</Typography>
                     </Box>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#3b82f6', boxShadow: '0 0 10px #3b82f6' }} />
+                  <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'center' }}>
+                    <Box sx={{ position: 'relative' }}>
+                      <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: '#6366f1', position: 'relative', zIndex: 1 }} />
+                      <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: '#6366f1', borderRadius: '50%', opacity: 0.5, animation: 'pulse 2s infinite' }} />
+                    </Box>
                     <Box>
-                      <Typography variant="caption" fontWeight={1000} display="block">ID FABRICATION NODE</Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={900}>READY • IDLE</Typography>
+                      <Typography variant="caption" fontWeight={1000} display="block" color="text.primary">ID FABRICATION NODE</Typography>
+                      <Typography variant="caption" color="primary.main" fontWeight={900}>READY • STANDBY MODE</Typography>
                     </Box>
                   </Box>
                 </Stack>
@@ -2526,8 +2631,8 @@ const RegistrarDashboard = () => {
             </Card>
           </Stack>
         </Grid>
-      </Grid>
-    </Box>
+      </Grid >
+    </Box >
   );
 
   const renderPendingIdsTab = () => (
@@ -4066,6 +4171,27 @@ const RegistrarDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{
+            borderRadius: 3,
+            fontWeight: 800,
+            boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+            fontFamily: 'Outfit, sans-serif'
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

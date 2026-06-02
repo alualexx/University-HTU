@@ -3,7 +3,7 @@ import {
   Box, Typography, Button, Grid, Card, CardContent,
   Stack, Avatar, Chip, Tooltip, IconButton,
   Dialog, DialogTitle, DialogContent, TextField, alpha,
-  MenuItem, Select, FormControl, InputLabel
+  MenuItem, Select, FormControl, InputLabel, Snackbar, Alert
 } from '@mui/material';
 import {
   Add, AccountTree, Edit, Delete, School, LocationOn,
@@ -35,6 +35,11 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
     requiredDocuments: "Transcript, ID/Passport, Photo"
   });
   const [deptOtp, setDeptOtp] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   const handleOpenDeptDialog = (dept = null) => {
     if (dept) {
@@ -63,7 +68,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         // Verify OTP for new department creation
         const otpResult = await verifyOTP(deptOtp, "DEPARTMENT_CREATE");
         if (!otpResult.success) {
-          alert(otpResult.message || "Invalid or expired OTP. Please contact Administrator.");
+          showSnackbar(otpResult.message || "Invalid or expired OTP.", "error");
           return;
         }
 
@@ -75,8 +80,7 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
           ...data,
           status: "active" // Changed from pending_credentials for demo ease
         });
-        alert("Academic Sector initialized successfully!");
-        window.location.reload();
+        showSnackbar("Academic Sector initialized successfully!", "success");
       } else {
         const data = { ...deptForm };
         const id = data._id || data.id;
@@ -92,14 +96,13 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
         }
 
         await departmentsAPI.update(id, data);
-        alert("Academic Sector updated successfully!");
-        window.location.reload();
+        showSnackbar("Academic Sector updated successfully!", "success");
       }
       setOpenDeptDialog(false);
       setDeptOtp(""); // Reset OTP
     } catch (error) {
       console.error("Department error:", error);
-      alert(`Critical Error: ${error.message || "Unable to save department"}`);
+      showSnackbar(`Critical Error: ${error.message || "Unable to save department"}`, "error");
     }
   };
 
@@ -107,11 +110,10 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
     if (window.confirm("Permanently remove this academic sector?")) {
       try {
         await departmentsAPI.delete(id);
-        alert("Sector removed successfully!");
-        window.location.reload();
+        showSnackbar("Sector removed successfully!", "success");
       } catch (error) {
         console.error("Delete error:", error);
-        alert(`Failed to delete: ${error.message || error}`);
+        showSnackbar(`Failed to delete: ${error.message || error}`, "error");
       }
     }
   };
@@ -248,6 +250,22 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
           </Box>
         </form>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ borderRadius: 2, fontWeight: 700 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
