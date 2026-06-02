@@ -5,8 +5,20 @@ const connectDB = require("./config/db");
 
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB then optionally auto-seed
+connectDB().then(async () => {
+  try {
+    const User = require("./models/User");
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      console.log("🌱 Database is empty. Running auto-seed...");
+      const { seedData } = require("./scripts/seed_logic");
+      await seedData();
+    }
+  } catch (err) {
+    console.warn("⚠️ Auto-seeding skipped:", err.message);
+  }
+});
 
 const app = express();
 

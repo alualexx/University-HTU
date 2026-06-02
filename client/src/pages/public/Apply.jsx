@@ -1,34 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-    Box, Container, Typography, Grid, Card, CardContent, Button,
-    Chip, Avatar, alpha, Divider, Stack, Alert, Collapse, CircularProgress
-} from "@mui/material";
-import {
-    Computer, Engineering, BusinessCenter, Science, Palette,
-    HealthAndSafety, Gavel, Agriculture, ArrowForward, School,
-    AccessTime, People, MenuBook, Star, CheckCircle, Campaign, CampaignOutlined,
-    Work, Biotech, AccountBalance, LocalHospital
-} from "@mui/icons-material";
-import { db } from "../../services/Firebase";
-import { departmentsAPI, announcementsAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
-// Helper to map department names to icons/colors if needed, or fallback
-const getDeptStyles = (name) => {
-    const n = name.toLowerCase();
-    if (n.includes("computer") || n.includes("software")) return { icon: <Computer sx={{ fontSize: 36 }} />, color: "#1976d2", gradient: "linear-gradient(135deg, #1976d2, #42a5f5)" };
-    if (n.includes("electrical") || n.includes("engineer")) return { icon: <Engineering sx={{ fontSize: 36 }} />, color: "#f59e0b", gradient: "linear-gradient(135deg, #f59e0b, #fbbf24)" };
-    if (n.includes("business") || n.includes("admin")) return { icon: <BusinessCenter sx={{ fontSize: 36 }} />, color: "#2e7d32", gradient: "linear-gradient(135deg, #2e7d32, #66bb6a)" };
-    if (n.includes("med") || n.includes("health") || n.includes("surgery")) return { icon: <LocalHospital sx={{ fontSize: 36 }} />, color: "#e53935", gradient: "linear-gradient(135deg, #e53935, #ef9a9a)" };
-    if (n.includes("law")) return { icon: <Gavel sx={{ fontSize: 36 }} />, color: "#6a1b9a", gradient: "linear-gradient(135deg, #6a1b9a, #ba68c8)" };
-    if (n.includes("arch")) return { icon: <Palette sx={{ fontSize: 36 }} />, color: "#e65100", gradient: "linear-gradient(135deg, #e65100, #ff8a65)" };
-    if (n.includes("science")) return { icon: <Science sx={{ fontSize: 36 }} />, color: "#0891b2", gradient: "linear-gradient(135deg, #0891b2, #22d3ee)" };
-    return { icon: <School sx={{ fontSize: 36 }} />, color: "#475569", gradient: "linear-gradient(135deg, #475569, #94a3b8)" };
-};
-
-const DepartmentCard = ({ dept, onApply }) => {
+const DepartmentCard = ({ dept, onApply, globalAdmissionOpen }) => {
     const [hovered, setHovered] = useState(false);
     const styles = getDeptStyles(dept.name);
+    const isAdmissionEnabled = globalAdmissionOpen && dept.admissionOpen;
 
     return (
         <Card
@@ -47,7 +23,7 @@ const DepartmentCard = ({ dept, onApply }) => {
                 transform: hovered ? "translateY(-12px)" : "none",
                 boxShadow: hovered ? `0 32px 64px -12px ${alpha(styles.color, 0.2)}` : "0 4px 12px rgba(0,0,0,0.03)",
                 bgcolor: 'background.paper',
-                opacity: dept.admissionOpen ? 1 : 0.8
+                opacity: isAdmissionEnabled ? 1 : 0.8
             }}
         >
             <Box sx={{ height: 8, background: styles.gradient }} />
@@ -67,9 +43,9 @@ const DepartmentCard = ({ dept, onApply }) => {
                     </Box>
                     <Box sx={{ textAlign: "right" }}>
                         <Chip
-                            label={dept.admissionOpen ? "OPEN" : "CLOSED"}
+                            label={isAdmissionEnabled ? "OPEN" : "CLOSED"}
                             size="small"
-                            color={dept.admissionOpen ? "success" : "error"}
+                            color={isAdmissionEnabled ? "success" : "error"}
                             sx={{ fontWeight: 1000, fontSize: "0.65rem", mb: 1, px: 1 }}
                         />
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end" }}>
@@ -111,7 +87,7 @@ const DepartmentCard = ({ dept, onApply }) => {
                     fullWidth
                     variant="contained"
                     onClick={() => onApply(dept.id)}
-                    disabled={!dept.admissionOpen}
+                    disabled={!isAdmissionEnabled}
                     endIcon={<ArrowForward />}
                     sx={{
                         borderRadius: 4,
@@ -119,17 +95,20 @@ const DepartmentCard = ({ dept, onApply }) => {
                         textTransform: "none",
                         py: 2.2,
                         fontSize: '1rem',
-                        background: dept.admissionOpen ? styles.gradient : '#94a3b8',
-                        boxShadow: dept.admissionOpen ? `0 12px 32px ${alpha(styles.color, 0.3)}` : "none",
+                        background: isAdmissionEnabled ? styles.gradient : '#94a3b8',
+                        boxShadow: isAdmissionEnabled ? `0 12px 32px ${alpha(styles.color, 0.3)}` : "none",
                         "&:hover": {
-                            background: dept.admissionOpen ? styles.gradient : '#94a3b8',
-                            boxShadow: dept.admissionOpen ? `0 16px 48px ${alpha(styles.color, 0.45)}` : "none",
-                            transform: dept.admissionOpen ? "scale(1.02)" : "none",
+                            background: isAdmissionEnabled ? styles.gradient : '#94a3b8',
+                            boxShadow: isAdmissionEnabled ? `0 16px 48px ${alpha(styles.color, 0.45)}` : "none",
+                            transform: isAdmissionEnabled ? "scale(1.02)" : "none",
                         },
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                 >
-                    {dept.admissionOpen ? "Initiate Application" : "Admissions Closed"}
+                    {isAdmissionEnabled
+                        ? "Initiate Application"
+                        : (globalAdmissionOpen ? "Admissions Closed" : "Portal Deactivated")
+                    }
                 </Button>
             </Box>
         </Card>
@@ -138,6 +117,7 @@ const DepartmentCard = ({ dept, onApply }) => {
 
 const Apply = () => {
     const navigate = useNavigate();
+    const { globalAdmissionOpen } = useAuth();
     const [admissionsPosts, setAdmissionsPosts] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -286,7 +266,7 @@ const Apply = () => {
                     <Grid container spacing={4}>
                         {departments.map((dept) => (
                             <Grid item xs={12} sm={6} md={4} key={dept.id}>
-                                <DepartmentCard dept={dept} onApply={handleApply} />
+                                <DepartmentCard dept={dept} onApply={handleApply} globalAdmissionOpen={globalAdmissionOpen} />
                             </Grid>
                         ))}
                     </Grid>

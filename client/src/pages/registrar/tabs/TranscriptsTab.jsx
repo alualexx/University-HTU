@@ -15,13 +15,13 @@ import { collection, query, where, getDocs, doc, setDoc, deleteDoc, updateDoc } 
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-const TranscriptsTab = ({ isDark, glassStyle }) => {
+const TranscriptsTab = ({ isDark, glassStyle, showSnackbar }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [transcriptData, setTranscriptData] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Dialog state
   const [semesterDialog, setSemesterDialog] = useState({ open: false, mode: 'add', data: { term: '', termGPA: 0 } });
   const [courseDialog, setCourseDialog] = useState({ open: false, termIndex: null, mode: 'add', data: { code: '', title: '', credits: 3, grade: 'A' } });
@@ -37,8 +37,8 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       const snapshot = await getDocs(q);
       const results = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(s => 
-          s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        .filter(s =>
+          s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           s.studentId?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       setStudents(results);
@@ -100,7 +100,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
         else if (grade === 'C-') gp = 1.7;
         else if (grade === 'D') gp = 1.0;
         else if (grade === 'F') gp = 0.0;
-        
+
         totalPoints += gp * (course.credits || 0);
         totalCredits += (course.credits || 0);
       });
@@ -112,12 +112,12 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
     if (!transcriptData || !selectedStudent) return;
     try {
       const updatedCGPA = calculateCGPA(transcriptData.termRecords);
-      const dataToSave = { 
-        ...transcriptData, 
+      const dataToSave = {
+        ...transcriptData,
         cumulativeGPA: parseFloat(updatedCGPA),
         lastUpdated: new Date().toISOString()
       };
-      
+
       // 1. Save to transcripts collection
       if (transcriptData.id) {
         await updateDoc(doc(db, 'transcripts', transcriptData.id), dataToSave);
@@ -135,10 +135,10 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       });
 
       setTranscriptData(dataToSave);
-      alert("Transcript and Student Profile updated successfully!");
+      showSnackbar?.("Transcript and Student Profile updated successfully!", "success");
     } catch (error) {
       console.error("Error saving transcript", error);
-      alert("Error saving transcript: " + error.message);
+      showSnackbar?.("Error saving transcript: " + error.message, "error");
     }
   };
 
@@ -179,9 +179,9 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       // Fetch approved enrollments for this student
       const q = query(collection(db, 'enrollments'), where('studentId', '==', selectedStudent.studentId || selectedStudent.uid), where('status', '==', 'approved'));
       const snap = await getDocs(q);
-      
+
       if (snap.empty) {
-        alert("No approved enrollments found for this student.");
+        showSnackbar?.("No approved enrollments found for this student.", "info");
         setLoading(false);
         return;
       }
@@ -206,7 +206,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       const coursesToAdd = newCourses.filter(c => !existingCodes.has(c.code));
 
       if (coursesToAdd.length === 0) {
-        alert("All approved courses are already in the transcript.");
+        showSnackbar?.("All approved courses are already in the transcript.", "info");
         setLoading(false);
         return;
       }
@@ -214,7 +214,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       // Add to a "Current Enrollment" term if it exists, or create a new one
       const updated = { ...transcriptData };
       let targetTerm = updated.termRecords.find(t => t.term === "Current Enrollment" || t.term === "Pending Sync");
-      
+
       if (!targetTerm) {
         targetTerm = { term: "Current Enrollment", courses: [], termGPA: "0.00" };
         updated.termRecords.push(targetTerm);
@@ -222,10 +222,10 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
 
       targetTerm.courses.push(...coursesToAdd);
       setTranscriptData(updated);
-      alert(`Imported ${coursesToAdd.length} courses from enrollments!`);
+      showSnackbar?.(`Imported ${coursesToAdd.length} courses from enrollments!`, "success");
     } catch (err) {
       console.error("Sync error:", err);
-      alert("Error syncing enrollments: " + err.message);
+      showSnackbar?.("Error syncing enrollments: " + err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -242,7 +242,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
     if (!transcriptData) return;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
-    
+
     // 1. Header & Branding
     // Logo Placeholder
     doc.setDrawColor(99, 102, 241);
@@ -258,7 +258,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
     doc.setFont("helvetica", "normal");
     doc.text("(FORMERLY STATE TECHNICAL COLLEGE)", pageWidth / 2, 43, { align: "center" });
     doc.text("Main Campus, Sector-11, Education City, Alex State, India", pageWidth / 2, 47, { align: "center" });
-    
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("OFFICIAL TRANSCRIPT", pageWidth / 2, 55, { align: "center" });
@@ -352,10 +352,10 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       const bodyData = term.courses.map((c, i) => {
         const row = [c.code, c.title, c.credits, c.grade];
         if (i === 0) {
-          row.push({ 
-            content: `${index + 1}${index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Semester\nSGPA : ${sgpa}\n\nPASS`, 
+          row.push({
+            content: `${index + 1}${index === 0 ? 'st' : index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Semester\nSGPA : ${sgpa}\n\nPASS`,
             rowSpan: term.courses.length,
-            styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } 
+            styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' }
           });
         }
         return row;
@@ -379,7 +379,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
       });
 
       tableY = doc.lastAutoTable.finalY + 5;
-      
+
       // Check for page break
       if (tableY > 250) {
         doc.addPage();
@@ -421,13 +421,13 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                   sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }
                 }}
               />
-              <Button 
-                variant="contained" 
-                onClick={handleSearch} 
-                disabled={loading} 
-                sx={{ 
-                  borderRadius: 3, 
-                  px: 4, 
+              <Button
+                variant="contained"
+                onClick={handleSearch}
+                disabled={loading}
+                sx={{
+                  borderRadius: 3,
+                  px: 4,
                   py: 1,
                   background: isDark ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                   color: '#fff',
@@ -475,87 +475,87 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box sx={{ display: 'flex', gap: 3 }}>
                     <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', fontSize: '1.5rem', fontWeight: 800 }}>{selectedStudent.name?.[0]}</Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="h5" fontWeight={1000}>{selectedStudent.name}</Typography>
-                    <Typography variant="subtitle2" color="primary.main" fontWeight={800} sx={{ mb: 2 }}>{selectedStudent.studentId || "PENDING ID"}</Typography>
-                    
-                    <Grid container spacing={2}>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Course"
-                          value={transcriptData.program}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, program: e.target.value })}
-                          sx={{ mb: 2 }}
-                        />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h5" fontWeight={1000}>{selectedStudent.name}</Typography>
+                      <Typography variant="subtitle2" color="primary.main" fontWeight={800} sx={{ mb: 2 }}>{selectedStudent.studentId || "PENDING ID"}</Typography>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Course"
+                            value={transcriptData.program}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, program: e.target.value })}
+                            sx={{ mb: 2 }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Branch"
+                            value={transcriptData.courseBranch || ''}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, courseBranch: e.target.value })}
+                            sx={{ mb: 2 }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="College"
+                            value={transcriptData.collegeName || ''}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, collegeName: e.target.value })}
+                            sx={{ mb: 2 }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Admission Year"
+                            value={transcriptData.admissionYear || ''}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, admissionYear: e.target.value })}
+                            sx={{ mb: 2 }}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Completion Year"
+                            value={transcriptData.completionYear || ''}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, completionYear: e.target.value })}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Duration"
+                            value={transcriptData.courseDuration || ''}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, courseDuration: e.target.value })}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth size="small"
+                            label="Medium"
+                            value={transcriptData.mediumOfInstruction || 'English'}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, mediumOfInstruction: e.target.value })}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={3}>
+                          <TextField
+                            fullWidth select size="small"
+                            label="Student Status"
+                            value={transcriptData.studentStatus || 'Active'}
+                            onChange={(e) => setTranscriptData({ ...transcriptData, studentStatus: e.target.value })}
+                          >
+                            <MenuItem value="Active">Active</MenuItem>
+                            <MenuItem value="On Leave">On Leave</MenuItem>
+                            <MenuItem value="Suspended">Suspended</MenuItem>
+                            <MenuItem value="Graduated">Graduated</MenuItem>
+                            <MenuItem value="Withdrawn">Withdrawn</MenuItem>
+                          </TextField>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Branch"
-                          value={transcriptData.courseBranch || ''}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, courseBranch: e.target.value })}
-                          sx={{ mb: 2 }}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="College"
-                          value={transcriptData.collegeName || ''}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, collegeName: e.target.value })}
-                          sx={{ mb: 2 }}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Admission Year"
-                          value={transcriptData.admissionYear || ''}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, admissionYear: e.target.value })}
-                          sx={{ mb: 2 }}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Completion Year"
-                          value={transcriptData.completionYear || ''}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, completionYear: e.target.value })}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Duration"
-                          value={transcriptData.courseDuration || ''}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, courseDuration: e.target.value })}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth size="small"
-                          label="Medium"
-                          value={transcriptData.mediumOfInstruction || 'English'}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, mediumOfInstruction: e.target.value })}
-                        />
-                      </Grid>
-                      <Grid item xs={6} md={3}>
-                        <TextField
-                          fullWidth select size="small"
-                          label="Student Status"
-                          value={transcriptData.studentStatus || 'Active'}
-                          onChange={(e) => setTranscriptData({ ...transcriptData, studentStatus: e.target.value })}
-                        >
-                          <MenuItem value="Active">Active</MenuItem>
-                          <MenuItem value="On Leave">On Leave</MenuItem>
-                          <MenuItem value="Suspended">Suspended</MenuItem>
-                          <MenuItem value="Graduated">Graduated</MenuItem>
-                          <MenuItem value="Withdrawn">Withdrawn</MenuItem>
-                        </TextField>
-                      </Grid>
-                    </Grid>
-                  </Box>
+                    </Box>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography variant="h3" fontWeight={1000} color="primary.main">{calculateCGPA(transcriptData?.termRecords)}</Typography>
@@ -565,10 +565,10 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                 <Box sx={{ display: 'flex', gap: 2, mt: 4, alignItems: 'center' }}>
                   <Button variant="contained" startIcon={<Save />} onClick={handleSaveTranscript} sx={{ borderRadius: 3, fontWeight: 800, px: 3 }}>Save Record</Button>
                   <Button variant="outlined" startIcon={<Print />} onClick={handleDownloadPDF} sx={{ borderRadius: 3, fontWeight: 800, px: 3 }}>Export PDF</Button>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={loading ? <CircularProgress size={18} /> : <Sync />} 
-                    onClick={handleSyncEnrollments} 
+                  <Button
+                    variant="outlined"
+                    startIcon={loading ? <CircularProgress size={18} /> : <Sync />}
+                    onClick={handleSyncEnrollments}
                     disabled={loading}
                     sx={{ borderRadius: 3, fontWeight: 800, px: 3, borderStyle: 'dashed' }}
                   >
@@ -595,7 +595,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                             <IconButton size="small" color="error" onClick={() => handleDeleteSemester(tIndex)}><Delete fontSize="small" /></IconButton>
                           </Box>
                         </Box>
-                        
+
                         <TableContainer sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
                           <Table size="small">
                             <TableHead>
@@ -615,7 +615,7 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                                 </TableRow>
                               ) : (
                                 term.courses?.map((course, cIndex) => (
-                                  <TableRow key={cIndex} sx={{ 
+                                  <TableRow key={cIndex} sx={{
                                     '& td': { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}` },
                                     opacity: course.status === 'Dropped' ? 0.5 : 1,
                                     textDecoration: course.status === 'Dropped' ? 'line-through' : 'none'
@@ -624,20 +624,20 @@ const TranscriptsTab = ({ isDark, glassStyle }) => {
                                     <TableCell fontWeight={700}>{course.title}</TableCell>
                                     <TableCell>{course.credits}</TableCell>
                                     <TableCell>
-                                      <Chip 
-                                        label={course.status === 'Dropped' ? 'W/D' : course.grade} 
-                                        size="small" 
-                                        color={course.grade === 'F' ? 'error' : (course.status === 'Dropped' ? 'default' : 'primary')} 
-                                        sx={{ borderRadius: 1.5, fontWeight: 900, height: 24 }} 
+                                      <Chip
+                                        label={course.status === 'Dropped' ? 'W/D' : course.grade}
+                                        size="small"
+                                        color={course.grade === 'F' ? 'error' : (course.status === 'Dropped' ? 'default' : 'primary')}
+                                        sx={{ borderRadius: 1.5, fontWeight: 900, height: 24 }}
                                       />
                                     </TableCell>
                                     <TableCell>
                                       <Tooltip title={course.status === 'Dropped' ? "Re-activate Course" : "Mark as Dropped/Withdrawn"}>
                                         <FormControlLabel
                                           control={
-                                            <Switch 
-                                              size="small" 
-                                              checked={course.status !== 'Dropped'} 
+                                            <Switch
+                                              size="small"
+                                              checked={course.status !== 'Dropped'}
                                               onChange={() => handleToggleCourseStatus(tIndex, cIndex)}
                                               color="primary"
                                             />

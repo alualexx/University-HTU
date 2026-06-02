@@ -413,7 +413,8 @@ const Home = () => {
                     variant="outlined"
                     size="large"
                     component={RouterLink}
-                    to="/apply"
+                    to={globalAdmissionOpen ? "/apply" : "#"}
+                    disabled={!globalAdmissionOpen}
                     startIcon={<AssignmentInd />}
                     sx={{
                       borderColor: "rgba(255,255,255,0.15)",
@@ -422,9 +423,10 @@ const Home = () => {
                       backdropFilter: 'blur(10px)',
                       "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.05)", transform: "translateY(-4px)" },
                       transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      "&.Mui-disabled": { borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }
                     }}
                   >
-                    Deploy Application
+                    {globalAdmissionOpen ? "Deploy Application" : "Admissions Closed"}
                   </Button>
                 )}
               </Box>
@@ -594,7 +596,7 @@ const Home = () => {
               </Grid>
             ) : publishedDepts.map((dept) => (
               <Grid item xs={12} sm={6} md={4} key={dept.id}>
-                <Card sx={{ 
+                <Card sx={{
                   borderRadius: 6, height: '100%', display: 'flex', flexDirection: 'column',
                   bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
                   transition: '0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -605,7 +607,7 @@ const Home = () => {
                       <SchoolIcon />
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
-                      <Chip label={dept.admissionOpen ? "OPEN" : "CLOSED"} size="small" variant="filled" 
+                      <Chip label={dept.admissionOpen ? "OPEN" : "CLOSED"} size="small" variant="filled"
                         sx={{ fontWeight: 1000, bgcolor: dept.admissionOpen ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1), color: dept.admissionOpen ? '#10b981' : '#ef4444', mb: 1 }} />
                     </Box>
                   </Box>
@@ -627,7 +629,7 @@ const Home = () => {
                   </CardContent>
                   <Divider sx={{ mx: 4, opacity: 0.1 }} />
                   <Box sx={{ p: 4, pt: 3 }}>
-                    <Button fullWidth variant="outlined" component={RouterLink} to="/apply" 
+                    <Button fullWidth variant="outlined" component={RouterLink} to="/apply"
                       sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none', py: 1.2, borderColor: alpha(dept.color || '#6366f1', 0.3), color: dept.color || 'primary.main', '&:hover': { bgcolor: alpha(dept.color || '#6366f1', 0.05), borderColor: dept.color || 'primary.main' } }}>
                       Initiate Enrollment
                     </Button>

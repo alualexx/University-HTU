@@ -19,25 +19,25 @@ import { useAuth } from '../../../context/AuthContext';
 
 // HTU default grading scale (seeded on first load)
 const DEFAULT_GRADES = [
-  { minMark: 90, maxMark: 100, fixedGrade: 4.0,  letterGrade: 'A+',  status: 'Excellent',       classDesc: 'First class with Great distinction' },
-  { minMark: 85, maxMark: 89,  fixedGrade: 4.0,  letterGrade: 'A',   status: 'Excellent',       classDesc: 'First class with Great distinction' },
-  { minMark: 80, maxMark: 84,  fixedGrade: 3.75, letterGrade: 'A-',  status: '',                classDesc: ''                                   },
-  { minMark: 75, maxMark: 79,  fixedGrade: 3.5,  letterGrade: 'B+',  status: 'Very Good',       classDesc: 'First class with Distinction'       },
-  { minMark: 70, maxMark: 74,  fixedGrade: 3.0,  letterGrade: 'B',   status: 'Very Good',       classDesc: 'First class with Distinction'       },
-  { minMark: 65, maxMark: 69,  fixedGrade: 2.75, letterGrade: 'B-',  status: 'Good',            classDesc: 'First class'                        },
-  { minMark: 60, maxMark: 64,  fixedGrade: 2.5,  letterGrade: 'C+',  status: '',                classDesc: 'Second class'                       },
-  { minMark: 50, maxMark: 59,  fixedGrade: 2.0,  letterGrade: 'C',   status: 'Satisfactory',    classDesc: 'Second class'                       },
-  { minMark: 45, maxMark: 49,  fixedGrade: 1.75, letterGrade: 'C-',  status: 'Unsatisfactory',  classDesc: 'Lower class'                        },
-  { minMark: 40, maxMark: 44,  fixedGrade: 1.0,  letterGrade: 'D',   status: 'Very Poor',       classDesc: 'Lower class'                        },
-  { minMark: 30, maxMark: 39,  fixedGrade: 0.0,  letterGrade: 'Fx',  status: 'Fail',            classDesc: 'Lowest class'                       },
-  { minMark: 0,  maxMark: 29,  fixedGrade: 0.0,  letterGrade: 'F',   status: 'Fail',            classDesc: 'Lowest class'                       },
+  { minMark: 90, maxMark: 100, fixedGrade: 4.0, letterGrade: 'A+', status: 'Excellent', classDesc: 'First class with Great distinction' },
+  { minMark: 85, maxMark: 89, fixedGrade: 4.0, letterGrade: 'A', status: 'Excellent', classDesc: 'First class with Great distinction' },
+  { minMark: 80, maxMark: 84, fixedGrade: 3.75, letterGrade: 'A-', status: '', classDesc: '' },
+  { minMark: 75, maxMark: 79, fixedGrade: 3.5, letterGrade: 'B+', status: 'Very Good', classDesc: 'First class with Distinction' },
+  { minMark: 70, maxMark: 74, fixedGrade: 3.0, letterGrade: 'B', status: 'Very Good', classDesc: 'First class with Distinction' },
+  { minMark: 65, maxMark: 69, fixedGrade: 2.75, letterGrade: 'B-', status: 'Good', classDesc: 'First class' },
+  { minMark: 60, maxMark: 64, fixedGrade: 2.5, letterGrade: 'C+', status: '', classDesc: 'Second class' },
+  { minMark: 50, maxMark: 59, fixedGrade: 2.0, letterGrade: 'C', status: 'Satisfactory', classDesc: 'Second class' },
+  { minMark: 45, maxMark: 49, fixedGrade: 1.75, letterGrade: 'C-', status: 'Unsatisfactory', classDesc: 'Lower class' },
+  { minMark: 40, maxMark: 44, fixedGrade: 1.0, letterGrade: 'D', status: 'Very Poor', classDesc: 'Lower class' },
+  { minMark: 30, maxMark: 39, fixedGrade: 0.0, letterGrade: 'Fx', status: 'Fail', classDesc: 'Lowest class' },
+  { minMark: 0, maxMark: 29, fixedGrade: 0.0, letterGrade: 'F', status: 'Fail', classDesc: 'Lowest class' },
 ];
 
 const LETTER_GRADE_COLORS = {
   'A+': '#10b981', 'A': '#10b981', 'A-': '#34d399',
   'B+': '#6366f1', 'B': '#6366f1', 'B-': '#818cf8',
   'C+': '#f59e0b', 'C': '#f59e0b', 'C-': '#fbbf24',
-  'D':  '#f97316',
+  'D': '#f97316',
   'Fx': '#ef4444', 'F': '#dc2626',
 };
 
@@ -47,17 +47,17 @@ const emptyForm = {
   minMark: '', maxMark: '', fixedGrade: '', letterGrade: '', status: '', classDesc: ''
 };
 
-const GradingSystemTab = ({ isDark, glassStyle }) => {
+const GradingSystemTab = ({ isDark, glassStyle, showSnackbar }) => {
   const { logAuditActivity } = useAuth();
-  const [grades, setGrades]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [seeding, setSeeding]     = useState(false);
+  const [grades, setGrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing]     = useState(null); // null = add, object = edit
-  const [form, setForm]           = useState(emptyForm);
-  const [saving, setSaving]       = useState(false);
-  const [deleteId, setDeleteId]   = useState(null);
-  const [error, setError]         = useState('');
+  const [editing, setEditing] = useState(null); // null = add, object = edit
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [error, setError] = useState('');
 
   // Real-time listener
   useEffect(() => {
@@ -79,8 +79,10 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
       const col = collection(db, 'grading_system');
       await Promise.all(DEFAULT_GRADES.map(g => addDoc(col, { ...g, createdAt: serverTimestamp() })));
       logAuditActivity?.('Grading System Seeded', 'Loaded HTU default grading scale');
+      showSnackbar?.('Default grading scale seeded successfully', 'success');
     } catch (err) {
       console.error(err);
+      showSnackbar?.('Failed to seed grading scale', 'error');
     } finally {
       setSeeding(false);
     }
@@ -96,12 +98,12 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
   const openEdit = (grade) => {
     setEditing(grade);
     setForm({
-      minMark:    grade.minMark ?? '',
-      maxMark:    grade.maxMark ?? '',
+      minMark: grade.minMark ?? '',
+      maxMark: grade.maxMark ?? '',
       fixedGrade: grade.fixedGrade ?? '',
       letterGrade: grade.letterGrade ?? '',
-      status:     grade.status ?? '',
-      classDesc:  grade.classDesc ?? '',
+      status: grade.status ?? '',
+      classDesc: grade.classDesc ?? '',
     });
     setError('');
     setDialogOpen(true);
@@ -109,9 +111,9 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
 
   const validate = () => {
     if (form.minMark === '' || form.maxMark === '') return 'Min and Max marks are required.';
-    if (Number(form.minMark) > Number(form.maxMark))  return 'Min mark cannot exceed Max mark.';
-    if (form.letterGrade.trim() === '')                return 'Letter grade is required.';
-    if (form.fixedGrade === '')                        return 'Fixed grade number is required.';
+    if (Number(form.minMark) > Number(form.maxMark)) return 'Min mark cannot exceed Max mark.';
+    if (form.letterGrade.trim() === '') return 'Letter grade is required.';
+    if (form.fixedGrade === '') return 'Fixed grade number is required.';
     return '';
   };
 
@@ -121,25 +123,27 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
     setSaving(true);
     try {
       const payload = {
-        minMark:    Number(form.minMark),
-        maxMark:    Number(form.maxMark),
+        minMark: Number(form.minMark),
+        maxMark: Number(form.maxMark),
         fixedGrade: Number(form.fixedGrade),
         letterGrade: form.letterGrade.trim().toUpperCase(),
-        status:     form.status,
-        classDesc:  form.classDesc,
-        updatedAt:  serverTimestamp(),
+        status: form.status,
+        classDesc: form.classDesc,
+        updatedAt: serverTimestamp(),
       };
       if (editing) {
         await updateDoc(doc(db, 'grading_system', editing.id), payload);
         logAuditActivity?.('Grading Scale Updated', `Updated grade band: ${payload.letterGrade}`);
+        showSnackbar?.(`Grade band ${payload.letterGrade} updated`, 'success');
       } else {
         await addDoc(collection(db, 'grading_system'), { ...payload, createdAt: serverTimestamp() });
         logAuditActivity?.('Grading Scale Created', `Added grade band: ${payload.letterGrade}`);
+        showSnackbar?.(`Grade band ${payload.letterGrade} created`, 'success');
       }
       setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+      showSnackbar?.(`Failed to save: ${err.message || 'Unknown error'}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -149,8 +153,10 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
     try {
       await deleteDoc(doc(db, 'grading_system', id));
       logAuditActivity?.('Grading Scale Deleted', `Removed grade band ID: ${id}`);
+      showSnackbar?.('Grade band removed successfully', 'info');
     } catch (err) {
       console.error(err);
+      showSnackbar?.('Failed to remove grade band', 'error');
     } finally {
       setDeleteId(null);
     }
@@ -242,7 +248,7 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
                       >
                         {/* Range */}
                         <ShadcnTableCell className="py-4">
-                          <div 
+                          <div
                             className="inline-flex items-center gap-1 px-3 py-1 rounded-xl border"
                             style={{ backgroundColor: alpha(color, 0.1), borderColor: alpha(color, 0.25), color }}
                           >
@@ -261,8 +267,8 @@ const GradingSystemTab = ({ isDark, glassStyle }) => {
 
                         {/* Letter Grade */}
                         <ShadcnTableCell>
-                          <ShadcnBadge 
-                            variant="outline" 
+                          <ShadcnBadge
+                            variant="outline"
                             className="font-black text-sm px-2.5 py-0.5"
                             style={{ backgroundColor: alpha(color, 0.15), borderColor: alpha(color, 0.3), color }}
                           >

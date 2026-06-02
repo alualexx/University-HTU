@@ -322,7 +322,6 @@ const RegistrarDashboard = () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setGlobalMaintenance(data.maintenanceMode ?? false);
-        setAdmissionWindow(data.globalAdmissionOpen ?? true);
       }
     }));
 
@@ -882,79 +881,79 @@ const RegistrarDashboard = () => {
     }
   };
 
-  const toggleRegLock = async () => {
-    setSettingsLoading(true);
-    try {
-      await setDoc(doc(db, "system_settings", "registrar"), { registrationLock: !regLock }, { merge: true });
-      await addDoc(collection(db, "audit_logs"), {
-        action: regLock ? "Registration Unlock" : "Registration Lock",
-        user: user?.email || "Registrar",
-        timestamp: serverTimestamp(),
-        ip: userIp || "unknown"
-      });
-      showSnackbar(`Registration ${regLock ? 'Unlocked' : 'Locked'} Successfully`, 'info');
-    } catch (err) {
-      console.error(err);
-      showSnackbar('Failed to update registration status', 'error');
-    }
-    finally { setSettingsLoading(false); }
-  };
-
+  // Open existing student course registration
   const handleOpenRegistration = async () => {
     setSettingsLoading(true);
     try {
-      await setDoc(doc(db, "system_settings", "registrar"), {
+      const docRef = doc(db, "system_settings", "registrar");
+      await setDoc(docRef, {
         registrationLock: false,
         targetYear: regDialogYear,
         targetSemester: regDialogSemester,
       }, { merge: true });
-      await addDoc(collection(db, "audit_logs"), {
-        action: `Registration Opened for Year ${regDialogYear} Semester ${regDialogSemester}`,
-        user: user?.email || "Registrar",
-        timestamp: serverTimestamp(),
-      });
+      setRegLock(false);
+      setTargetYear(regDialogYear);
+      setTargetSemester(regDialogSemester);
       setOpenRegDialog(false);
-      showSnackbar(`Registration Window Launched for Y${regDialogYear} S${regDialogSemester}`, 'success');
+      showSnackbar(`Existing Student Registration Opened (Y${regDialogYear} S${regDialogSemester})`, 'success');
+      try { await addDoc(collection(db, "audit_logs"), { action: `Existing Student Registration Opened Y${regDialogYear}S${regDialogSemester}`, user: user?.email || "Registrar", role: "registrar", timestamp: serverTimestamp() }); } catch (_) { }
     } catch (err) {
-      console.error(err);
-      showSnackbar('Failed to launch registration window', 'error');
+      console.error("Open Reg Error:", err);
+      showSnackbar(`Error: ${err.message}`, 'error');
+    } finally {
+      setSettingsLoading(false);
     }
-    finally { setSettingsLoading(false); }
   };
 
+  // Close existing student course registration
   const handleCloseRegistration = async () => {
     setSettingsLoading(true);
     try {
-      await setDoc(doc(db, "system_settings", "registrar"), { registrationLock: true }, { merge: true });
-      await addDoc(collection(db, "audit_logs"), {
-        action: `Registration Closed (was Year ${targetYear} Sem ${targetSemester})`,
-        user: user?.email || "Registrar",
-        timestamp: serverTimestamp(),
-      });
-      showSnackbar('Registration Window Terminated', 'info');
+      const docRef = doc(db, "system_settings", "registrar");
+      await setDoc(docRef, { registrationLock: true }, { merge: true });
+      setRegLock(true);
+      showSnackbar('Existing Student Registration Closed', 'info');
+      try { await addDoc(collection(db, "audit_logs"), { action: "Existing Student Registration Closed", user: user?.email || "Registrar", role: "registrar", timestamp: serverTimestamp() }); } catch (_) { }
     } catch (err) {
-      console.error(err);
-      showSnackbar('Failed to terminate window', 'error');
+      console.error("Close Reg Error:", err);
+      showSnackbar(`Error: ${err.message}`, 'error');
+    } finally {
+      setSettingsLoading(false);
     }
-    finally { setSettingsLoading(false); }
   };
 
-  const toggleAdmissionWindow = async () => {
+  // Open new student admission portal
+  const handleOpenAdmission = async () => {
     setSettingsLoading(true);
     try {
-      await setDoc(doc(db, "system_settings", "registrar"), { admissionWindow: !admissionWindow }, { merge: true });
-      await addDoc(collection(db, "audit_logs"), {
-        action: admissionWindow ? "Admission Window Closed" : "Admission Window Opened",
-        user: user?.email || "Registrar",
-        timestamp: serverTimestamp(),
-        ip: userIp || "unknown"
-      });
-      showSnackbar(`Applicant Portal ${admissionWindow ? 'Deactivated' : 'Activated'}`, admissionWindow ? 'info' : 'success');
+      const docRef = doc(db, "system_settings", "registrar");
+      await setDoc(docRef, { admissionWindow: true }, { merge: true });
+      setAdmissionWindow(true);
+      showSnackbar('New Student Admission Portal Opened', 'success');
+      try { await addDoc(collection(db, "audit_logs"), { action: "New Student Admission Portal Opened", user: user?.email || "Registrar", role: "registrar", timestamp: serverTimestamp() }); } catch (_) { }
     } catch (err) {
-      console.error(err);
-      showSnackbar('Portal update failed', 'error');
+      console.error("Open Admission Error:", err);
+      showSnackbar(`Error: ${err.message}`, 'error');
+    } finally {
+      setSettingsLoading(false);
     }
-    finally { setSettingsLoading(false); }
+  };
+
+  // Close new student admission portal
+  const handleCloseAdmission = async () => {
+    setSettingsLoading(true);
+    try {
+      const docRef = doc(db, "system_settings", "registrar");
+      await setDoc(docRef, { admissionWindow: false }, { merge: true });
+      setAdmissionWindow(false);
+      showSnackbar('New Student Admission Portal Closed', 'info');
+      try { await addDoc(collection(db, "audit_logs"), { action: "New Student Admission Portal Closed", user: user?.email || "Registrar", role: "registrar", timestamp: serverTimestamp() }); } catch (_) { }
+    } catch (err) {
+      console.error("Close Admission Error:", err);
+      showSnackbar(`Error: ${err.message}`, 'error');
+    } finally {
+      setSettingsLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -1671,7 +1670,7 @@ const RegistrarDashboard = () => {
             </Card>
           </Grid>
 
-          {/* Phase 18: Executive Matrix Vanguards */}
+          {/* Executive Matrix Vanguards */}
           <Grid item xs={12}>
             <Card sx={{
               ...glassStyle,
@@ -1736,124 +1735,8 @@ const RegistrarDashboard = () => {
             </Card>
           </Grid>
 
-          {/* Strategic Control Center */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{
-              ...glassStyle,
-              borderRadius: 6,
-              height: '100%',
-              background: isDark
-                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%)'
-                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)',
-              border: isDark ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid rgba(99, 102, 241, 0.1)'
-            }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 3, color: '#818cf8' }}>Registrar Control Center</Typography>
-
-                <Stack spacing={3}>
-                  <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{
-                          width: 32, height: 32, borderRadius: 1.5,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: !regLock ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
-                          color: !regLock ? '#10b981' : '#ef4444'
-                        }}>
-                          <CheckCircleOutline fontSize="small" />
-                        </Box>
-                        <Box>
-                          <Typography variant="body2" fontWeight={900}>Student Course Enrolment</Typography>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>{!regLock ? 'Registration Open' : 'Enrolment Locked'}</Typography>
-                        </Box>
-                      </Box>
-                      <Switch
-                        checked={!regLock}
-                        onChange={toggleRegLock}
-                        disabled={settingsLoading}
-                        color="success"
-                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#10b981' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#10b981' } }}
-                      />
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{
-                          width: 32, height: 32, borderRadius: 1.5,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: admissionWindow ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
-                          color: admissionWindow ? '#10b981' : '#ef4444'
-                        }}>
-                          <PersonAdd fontSize="small" />
-                        </Box>
-                        <Box>
-                          <Typography variant="body2" fontWeight={900}>New Applicant Portal</Typography>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>{admissionWindow ? 'Accepting Applications' : 'Portal Closed'}</Typography>
-                        </Box>
-                      </Box>
-                      <Switch
-                        checked={admissionWindow}
-                        onChange={toggleAdmissionWindow}
-                        disabled={settingsLoading}
-                        color="success"
-                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#10b981' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#10b981' } }}
-                      />
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ p: 2, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: `1px solid ${alpha('#6366f1', 0.2)}` }}>
-                    <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 1, display: 'block', mb: 1 }}>ACTIVE REGISTRATION WINDOW</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="h6" fontWeight={1000}>{regLock ? "CLOSED" : `OPEN: Y${targetYear} S${targetSemester}`}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                          {regLock ? "Students cannot register" : "Target cohorts currently enrolling"}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={regLock ? () => setOpenRegDialog(true) : handleCloseRegistration}
-                        disabled={settingsLoading}
-                        sx={{
-                          borderRadius: 2,
-                          fontWeight: 900,
-                          textTransform: 'none',
-                          bgcolor: regLock ? 'primary.main' : 'error.main',
-                          '&:hover': { bgcolor: regLock ? 'primary.dark' : 'error.dark' }
-                        }}
-                      >
-                        {regLock ? "Open Window" : "Close Window"}
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    disabled={globalMaintenance}
-                    startIcon={<Campaign />}
-                    onClick={() => setOpenNewsDialog(true)}
-                    sx={{
-                      borderRadius: 3,
-                      py: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 1000,
-                      background: globalMaintenance ? 'grey' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      boxShadow: globalMaintenance ? 'none' : '0 8px 16px rgba(99, 102, 241, 0.3)'
-                    }}
-                  >
-                    {globalMaintenance ? "Pulse Blocked by Maintenance" : "System Pulse Broadcast"}
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
           {/* Matrix Matrix (Keeping existing Bar Chart for density) */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={12}>
             <Card sx={{ ...glassStyle, borderRadius: 6 }}>
               <CardContent sx={{ p: 4 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -2525,6 +2408,153 @@ const RegistrarDashboard = () => {
 
         <Grid item xs={12} md={4}>
           <Stack spacing={4}>
+            {/* Registrar Strategic Control Center */}
+            <Card sx={{
+              ...glassStyle,
+              borderRadius: 6,
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)',
+              border: isDark ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid rgba(99, 102, 241, 0.1)'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 3, color: '#818cf8' }}>Registrar Control Center</Typography>
+
+                <Stack spacing={2.5}>
+
+                  {/* NEW STUDENTS SECTION */}
+                  <Box sx={{
+                    p: 2.5, borderRadius: 4,
+                    bgcolor: admissionWindow ? alpha('#10b981', 0.05) : alpha('#ef4444', 0.05),
+                    border: `1px solid ${admissionWindow ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2)}`
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Box sx={{
+                        width: 32, height: 32, borderRadius: 1.5,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: admissionWindow ? alpha('#10b981', 0.15) : alpha('#ef4444', 0.15),
+                        color: admissionWindow ? '#10b981' : '#ef4444'
+                      }}>
+                        <PersonAdd fontSize="small" />
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" fontWeight={900}>New Students</Typography>
+                        <Typography variant="caption" color={admissionWindow ? 'success.main' : 'error.main'} fontWeight={800}>
+                          {admissionWindow ? '● Admission Portal Open' : '● Admission Portal Closed'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        fullWidth size="small" variant="contained"
+                        startIcon={<CheckCircleOutline fontSize="small" />}
+                        onClick={handleOpenAdmission}
+                        disabled={settingsLoading || admissionWindow}
+                        sx={{
+                          borderRadius: 2.5, py: 1, textTransform: 'none', fontWeight: 900, fontSize: '0.78rem',
+                          background: admissionWindow ? alpha('#10b981', 0.15) : 'linear-gradient(135deg, #10b981, #059669)',
+                          color: admissionWindow ? '#10b981' : 'white',
+                          boxShadow: admissionWindow ? 'none' : '0 4px 12px rgba(16,185,129,0.3)',
+                          border: admissionWindow ? `1px solid ${alpha('#10b981', 0.3)}` : 'none',
+                        }}
+                      >
+                        Open Admission
+                      </Button>
+                      <Button
+                        fullWidth size="small" variant="contained"
+                        startIcon={<Lock fontSize="small" />}
+                        onClick={handleCloseAdmission}
+                        disabled={settingsLoading || !admissionWindow}
+                        sx={{
+                          borderRadius: 2.5, py: 1, textTransform: 'none', fontWeight: 900, fontSize: '0.78rem',
+                          background: !admissionWindow ? alpha('#ef4444', 0.12) : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                          color: !admissionWindow ? '#ef4444' : 'white',
+                          boxShadow: !admissionWindow ? 'none' : '0 4px 12px rgba(239,68,68,0.3)',
+                          border: !admissionWindow ? `1px solid ${alpha('#ef4444', 0.3)}` : 'none',
+                        }}
+                      >
+                        Close Admission
+                      </Button>
+                    </Stack>
+                  </Box>
+
+                  {/* EXISTING STUDENTS SECTION */}
+                  <Box sx={{
+                    p: 2.5, borderRadius: 4,
+                    bgcolor: !regLock ? alpha('#6366f1', 0.05) : alpha('#f59e0b', 0.05),
+                    border: `1px solid ${!regLock ? alpha('#6366f1', 0.2) : alpha('#f59e0b', 0.2)}`
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Box sx={{
+                        width: 32, height: 32, borderRadius: 1.5,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: !regLock ? alpha('#6366f1', 0.15) : alpha('#f59e0b', 0.15),
+                        color: !regLock ? '#6366f1' : '#f59e0b'
+                      }}>
+                        <CheckCircleOutline fontSize="small" />
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" fontWeight={900}>Existing Students</Typography>
+                        <Typography variant="caption" color={!regLock ? 'primary.main' : 'warning.main'} fontWeight={800}>
+                          {!regLock ? `● Registration Open — Y${targetYear} S${targetSemester}` : '● Course Registration Locked'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        fullWidth size="small" variant="contained"
+                        startIcon={<CheckCircleOutline fontSize="small" />}
+                        onClick={() => setOpenRegDialog(true)}
+                        disabled={settingsLoading || !regLock}
+                        sx={{
+                          borderRadius: 2.5, py: 1, textTransform: 'none', fontWeight: 900, fontSize: '0.78rem',
+                          background: !regLock ? alpha('#6366f1', 0.15) : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                          color: !regLock ? '#6366f1' : 'white',
+                          boxShadow: !regLock ? 'none' : '0 4px 12px rgba(99,102,241,0.3)',
+                          border: !regLock ? `1px solid ${alpha('#6366f1', 0.3)}` : 'none',
+                        }}
+                      >
+                        Open Registration
+                      </Button>
+                      <Button
+                        fullWidth size="small" variant="contained"
+                        startIcon={<Lock fontSize="small" />}
+                        onClick={handleCloseRegistration}
+                        disabled={settingsLoading || regLock}
+                        sx={{
+                          borderRadius: 2.5, py: 1, textTransform: 'none', fontWeight: 900, fontSize: '0.78rem',
+                          background: regLock ? alpha('#f59e0b', 0.12) : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: regLock ? '#f59e0b' : 'white',
+                          boxShadow: regLock ? 'none' : '0 4px 12px rgba(245,158,11,0.3)',
+                          border: regLock ? `1px solid ${alpha('#f59e0b', 0.3)}` : 'none',
+                        }}
+                      >
+                        Close Registration
+                      </Button>
+                    </Stack>
+                  </Box>
+
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    disabled={globalMaintenance}
+                    startIcon={<Campaign />}
+                    onClick={() => setOpenNewsDialog(true)}
+                    sx={{
+                      borderRadius: 3,
+                      py: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 1000,
+                      background: globalMaintenance ? 'grey' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: globalMaintenance ? 'none' : '0 8px 16px rgba(99, 102, 241, 0.3)'
+                    }}
+                  >
+                    {globalMaintenance ? "Pulse Blocked by Maintenance" : "System Pulse Broadcast"}
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+
             <Card sx={{
               ...glassStyle,
               borderRadius: 6,
@@ -3636,8 +3666,8 @@ const RegistrarDashboard = () => {
             {activeTab === 11 && renderNewsManagementTab()}
             {activeTab === 12 && renderFinanceRegistrationsTab()}
             {activeTab === 13 && renderCurriculumApprovalTab()}
-            {activeTab === 14 && <TranscriptsTab isDark={isDark} glassStyle={glassStyle} />}
-            {activeTab === 15 && <GradingSystemTab isDark={isDark} glassStyle={glassStyle} />}
+            {activeTab === 14 && <TranscriptsTab isDark={isDark} glassStyle={glassStyle} showSnackbar={showSnackbar} />}
+            {activeTab === 15 && <GradingSystemTab isDark={isDark} glassStyle={glassStyle} showSnackbar={showSnackbar} />}
           </Box>
         </Container>
       </Box>

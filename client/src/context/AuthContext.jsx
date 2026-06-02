@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { db } from "../services/Firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 const AuthContext = createContext(null);
 
@@ -45,6 +47,38 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // New global system settings
+  const [globalAdmissionOpen, setGlobalAdmissionOpen] = useState(true);
+  const [registrationLock, setRegistrationLock] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // ------------------------------------------------------------------
+  // System Settings Listener
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    // Listen to registrar settings for admission and registration lock
+    const unsubRegistrar = onSnapshot(doc(db, "system_settings", "registrar"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setGlobalAdmissionOpen(data.admissionWindow ?? true);
+        setRegistrationLock(data.registrationLock ?? false);
+      }
+    });
+
+    // Listen to global config for maintenance mode
+    const unsubConfig = onSnapshot(doc(db, "system_config", "settings"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setMaintenanceMode(data.maintenanceMode ?? false);
+      }
+    });
+
+    return () => {
+      unsubRegistrar();
+      unsubConfig();
+    };
+  }, []);
 
   // ------------------------------------------------------------------
   // Restore session from localStorage token on app load
@@ -178,8 +212,8 @@ const AuthProvider = ({ children }) => {
   };
 
   // Stub audit/security loggers — can wire to a backend route if needed
-  const logSecurityEvent = useCallback(async (_classification, _details, _color) => {}, []);
-  const logAuditActivity = useCallback(async (_action, _details) => {}, []);
+  const logSecurityEvent = useCallback(async (_classification, _details, _color) => { }, []);
+  const logAuditActivity = useCallback(async (_action, _details) => { }, []);
 
   // OTP verification — checks MongoDB via /api/otps
   const verifyOTP = useCallback(async (code, type) => {
@@ -209,9 +243,6 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const isAuthenticated = !!user;
-  // maintenanceMode defaults to false; wire to a backend /api/settings route if needed
-  const maintenanceMode = false;
-  const globalAdmissionOpen = true;
 
   const value = {
     user,
@@ -228,6 +259,7 @@ const AuthProvider = ({ children }) => {
     sendPasswordReset: requestPasswordReset,
     maintenanceMode,
     globalAdmissionOpen,
+    registrationLock,
     userIp: null,
     logSecurityEvent,
     logAuditActivity,
