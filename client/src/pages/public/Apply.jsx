@@ -101,7 +101,7 @@ const DepartmentCard = ({ dept, onApply, globalAdmissionOpen }) => {
                 <Button
                     fullWidth
                     variant="contained"
-                    onClick={() => onApply(dept.id)}
+                    onClick={() => onApply(dept.slug || dept._id || dept.id)}
                     disabled={!isAdmissionEnabled}
                     endIcon={<ArrowForward />}
                     sx={{
