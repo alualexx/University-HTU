@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { departmentsAPI, announcementsAPI } from "../../services/api";
+import { Box, Container, Typography, Grid, Card, CardContent, Chip, Stack, Divider, Button, Alert, CircularProgress, alpha } from "@mui/material";
+import { School, CheckCircle, ArrowForward, CampaignOutlined, People, LaptopMac, Science, Assessment, DesignServices, Gavel, Build } from "@mui/icons-material";
+
+const getDeptStyles = (name) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("computer") || n.includes("software") || n.includes("it")) return { color: "#3b82f6", gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: <LaptopMac fontSize="large" /> };
+    if (n.includes("engineering")) return { color: "#f59e0b", gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: <Build fontSize="large" /> };
+    if (n.includes("science")) return { color: "#10b981", gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: <Science fontSize="large" /> };
+    if (n.includes("business") || n.includes("management") || n.includes("finance")) return { color: "#8b5cf6", gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: <Assessment fontSize="large" /> };
+    if (n.includes("art") || n.includes("design") || n.includes("architecture")) return { color: "#ec4899", gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)", icon: <DesignServices fontSize="large" /> };
+    if (n.includes("law")) return { color: "#64748b", gradient: "linear-gradient(135deg, #64748b 0%, #475569 100%)", icon: <Gavel fontSize="large" /> };
+    return { color: "#6366f1", gradient: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)", icon: <School fontSize="large" /> };
+};
 
 const DepartmentCard = ({ dept, onApply, globalAdmissionOpen }) => {
     const [hovered, setHovered] = useState(false);
