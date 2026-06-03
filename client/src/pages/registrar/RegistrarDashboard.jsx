@@ -18,7 +18,7 @@ import {
   AssignmentInd, ExpandMore, ExpandLess, Close, Print,
   Edit, Delete, Add, Schedule, Class, CreditCard, Newspaper, Campaign, AccountBalance, Forum, AccessTime, Person,
   Menu as MenuIcon, ChevronLeft, ChevronRight, MenuBook, Circle, FormatQuote, LockReset, Password, Security, Lock,
-  History, FactCheck, Verified, Save, RemoveCircle, AddCircle, Grade
+  History, FactCheck, Verified, Save, RemoveCircle, AddCircle, Grade, Description, OpenInNew
 }
   from "@mui/icons-material";
 import {
@@ -2330,53 +2330,101 @@ const RegistrarDashboard = () => {
 
                         <Collapse in={isExpanded}>
                           <Box sx={{ p: 4, pt: 0 }}>
-                            <Divider sx={{ mb: 3, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                            <Grid container spacing={2} sx={{ mb: 4 }}>
-                              {[
-                                { label: "Performance Metric", value: app.highSchoolGrades || '85.5%', icon: <TrendingUp /> },
-                                { label: "Origin Institution", value: app.highSchoolName || 'Global Academy', icon: <School /> },
-                                { label: "Protocol Ref ID", value: app.referenceId || "N/A", icon: <Badge /> },
-                                { label: "Access Level", value: app.level || "Undergraduate Year 1", icon: <Verified /> },
-                              ].map((item, idx) => (
-                                <Grid item xs={12} sm={6} md={3} key={idx}>
-                                  <Box sx={{
-                                    p: 2.5, borderRadius: 4,
-                                    bgcolor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
-                                    border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
-                                    transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' }
-                                  }}>
-                                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1, opacity: 0.7 }}>
-                                      {React.cloneElement(item.icon, { sx: { fontSize: 18, color: 'text.secondary' } })}
-                                      <Typography variant="caption" color="text.secondary" fontWeight={900}>{item.label.toUpperCase()}</Typography>
-                                    </Stack>
-                                    <Typography variant="subtitle2" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary' }}>{item.value}</Typography>
-                                  </Box>
+                            <Divider sx={{ mb: 4, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+
+                            <Grid container spacing={4}>
+                              {/* Left: Metadata and Bios */}
+                              <Grid item xs={12} md={8}>
+                                <Typography variant="caption" fontWeight={1000} color="primary.main" sx={{ letterSpacing: 2, display: 'block', mb: 3 }}>ACADEMIC PROFILE & BIO</Typography>
+                                <Grid container spacing={2}>
+                                  {[
+                                    { label: "Performance Metric", value: app.highSchoolGrades || '85.5%', icon: <TrendingUp /> },
+                                    { label: "Origin Institution", value: app.highSchoolName || 'Global Academy', icon: <School /> },
+                                    { label: "Protocol Ref ID", value: app.referenceId || "N/A", icon: <Badge /> },
+                                    { label: "Phone & Contact", value: app.phone || "No Contact", icon: <Phone /> },
+                                    { label: "Access Level", value: app.level || "Undergraduate Year 1", icon: <Verified /> },
+                                    { label: "Date of Birth", value: app.dob ? new Date(app.dob).toLocaleDateString() : "Unknown", icon: <CalendarToday /> },
+                                  ].map((item, idx) => (
+                                    <Grid item xs={12} sm={6} key={idx}>
+                                      <Box sx={{
+                                        p: 2.5, borderRadius: 4,
+                                        bgcolor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                                        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+                                        transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)', borderColor: 'primary.main' }
+                                      }}>
+                                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1, opacity: 0.7 }}>
+                                          {React.cloneElement(item.icon, { sx: { fontSize: 18, color: 'primary.main' } })}
+                                          <Typography variant="caption" color="text.secondary" fontWeight={900}>{item.label.toUpperCase()}</Typography>
+                                        </Stack>
+                                        <Typography variant="subtitle1" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary', fontFamily: 'Outfit, sans-serif' }}>{item.value}</Typography>
+                                      </Box>
+                                    </Grid>
+                                  ))}
                                 </Grid>
-                              ))}
-                              {app.personalStatement && (
-                                <Grid item xs={12}>
+
+                                {app.personalStatement && (
                                   <Box sx={{
-                                    p: 3, borderRadius: 4, mt: 2,
-                                    bgcolor: alpha('#6366f1', 0.05),
+                                    p: 3, borderRadius: 4, mt: 4,
+                                    bgcolor: alpha('#6366f1', 0.03),
                                     border: `1px solid ${alpha('#6366f1', 0.1)}`,
                                     position: 'relative'
                                   }}>
-                                    <Typography variant="caption" color="primary.main" fontWeight={900} display="block" sx={{ letterSpacing: 1.5, mb: 1.5 }}>STATEMENT OF INTENT</Typography>
-                                    <Typography variant="body2" sx={{ lineHeight: 1.8, color: isDark ? 'rgba(255,255,255,0.8)' : 'text.primary', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>
+                                    <Typography variant="caption" color="primary.main" fontWeight={900} display="block" sx={{ letterSpacing: 1.5, mb: 2 }}>PERSONAL STATEMENT</Typography>
+                                    <Typography variant="body2" sx={{ lineHeight: 1.8, color: isDark ? 'rgba(255,255,255,0.8)' : 'text.primary', fontStyle: 'italic' }}>
                                       "{app.personalStatement}"
                                     </Typography>
                                     <FormatQuote sx={{ position: 'absolute', top: 15, right: 15, opacity: 0.1, fontSize: 50, color: 'primary.main' }} />
                                   </Box>
-                                </Grid>
-                              )}
-                            </Grid>
+                                )}
+                              </Grid>
 
-                            <Box sx={{ p: 3, borderRadius: 4, background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)', border: '1px dashed rgba(16, 185, 129, 0.3)', mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Info sx={{ color: '#10b981', fontSize: 24 }} />
-                              <Typography variant="caption" color="text.primary" fontWeight={800} sx={{ lineHeight: 1.6 }}>
-                                AUTHORIZATION PROTOCOL ALIGNED. CONFIRMING WILL GENERATE PERMANENT ACADEMIC CREDENTIAL <span style={{ color: '#10b981', fontWeight: 1000 }}>(ALX-XXXX/{new Date().getFullYear()})</span> AND INITIATE REGISTRY DEPLOYMENT.
-                              </Typography>
-                            </Box>
+                              {/* Right: Verification Dossier (Documents) */}
+                              <Grid item xs={12} md={4}>
+                                <Typography variant="caption" fontWeight={1000} color="error.main" sx={{ letterSpacing: 2, display: 'block', mb: 3 }}>VERIFICATION DOSSIER</Typography>
+                                <Stack spacing={2}>
+                                  {!app.documents || Object.keys(app.documents).length === 0 ? (
+                                    <Box sx={{ p: 4, borderRadius: 4, border: '1px dashed grey', textAlign: 'center', opacity: 0.5 }}>
+                                      <Typography variant="caption" fontWeight={800} color="text.secondary">NO ATTACHMENTS FOUND</Typography>
+                                    </Box>
+                                  ) : (
+                                    Object.entries(app.documents).map(([key, url]) => (
+                                      <Button
+                                        key={key}
+                                        fullWidth
+                                        variant="outlined"
+                                        component="a"
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        startIcon={<Description />}
+                                        endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+                                        sx={{
+                                          borderRadius: 3, textTransform: 'none', py: 2, fontWeight: 800,
+                                          bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                                          borderColor: 'divider', color: 'text.primary',
+                                          '&:hover': { borderColor: 'primary.main', bgcolor: alpha('#6366f1', 0.05) }
+                                        }}
+                                      >
+                                        <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
+                                          <Typography variant="caption" display="block" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>STUDENT RECORD</Typography>
+                                          {key === 'idDocument' ? 'Identity / Passport' :
+                                            key === 'transcript' ? 'Academic Transcripts' :
+                                              key === 'photo' ? 'Biometric Photo' :
+                                                key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                        </Box>
+                                      </Button>
+                                    ))
+                                  )}
+                                </Stack>
+
+                                <Box sx={{ p: 3, borderRadius: 4, mt: 4, background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)', border: '1px dashed rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Verified sx={{ color: '#10b981', fontSize: 24 }} />
+                                  <Typography variant="caption" color="text.primary" fontWeight={800} sx={{ lineHeight: 1.6 }}>
+                                    PORTAL READINESS: <span style={{ color: '#10b981', fontWeight: 1000 }}>SECURED</span>. CONFIRMING WILL INITIATE CREDENTIAL GENERATION.
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            </Grid>
 
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
                               <Button

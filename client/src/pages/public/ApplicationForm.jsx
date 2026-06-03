@@ -155,8 +155,13 @@ const ApplicationForm = () => {
         highSchoolName: "", graduationYear: "", gpa: "", gradeSystem: "",
         previousQualification: "", extraCurricular: "",
         personalStatement: "", whyThisDepartment: "",
-        idDocumentName: "", transcriptName: "", photoName: "",
+        idDocument: null, idDocumentName: "",
+        transcript: null, transcriptName: "",
+        photo: null, photoName: "",
+        recommendationLetter: null, recommendationLetterName: "",
     });
+
+    const [uploading, setUploading] = useState(false);
 
     if (deptLoading) return <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}><CircularProgress size={40} /></Box>;
     if (deptError || !deptData) return (
@@ -177,7 +182,9 @@ const ApplicationForm = () => {
     };
     const handleFileChange = (field) => (e) => {
         const file = e.target.files[0];
-        if (file) setForm({ ...form, [field]: file.name });
+        if (file) {
+            setForm({ ...form, [field]: file, [`${field}Name`]: file.name });
+        }
     };
     const validate = () => {
         const e = {};
@@ -205,17 +212,46 @@ const ApplicationForm = () => {
 
     const handleSubmit = async () => {
         setSubmitting(true);
+        setUploading(true);
         try {
             const part1 = Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
             const part2 = Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
             const refId = `${part1}\u2014${part2}`;
+
+            // 1. Upload Documents to Firebase Storage
+            const docUrls = {};
+            const uploadPromises = [];
+            const filesToUpload = [
+                { key: 'idDocument', file: form.idDocument },
+                { key: 'transcript', file: form.transcript },
+                { key: 'photo', file: form.photo },
+                { key: 'recommendationLetter', file: form.recommendationLetter }
+            ];
+
+            const { ref: storageRef, uploadBytes, getDownloadURL } = await import("firebase/storage");
+            const { storage } = await import("../../services/Firebase");
+
+            for (const item of filesToUpload) {
+                if (item.file) {
+                    const fileRef = storageRef(storage, `applications/${refId}/${item.key}_${item.file.name}`);
+                    const uploadTask = uploadBytes(fileRef, item.file).then(async (snapshot) => {
+                        const url = await getDownloadURL(snapshot.ref);
+                        docUrls[item.key] = url;
+                    });
+                    uploadPromises.push(uploadTask);
+                }
+            }
+
+            await Promise.all(uploadPromises);
+            setUploading(false);
+
             const data = {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 name: `${form.firstName} ${form.lastName}`,
                 phone: form.phone,
-                email: form.email || `pending_${refId.toLowerCase()}@htu.edu`, // Fallback for Mongoose required field
-                dob: form.dateOfBirth, // Match Mongoose field name
+                email: form.email || `pending_${refId.toLowerCase()}@htu.edu`,
+                dob: form.dateOfBirth,
                 dateOfBirth: form.dateOfBirth,
                 gender: form.gender,
                 nationality: form.nationality,
@@ -228,7 +264,7 @@ const ApplicationForm = () => {
                 extraCurricular: form.extraCurricular,
                 personalStatement: form.personalStatement,
                 whyThisDepartment: form.whyThisDepartment,
-                documents: { idDocument: form.idDocumentName, transcript: form.transcriptName, photo: form.photoName },
+                documents: docUrls, // Store REAL URLs
                 intendedMajor: dept.name,
                 departmentId,
                 departmentCode: dept.code,
@@ -236,17 +272,20 @@ const ApplicationForm = () => {
                 status: "pending_dept_review",
             };
 
-            // 1. Submit to MongoDB API
+            // 2. Submit to MongoDB API
             await applicationsAPI.submit(data);
 
-            // 2. Backup to Firestore
+            // 3. Backup to Firestore
             const ref = await addDoc(collection(db, "applications"), { ...data, submittedAt: serverTimestamp() });
             setApplicationId(ref.id);
             setSubmitted(true);
         } catch (err) {
             console.error("Submission Error Details:", err.response?.data || err.message);
             setErrors({ submit: `Submission Failed: ${err.response?.data?.message || err.message}` });
-        } finally { setSubmitting(false); }
+        } finally {
+            setSubmitting(false);
+            setUploading(false);
+        }
     };
 
     if (submitted) return <SuccessScreen applicationId={applicationId} applicantName={`${form.firstName} ${form.lastName}`} department={dept.name} />;
@@ -404,7 +443,7 @@ const ApplicationForm = () => {
                                                         transition: "all 0.25s ease",
                                                         "&:hover": { borderColor: dept.color, bgcolor: alpha(dept.color, 0.05) }
                                                     }}>
-                                                        <input type="file" hidden accept={doc.accept} onChange={handleFileChange(doc.field)} />
+                                                        <input type="file" hidden accept={doc.accept} onChange={handleFileChange(doc.field.replace('Name', ''))} />
                                                         <Box sx={{ width: 40, height: 40, borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", bgcolor: form[doc.field] ? alpha("#10b981", 0.1) : alpha(dept.color, 0.08), flexShrink: 0 }}>
                                                             {form[doc.field] ? <CheckCircle sx={{ color: "success.main", fontSize: 22 }} /> : <CloudUpload sx={{ color: dept.color, fontSize: 22 }} />}
                                                         </Box>
