@@ -12,7 +12,8 @@ import {
     LockOutlined, InfoOutlined,
 } from "@mui/icons-material";
 import { collection, serverTimestamp, addDoc } from "firebase/firestore";
-import { db } from "../../services/Firebase";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "../../services/Firebase";
 import { applicationsAPI, departmentsAPI } from "../../services/api";
 
 /* ── Department meta helper ────────────────────────────── */
@@ -26,6 +27,7 @@ const getDeptMeta = (dept) => {
     if (n.includes("art") || n.includes("design") || n.includes("architecture")) return { color: "#ec4899", gradient: "linear-gradient(135deg,#ec4899,#db2777)", code: dept.code || "ART" };
     if (n.includes("law")) return { color: "#64748b", gradient: "linear-gradient(135deg,#64748b,#475569)", code: dept.code || "LAW" };
     if (n.includes("medicine") || n.includes("medical")) return { color: "#e53935", gradient: "linear-gradient(135deg,#e53935,#ef9a9a)", code: dept.code || "MED" };
+    if (n.includes("theology") || n.includes("divinity") || n.includes("religion")) return { color: "#7c4dff", gradient: "linear-gradient(135deg,#7c4dff,#651fff)", code: dept.code || "THEO" };
     return { color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", code: dept.code || "DEPT" };
 };
 
@@ -213,11 +215,11 @@ const ApplicationForm = () => {
     const handleSubmit = async () => {
         setSubmitting(true);
         setUploading(true);
-        try {
-            const part1 = Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
-            const part2 = Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
-            const refId = `${part1}\u2014${part2}`;
+        const part1 = Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
+        const part2 = Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+        const refId = `${part1}\u2014${part2}`;
 
+        try {
             // 1. Upload Documents to Firebase Storage
             const docUrls = {};
             const uploadPromises = [];
@@ -228,21 +230,27 @@ const ApplicationForm = () => {
                 { key: 'recommendationLetter', file: form.recommendationLetter }
             ];
 
-            const { ref: storageRef, uploadBytes, getDownloadURL } = await import("firebase/storage");
-            const { storage } = await import("../../services/Firebase");
-
-            for (const item of filesToUpload) {
-                if (item.file) {
-                    const fileRef = storageRef(storage, `applications/${refId}/${item.key}_${item.file.name}`);
-                    const uploadTask = uploadBytes(fileRef, item.file).then(async (snapshot) => {
-                        const url = await getDownloadURL(snapshot.ref);
-                        docUrls[item.key] = url;
-                    });
-                    uploadPromises.push(uploadTask);
+            if (storage) {
+                for (const item of filesToUpload) {
+                    if (item.file) {
+                        const fileRef = storageRef(storage, `applications/${refId}/${item.key}_${item.file.name}`);
+                        const uploadTask = Promise.race([
+                            uploadBytes(fileRef, item.file).then(async (snapshot) => {
+                                const url = await getDownloadURL(snapshot.ref);
+                                docUrls[item.key] = url;
+                            }),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error(`Upload too long: ${item.key}`)), 20000))
+                        ]);
+                        uploadPromises.push(uploadTask);
+                    }
                 }
             }
 
-            await Promise.all(uploadPromises);
+            try {
+                await Promise.all(uploadPromises);
+            } catch (uErr) {
+                console.error("Upload process error:", uErr);
+            }
             setUploading(false);
 
             const data = {
@@ -264,7 +272,7 @@ const ApplicationForm = () => {
                 extraCurricular: form.extraCurricular,
                 personalStatement: form.personalStatement,
                 whyThisDepartment: form.whyThisDepartment,
-                documents: docUrls, // Store REAL URLs
+                documents: docUrls,
                 intendedMajor: dept.name,
                 departmentId,
                 departmentCode: dept.code,
@@ -280,7 +288,7 @@ const ApplicationForm = () => {
             setApplicationId(ref.id);
             setSubmitted(true);
         } catch (err) {
-            console.error("Submission Error Details:", err.response?.data || err.message);
+            console.error("Submission Error:", err.response?.data || err.message);
             setErrors({ submit: `Submission Failed: ${err.response?.data?.message || err.message}` });
         } finally {
             setSubmitting(false);
