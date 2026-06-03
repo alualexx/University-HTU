@@ -210,24 +210,42 @@ const ApplicationForm = () => {
             const part2 = Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
             const refId = `${part1}\u2014${part2}`;
             const data = {
-                firstName: form.firstName, lastName: form.lastName, phone: form.phone,
-                dateOfBirth: form.dateOfBirth, gender: form.gender, nationality: form.nationality,
-                address: form.address, highSchoolName: form.highSchoolName,
-                graduationYear: form.graduationYear, highSchoolGrades: form.gpa,
-                gradeSystem: form.gradeSystem, previousQualification: form.previousQualification,
-                extraCurricular: form.extraCurricular, personalStatement: form.personalStatement,
+                firstName: form.firstName,
+                lastName: form.lastName,
+                name: `${form.firstName} ${form.lastName}`,
+                phone: form.phone,
+                email: form.email || `pending_${refId.toLowerCase()}@htu.edu`, // Fallback for Mongoose required field
+                dob: form.dateOfBirth, // Match Mongoose field name
+                dateOfBirth: form.dateOfBirth,
+                gender: form.gender,
+                nationality: form.nationality,
+                address: form.address,
+                highSchoolName: form.highSchoolName,
+                graduationYear: form.graduationYear,
+                highSchoolGrades: form.gpa,
+                gradeSystem: form.gradeSystem,
+                previousQualification: form.previousQualification,
+                extraCurricular: form.extraCurricular,
+                personalStatement: form.personalStatement,
                 whyThisDepartment: form.whyThisDepartment,
                 documents: { idDocument: form.idDocumentName, transcript: form.transcriptName, photo: form.photoName },
-                intendedMajor: dept.name, departmentId, departmentCode: dept.code,
-                referenceId: refId, status: "pending_dept_review",
+                intendedMajor: dept.name,
+                departmentId,
+                departmentCode: dept.code,
+                referenceId: refId,
+                status: "pending_dept_review",
             };
-            try { await applicationsAPI.submit(data); } catch { /* continue */ }
+
+            // 1. Submit to MongoDB API
+            await applicationsAPI.submit(data);
+
+            // 2. Backup to Firestore
             const ref = await addDoc(collection(db, "applications"), { ...data, submittedAt: serverTimestamp() });
             setApplicationId(ref.id);
             setSubmitted(true);
         } catch (err) {
-            console.error(err);
-            setErrors({ submit: "Submission failed. Please try again." });
+            console.error("Submission Error Details:", err.response?.data || err.message);
+            setErrors({ submit: `Submission Failed: ${err.response?.data?.message || err.message}` });
         } finally { setSubmitting(false); }
     };
 

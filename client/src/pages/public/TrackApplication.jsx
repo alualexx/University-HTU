@@ -42,8 +42,10 @@ const TrackApplication = () => {
   const [applicationData, setApplicationData] = useState(null);
 
   const normalizeReferenceId = (input) => {
+    // Standardize all dashes/hyphens/spaces to empty string for lookup
     const clean = input.replace(/[\u2014\-\s]/g, '').toUpperCase();
-    if (clean.length >= 10) {
+    if (clean.length === 10) {
+      // Re-insert em-dash for the standard lookup format
       return clean.slice(0, 4) + '\u2014' + clean.slice(4, 10);
     }
     return clean;
@@ -153,8 +155,10 @@ const TrackApplication = () => {
                 <Box component="form" onSubmit={handleSearch}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                     <TextField
-                      fullWidth variant="outlined" placeholder="e.g. G9K4—NQ5AHG"
+                      fullWidth variant="outlined" placeholder="e.g. ABCD—123456"
                       value={applicationId} onChange={(e) => setApplicationId(e.target.value)}
+                      helperText="You can use a hyphen (-) or an em-dash (—)"
+                      FormHelperTextProps={{ sx: { color: 'rgba(255,255,255,0.4)', fontWeight: 600 } }}
                       sx={{
                         "& .MuiOutlinedInput-root": {
                           borderRadius: 3, bgcolor: 'rgba(0,0,0,0.2)', color: 'white', fontWeight: 600,
