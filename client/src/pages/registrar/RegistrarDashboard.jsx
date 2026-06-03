@@ -201,13 +201,16 @@ const RegistrarDashboard = () => {
   const fetchApplications = async () => {
     try {
       const res = await applicationsAPI.getAll();
+      // Only show applications that need Registrar action (approved by dept)
+      // or are still in early stages if the registrar needs to see them.
+      // Once "final_approved" or "rejected_by_registrar", they should clear from this active queue.
       setApplications(res.data.filter(app =>
         app.status === "approved_by_dept" ||
-        app.status === "pending_dept_review" ||
-        app.status === "rejected_by_registrar" ||
-        app.status === "final_approved"
+        app.status === "pending_dept_review"
       ));
-      setPendingIds(res.data.filter(app => app.status === "setup_completed"));
+      // Applications that are "final_approved" but haven't had an ID issued yet (setup_completed)
+      // move to the ID issuance pending list.
+      setPendingIds(res.data.filter(app => app.status === "final_approved" || app.status === "setup_completed"));
     } catch (err) {
       console.warn("applications fetch failed:", err);
     }
@@ -486,7 +489,7 @@ const RegistrarDashboard = () => {
       setSelectedStudentForPrint(null);
       // Refresh pending IDs list
       const res = await applicationsAPI.getAll();
-      setPendingIds(res.data.filter(app => app.status === "setup_completed"));
+      setPendingIds(res.data.filter(app => app.status === "final_approved" || app.status === "setup_completed"));
     } catch (err) {
       console.error("Error issuing ID Card:", err);
     }
