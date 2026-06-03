@@ -2335,7 +2335,7 @@ const RegistrarDashboard = () => {
                               {[
                                 { label: "Performance Metric", value: app.highSchoolGrades || '85.5%', icon: <TrendingUp /> },
                                 { label: "Origin Institution", value: app.highSchoolName || 'Global Academy', icon: <School /> },
-                                { label: "Application ID", value: `APP-${app.id?.slice(-6)?.toUpperCase() || "XXXXXX"}`, icon: <Badge /> },
+                                { label: "Protocol Ref ID", value: app.referenceId || "N/A", icon: <Badge /> },
                                 { label: "Access Level", value: app.level || "Undergraduate Year 1", icon: <Verified /> },
                               ].map((item, idx) => (
                                 <Grid item xs={12} sm={6} md={3} key={idx}>
