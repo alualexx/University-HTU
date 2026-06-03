@@ -10,10 +10,11 @@ const { protect } = require("../middleware/auth");
 // @access  Public
 router.post("/submit", async (req, res) => {
   try {
-    const { firstName, lastName, ...rest } = req.body;
+    const { firstName, lastName, dateOfBirth, ...rest } = req.body;
     const applicationData = {
       ...rest,
       name: `${firstName} ${lastName}`,
+      dob: dateOfBirth || rest.dob, // Support both formats
     };
     const application = await Application.create(applicationData);
     res.status(201).json({

@@ -9,9 +9,9 @@ const applicationSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
       lowercase: true,
       trim: true,
+      // No longer required at submission time as it's provided later by admin
     },
     phone: {
       type: String,

@@ -1,76 +1,49 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  TextField,
-  Button,
-  CircularProgress,
-  Alert,
-  Collapse,
-  Stepper,
-  Step,
-  StepLabel,
-  useTheme,
-  alpha,
-  Divider,
-  Chip
+  Box, Container, Typography, Card, CardContent, TextField, Button,
+  CircularProgress, Alert, Collapse, Stepper, Step, StepLabel,
+  useTheme, alpha, Divider, Chip, Fade, Stack, IconButton,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  Timeline,
-  CheckCircle,
-  Pending,
-  Cancel
+  Search as SearchIcon, Timeline, CheckCircle, Pending, Cancel,
+  ArrowBack, AssignmentInd, School, LockOutlined, InfoOutlined,
+  TrackChanges,
 } from '@mui/icons-material';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../services/Firebase';
 import { applicationsAPI } from '../../services/api';
 
-// Internal status codes used across the system
 const STATUS_STEPS = [
-  { label: 'Application Submitted', key: 'submitted' },
-  { label: 'Department Review', key: 'pending_dept_review' },
-  { label: 'Department Decision', key: 'dept_decision' },
-  { label: 'Registrar Final Decision', key: 'registrar_decision' },
-  { label: 'Student Account Issued', key: 'enrolled' },
-  { label: 'Semester Registration', key: 'reg_submitted' },
-  { label: 'Registration Verified', key: 'reg_approved' }
+  { label: 'Application Submitted', key: 'submitted', description: 'Application received and securely encrypted.' },
+  { label: 'Department Review', key: 'pending_dept_review', description: 'Under review by the academic department.' },
+  { label: 'Registrar Final Decision', key: 'registrar_decision', description: 'Final verification by the Office of the Registrar.' },
+  { label: 'Student Account Issued', key: 'enrolled', description: 'Institutional email and login provisioned.' },
 ];
 
-// Map internal status codes to human-readable labels
 const STATUS_LABELS = {
-  'pending_dept_review': 'Pending Department Review',
-  'approved_by_dept': 'Approved by Department',
-  'rejected_by_dept': 'Rejected by Department',
-  'approved_by_registrar': 'Approved by Registrar',
-  'final_approved': 'Approved by Registrar',
-  'rejected_by_registrar': 'Rejected by Registrar',
-  'enrolled': 'Student Account Issued',
-  'setup_completed': 'Account Setup Completed',
-  'id_issued': 'Student ID Issued',
-  'rejected': 'Rejected (Registrar)',
+  'pending_dept_review': 'Under Review',
+  'approved_by_dept': 'Dept Approved',
+  'rejected_by_dept': 'Application Declined',
+  'approved_by_registrar': 'Registration Authorized',
+  'final_approved': 'Admission Confirmed',
+  'rejected_by_registrar': 'Application Declined',
+  'enrolled': 'Enrolled / Active',
 };
 
 const TrackApplication = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const isDark = theme.palette.mode === 'dark';
+
   const [applicationId, setApplicationId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [applicationData, setApplicationData] = useState(null);
 
-  /**
-   * Normalize the Protocol Reference ID entered by user.
-   * Stored format in Firestore: 'DQHD—W4HEG5' (em-dash).
-   * User might type with em-dash, hyphen, or no separator at all.
-   * We normalize to 'XXXX—XXXXXX' format to match what's stored.
-   */
   const normalizeReferenceId = (input) => {
-    // Remove whitespace and em-dashes and hyphens, uppercase everything
     const clean = input.replace(/[\u2014\-\s]/g, '').toUpperCase();
     if (clean.length >= 10) {
-      // Re-insert em-dash between char 4 and 5
       return clean.slice(0, 4) + '\u2014' + clean.slice(4, 10);
     }
     return clean;
@@ -85,290 +58,249 @@ const TrackApplication = () => {
 
     setLoading(true);
     setError('');
-    setApplicationData(null);
-
-    // Normalize to match stored format
     const normalizedRef = normalizeReferenceId(applicationId.trim());
 
     try {
-      // Query the API instead of direct Firestore
       const response = await applicationsAPI.track(normalizedRef);
       const appData = response.data;
 
       if (appData) {
-        // If the application is fully enrolled, check registration status in Firestore
-        // (Tuition payments are still currently tracked in Firestore)
         if (appData.status === 'enrolled' && appData.studentId) {
           try {
             const paymentsRef = collection(db, "tuition_payments");
             const pq = query(paymentsRef, where("studentId", "==", appData.studentId), orderBy("timestamp", "desc"), limit(1));
             const paymentSnap = await getDocs(pq);
-
             if (!paymentSnap.empty) {
-              const latestPayment = paymentSnap.docs[0].data();
-              appData.registrationStatus = latestPayment.status;
-            } else {
-              appData.registrationStatus = 'not_submitted';
+              appData.registrationStatus = paymentSnap.docs[0].data().status;
             }
           } catch (paymentErr) {
-            console.error("Error fetching registration payments for tracker:", paymentErr);
-            appData.registrationStatus = 'unknown';
+            console.error("Error fetching registration payments:", paymentErr);
           }
         }
-
         setApplicationData(appData);
       } else {
-        setError('Application not found. Please check your Protocol Reference ID and try again.');
+        setError('Application not found. Please check your Protocol Reference ID.');
       }
     } catch (err) {
       console.error('Error fetching application:', err);
-      if (err.response?.status === 404) {
-        setError('Application not found. Please check your Protocol Reference ID and try again.');
-      } else {
-        setError('An error occurred while fetching your application. Please try again later.');
-      }
+      setError(err.response?.status === 404
+        ? 'Application not found. Verify your Reference ID.'
+        : 'Connection lost. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const getActiveStep = (status, registrationStatus) => {
+  const getActiveStep = (status) => {
     if (!status) return 0;
-
     switch (status) {
-      case 'pending_dept_review':
-        return 1; // Submitted, under dept review
-      case 'approved_by_dept':
-        return 2; // Dept approved, pending registrar
-      case 'rejected_by_dept':
-        return 2; // Rejected at dept step
-      case 'approved_by_registrar':
-      case 'final_approved':
-        return 3; // Registrar approved
-      case 'rejected_by_registrar':
-      case 'rejected':
-        return 3; // Rejected at registrar step
-      case 'enrolled':
-      case 'setup_completed':
-      case 'id_issued':
-        if (registrationStatus === 'approved') return 6;     // Fully registered (Step 7 - index 6)
-        if (registrationStatus === 'pending_approval' || registrationStatus === 'pending_payment_approval') return 5; // Submitted, awaiting approval (Step 6 - index 5)
-        return 4; // Account issued, waiting for student to register (Step 5 - index 4)
-      default:
-        return 0;
+      case 'pending_dept_review': return 1;
+      case 'approved_by_dept': return 2;
+      case 'final_approved': return 3;
+      case 'enrolled': return 4;
+      default: return 0;
     }
   };
 
-  const isRejected = applicationData?.status === 'rejected_by_dept' || applicationData?.status === 'rejected_by_registrar';
-  const activeStep = getActiveStep(applicationData?.status, applicationData?.registrationStatus);
-  const rejectedStep = applicationData?.status === 'rejected_by_dept' ? 2 : applicationData?.status === 'rejected_by_registrar' ? 3 : -1;
-  const displayStatus = STATUS_LABELS[applicationData?.status] || applicationData?.status || '';
+  const isRejected = applicationData?.status?.includes('rejected');
+  const activeStep = getActiveStep(applicationData?.status);
+  const displayStatus = STATUS_LABELS[applicationData?.status] || applicationData?.status || 'Processing';
 
   return (
     <Box sx={{
       minHeight: '100vh',
-      pt: { xs: 12, md: 16 },
-      pb: 8,
-      px: { xs: 2, sm: 4 },
-      background: theme.palette.mode === 'dark'
-        ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-        : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      pt: { xs: 12, md: 20 },
+      pb: 10,
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <Container maxWidth="md">
-        <Paper elevation={24} sx={{
-          p: { xs: 4, md: 6 },
-          borderRadius: 4,
-          background: theme.palette.mode === 'dark'
-            ? alpha('#1e293b', 0.9)
-            : alpha('#ffffff', 0.9),
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        }}>
-          {/* Header */}
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Box sx={{
-              display: 'inline-flex',
-              p: 2,
-              borderRadius: '50%',
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              mb: 3
-            }}>
-              <Timeline sx={{ fontSize: 48, color: theme.palette.primary.main }} />
-            </Box>
-            <Typography variant="h3" fontWeight="900" gutterBottom
-              sx={{
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              Track Your Application
-            </Typography>
-            <Typography variant="h6" color="text.secondary" fontWeight="500">
-              Enter your Reference ID to check your current admission status.
-            </Typography>
-          </Box>
+      {/* Background Orbs */}
+      <Box sx={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', top: -150, right: -150, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%)', filter: 'blur(80px)' }} />
+      <Box sx={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', bottom: -100, left: -100, background: 'radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, transparent 70%)', filter: 'blur(60px)' }} />
 
-          {/* Search Form */}
-          <Box component="form" onSubmit={handleSearch} sx={{ mb: 6 }}>
-            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-              <TextField
-                fullWidth
-                variant="outlined"
-                label="Protocol Reference ID"
-                placeholder="e.g., ABC1—23XYZ7"
-                value={applicationId}
-                onChange={(e) => setApplicationId(e.target.value)}
-                autoFocus
-                InputProps={{
-                  sx: { borderRadius: 3, fontWeight: 600, bgcolor: theme.palette.background.paper }
-                }}
-              />
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Fade in timeout={600}>
+          <Box>
+            {/* Nav Header */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={6}>
               <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                disabled={loading || !applicationId.trim()}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
-                sx={{
-                  px: 4, py: 1.5, borderRadius: 3, fontWeight: 800,
-                  whiteSpace: 'nowrap',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                  backdropFilter: 'blur(10px)',
-                }}
+                startIcon={<ArrowBack />} component={RouterLink} to="/"
+                sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none', fontWeight: 700, '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' } }}
               >
-                {loading ? 'Searching...' : 'Track Application'}
+                Back to Home
               </Button>
-            </Box>
+              <Chip icon={<TrackChanges sx={{ fontSize: '1rem !important', color: 'primary.main !important' }} />} label="Real-time Tracking" sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: 'primary.main', fontWeight: 800, border: '1px solid rgba(99,102,241,0.2)' }} />
+            </Stack>
 
-            <Collapse in={Boolean(error)}>
-              <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
-                {error}
-              </Alert>
-            </Collapse>
-          </Box>
-
-          <Divider sx={{ mb: 6, opacity: 0.5 }} />
-
-          {/* Results Area */}
-          <Collapse in={Boolean(applicationData)}>
-            {applicationData && (
-              <Box>
-                {/* Applicant Info Summary */}
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 3,
-                  p: 4,
-                  mb: 6,
-                  borderRadius: 4,
-                  bgcolor: theme.palette.mode === 'dark' ? alpha('#0f172a', 0.6) : alpha('#f1f5f9', 0.6),
-                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                }}>
-                  <Box>
-                    <Typography variant="overline" color="text.secondary" fontWeight="700">
-                      Applicant Name
-                    </Typography>
-                    <Typography variant="h5" fontWeight="800" gutterBottom>
-                      {applicationData.firstName} {applicationData.lastName}
-                    </Typography>
-
-                    <Typography variant="overline" color="text.secondary" fontWeight="700">
-                      Prospective Department
-                    </Typography>
-                    <Typography variant="subtitle1" fontWeight="600">
-                      {applicationData.intendedMajor}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-                    <Typography variant="overline" color="text.secondary" fontWeight="700" display="block">
-                      Current Status
-                    </Typography>
-                    <Chip
-                      label={displayStatus.toUpperCase()}
-                      color={isRejected ? 'error' : (applicationData.status === 'enrolled' || applicationData.status === 'approved_by_registrar' ? 'success' : 'primary')}
-                      sx={{ fontWeight: 900, fontSize: '0.85rem', px: 2, py: 2.5, borderRadius: 3 }}
-                    />
-                  </Box>
+            {/* Search Card */}
+            <Card elevation={0} sx={{
+              borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)',
+              bgcolor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)',
+              overflow: 'hidden', mb: 6
+            }}>
+              <Box sx={{ height: 6, background: 'linear-gradient(90deg, #6366f1, #a855f7)' }} />
+              <CardContent sx={{ p: { xs: 4, md: 6 } }}>
+                <Box sx={{ textAlign: 'center', mb: 6 }}>
+                  <Typography variant="h3" fontWeight={900} color="white" sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', mb: 2 }}>
+                    Track Your <Box component="span" sx={{ color: 'primary.main' }}>Admission</Box>
+                  </Typography>
+                  <Typography variant="body1" color="rgba(255,255,255,0.5)" fontWeight={500} sx={{ maxWidth: 500, mx: 'auto' }}>
+                    Enter your Protocol Reference ID to visualize your journey towards academic excellence.
+                  </Typography>
                 </Box>
 
-                {/* Status Timeline */}
-                <Typography variant="h5" fontWeight="800" mb={4}>
-                  Application Progress
-                </Typography>
-                <Stepper
-                  activeStep={activeStep}
-                  orientation="vertical"
-                  sx={{
-                    '& .MuiStepConnector-line': {
-                      minHeight: 40,
-                      borderLeftWidth: 3,
-                    }
-                  }}
-                >
-                  {STATUS_STEPS.map((step, index) => {
-                    const isStepRejected = isRejected && rejectedStep === index;
-                    const isActive = activeStep === index;
-                    const isCompleted = activeStep > index && !isStepRejected;
+                <Box component="form" onSubmit={handleSearch}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      fullWidth variant="outlined" placeholder="e.g. G9K4—NQ5AHG"
+                      value={applicationId} onChange={(e) => setApplicationId(e.target.value)}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 3, bgcolor: 'rgba(0,0,0,0.2)', color: 'white', fontWeight: 600,
+                          "& fieldset": { borderColor: 'rgba(255,255,255,0.1)' },
+                          "&:hover fieldset": { borderColor: 'primary.main' },
+                          "&.Mui-focused fieldset": { borderColor: 'primary.main' },
+                        }
+                      }}
+                    />
+                    <Button
+                      type="submit" variant="contained" disabled={loading}
+                      startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
+                      sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 800, textTransform: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }}
+                    >
+                      {loading ? 'Decrypting...' : 'Track Status'}
+                    </Button>
+                  </Stack>
+                  <Collapse in={Boolean(error)}>
+                    <Alert severity="error" sx={{ mt: 3, borderRadius: 3, bgcolor: 'rgba(244,67,54,0.08)', color: '#f44336', border: '1px solid rgba(244,67,54,0.2)' }}>
+                      {error}
+                    </Alert>
+                  </Collapse>
+                </Box>
+              </CardContent>
+            </Card>
 
-                    return (
-                      <Step key={step.label} completed={isCompleted} expanded={true}>
-                        <StepLabel
-                          error={isStepRejected}
-                          StepIconComponent={({ active, completed, error }) => {
-                            if (isStepRejected) return <Cancel color="error" sx={{ fontSize: 32 }} />;
-                            if (isCompleted) return <CheckCircle color="success" sx={{ fontSize: 32 }} />;
-                            if (isActive) return <Pending color="primary" sx={{ fontSize: 32 }} />;
-                            return <div style={{ width: 16, height: 16, margin: 8, borderRadius: '50%', backgroundColor: theme.palette.divider }} />;
-                          }}
-                        >
-                          <Typography variant="h6" fontWeight={isActive ? 800 : 500}
-                            color={isStepRejected ? 'error.main' : (isActive ? 'primary.main' : 'text.primary')}>
-                            {step.label}
+            {/* Results Area */}
+            <Collapse in={Boolean(applicationData)}>
+              {applicationData && (
+                <Box>
+                  {/* Summary Block */}
+                  <Card elevation={0} sx={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)', mb: 4 }}>
+                    <CardContent sx={{ p: 4 }}>
+                      <Grid container spacing={4} alignItems="center">
+                        <Grid item xs={12} md={7}>
+                          <Stack direction="row" spacing={2.5} alignItems="center">
+                            <Box sx={{ width: 64, height: 64, borderRadius: 4, bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 24px rgba(99,102,241,0.3)' }}>
+                              <School sx={{ color: 'white', fontSize: 32 }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="h5" fontWeight={900} color="white" sx={{ fontFamily: 'Outfit, sans-serif' }}>
+                                {applicationData.firstName} {applicationData.lastName}
+                              </Typography>
+                              <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                {applicationData.intendedMajor}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Grid>
+                        <Grid item xs={12} md={5} sx={{ textAlign: { md: 'right' } }}>
+                          <Typography variant="caption" fontWeight={800} color="rgba(255,255,255,0.3)" sx={{ textTransform: 'uppercase', letterSpacing: 2, display: 'block', mb: 1 }}>
+                            Current Protocol
                           </Typography>
-                          {isStepRejected && (
-                            <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 500 }}>
-                              Unfortunately, your application was not approved at this stage.
+                          <Chip
+                            label={displayStatus}
+                            sx={{
+                              fontWeight: 900, px: 2, py: 2.5, borderRadius: 3,
+                              bgcolor: isRejected ? 'rgba(244,67,54,0.1)' : 'rgba(16,185,129,0.1)',
+                              color: isRejected ? '#f44336' : '#10b981',
+                              border: `1px solid ${isRejected ? 'rgba(244,67,54,0.2)' : 'rgba(16,185,129,0.2)'}`
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+
+                  {/* Journey Stepper */}
+                  <Card elevation={0} sx={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(20px)' }}>
+                    <CardContent sx={{ p: { xs: 4, md: 6 } }}>
+                      <Typography variant="h6" fontWeight={800} color="white" mb={5} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Timeline sx={{ color: 'primary.main' }} /> Admission Journey
+                      </Typography>
+
+                      <Stepper
+                        activeStep={activeStep} orientation="vertical"
+                        sx={{
+                          '& .MuiStepConnector-line': { minHeight: 60, borderLeft: '2px dashed rgba(255,255,255,0.1)' },
+                          '& .MuiStepConnector-root.Mui-active .MuiStepConnector-line': { borderLeft: '2px solid #6366f1' },
+                          '& .MuiStepConnector-root.Mui-completed .MuiStepConnector-line': { borderLeft: '2px solid #10b981' },
+                        }}
+                      >
+                        {STATUS_STEPS.map((step, index) => {
+                          const isActive = activeStep === index;
+                          const isDone = activeStep > index;
+                          const isFail = isRejected && activeStep === index;
+
+                          return (
+                            <Step key={step.label} expanded>
+                              <StepLabel
+                                StepIconComponent={() => (
+                                  <Box sx={{
+                                    width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    bgcolor: isFail ? 'rgba(244,67,54,0.1)' : isDone ? 'rgba(16,185,129,0.1)' : isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.05)',
+                                    border: '2px solid',
+                                    borderColor: isFail ? '#f44336' : isDone ? '#10b981' : isActive ? '#6366f1' : 'rgba(255,255,255,0.1)',
+                                    color: isFail ? '#f44336' : isDone ? '#10b981' : isActive ? '#6366f1' : 'rgba(255,255,255,0.3)',
+                                    transition: 'all 0.3s ease'
+                                  }}>
+                                    {isFail ? <Cancel sx={{ fontSize: 24 }} /> : isDone ? <CheckCircle sx={{ fontSize: 24 }} /> : <Pending sx={{ fontSize: 24, animation: isActive ? 'pulse 2s infinite' : 'none' }} />}
+                                  </Box>
+                                )}
+                              >
+                                <Box sx={{ ml: 2 }}>
+                                  <Typography variant="subtitle1" fontWeight={800} color={isFail ? '#f44336' : isDone ? '#10b981' : isActive ? 'white' : 'rgba(255,255,255,0.35)'}>
+                                    {step.label}
+                                  </Typography>
+                                  <Typography variant="body2" color="rgba(255,255,255,0.4)" sx={{ mt: 0.5, fontWeight: 500, lineHeight: 1.6 }}>
+                                    {isFail ? 'Unfortunately, your journey ends here for this term.' : isActive ? step.description : isDone ? 'Stage successfully cleared.' : 'Waiting for previous stages...'}
+                                  </Typography>
+                                </Box>
+                              </StepLabel>
+                            </Step>
+                          );
+                        })}
+                      </Stepper>
+
+                      {applicationData.status === 'enrolled' && (
+                        <Box sx={{ mt: 6, p: 3, borderRadius: 4, bgcolor: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: 2.5, alignItems: 'center' }}>
+                          <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <LockOutlined sx={{ color: 'white' }} />
+                          </Box>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={800} color="#10b981">Action Required: Portal Access</Typography>
+                            <Typography variant="caption" color="rgba(255,255,255,0.5)" sx={{ lineHeight: 1.5, display: 'block', mt: 0.5 }}>
+                              Your student account is active. Please use the credentials sent to your registered contact number to login to the Portal.
                             </Typography>
-                          )}
-                          {isActive && !isStepRejected && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontWeight: 500 }}>
-                              {step.label === "Registrar Final Decision"
-                                ? "Awaiting final review by the Registrar's office."
-                                : step.label === "Student Account Issued"
-                                  ? "Your account is being provisioned. You will receive an email shortly with your credentials."
-                                  : step.label === "Semester Registration"
-                                    ? "Please log in to your Student Portal to complete your semester course registration."
-                                    : step.label === "Registration Verified"
-                                      ? "Your registration is under review by the finance/registrar office."
-                                      : "Your application is currently being processed."}
-                            </Typography>
-                          )}
-                          {isCompleted && (
-                            <Typography variant="body2" color="success.main" sx={{ mt: 0.5, fontWeight: 600 }}>
-                              Completed
-                            </Typography>
-                          )}
-                          {index === 6 && activeStep === 7 && (
-                            <Typography variant="body2" color="success.main" sx={{ mt: 1, fontWeight: 700 }}>
-                              Congratulations! Your enrollment is fully certified and you are officially registered for the semester.
-                            </Typography>
-                          )}
-                        </StepLabel>
-                      </Step>
-                    );
-                  })}
-                </Stepper>
-              </Box>
-            )}
-          </Collapse>
-        </Paper>
+                          </Box>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+            </Collapse>
+          </Box>
+        </Fade>
       </Container>
+
+      <style>{`
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </Box>
   );
 };
