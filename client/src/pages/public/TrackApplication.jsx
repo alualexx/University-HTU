@@ -42,13 +42,8 @@ const TrackApplication = () => {
   const [applicationData, setApplicationData] = useState(null);
 
   const normalizeReferenceId = (input) => {
-    // Standardize all dashes/hyphens/spaces to empty string for lookup
-    const clean = input.replace(/[\u2014\-\s]/g, '').toUpperCase();
-    if (clean.length === 10) {
-      // Re-insert em-dash for the standard lookup format
-      return clean.slice(0, 4) + '\u2014' + clean.slice(4, 10);
-    }
-    return clean;
+    // Just trim and uppercase, let the backend handle dash-insensitivity
+    return input.trim().toUpperCase();
   };
 
   const handleSearch = async (e) => {

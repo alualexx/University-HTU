@@ -33,12 +33,19 @@ router.post("/submit", async (req, res) => {
 router.get("/track/:referenceId", async (req, res) => {
   try {
     const { referenceId } = req.params;
-    // Normalize: remove all dashes, hyphens, and whitespace
+
+    // Normalize: remove all dashes, hyphens, and whitespace to extract the raw characters
     const cleanId = referenceId.replace(/[\u2014\-\s]/g, "");
 
-    // Search using a flexible regex to handle dash variations
-    // Create a regex that allows an optional dash between char 4 and 5
-    const searchRegex = new RegExp(`^${cleanId.slice(0, 4)}[\u2014\-]?${cleanId.slice(4)}$`, "i");
+    if (!cleanId || cleanId.length < 4) {
+      return res.status(400).json({ message: "Invalid Reference ID format" });
+    }
+
+    // Search using a regex that allows any type of dash (or none) at common positions
+    // We look for the raw characters with optional dashes in between groups
+    const part1 = cleanId.slice(0, 4);
+    const part2 = cleanId.slice(4);
+    const searchRegex = new RegExp(`^${part1}[\u2014\-]?${part2}$`, "i");
 
     const application = await Application.findOne({ referenceId: { $regex: searchRegex } });
     if (!application) {
