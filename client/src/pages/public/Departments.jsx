@@ -178,17 +178,20 @@ export default function Departments() {
     const isDark = theme.palette.mode === "dark";
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [selectedDept, setSelectedDept] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
 
     useEffect(() => {
         const fetchDepts = async () => {
             setLoading(true);
+            setError(false);
             try {
                 const res = await departmentsAPI.getAll();
-                setDepartments(res.data);
+                setDepartments(Array.isArray(res.data) ? res.data : []);
             } catch (err) {
                 console.error("Error fetching departments:", err);
+                setError(true);
             } finally {
                 setLoading(false);
             }
@@ -229,6 +232,19 @@ export default function Departments() {
                 {loading ? (
                     <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}>
                         <CircularProgress size={48} />
+                    </Box>
+                ) : error ? (
+                    <Box sx={{ textAlign: "center", py: 12 }}>
+                        <School sx={{ fontSize: 64, color: "text.disabled", mb: 3 }} />
+                        <Typography variant="h5" fontWeight={700} color="text.secondary">
+                            Unable to load departments
+                        </Typography>
+                        <Typography variant="body1" color="text.disabled" sx={{ mt: 1, mb: 3 }}>
+                            Could not connect to the server. Please check back later.
+                        </Typography>
+                        <Button variant="outlined" onClick={() => window.location.reload()} sx={{ borderRadius: 3, textTransform: "none", fontWeight: 700 }}>
+                            Retry
+                        </Button>
                     </Box>
                 ) : departments.length === 0 ? (
                     <Box sx={{ textAlign: "center", py: 12 }}>
