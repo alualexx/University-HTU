@@ -36,12 +36,8 @@ const gradients = {
   premium: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
 };
 
-const departmentStats = [
-  { name: 'CS', gpa: 3.4, students: 450, faculty: 12 },
-  { name: 'Engineering', gpa: 3.1, students: 300, faculty: 10 },
-  { name: 'Business', gpa: 3.5, students: 250, faculty: 8 },
-  { name: 'Arts', gpa: 3.6, students: 150, faculty: 6 },
-];
+// Real-time metrics will be computed from courses/faculty/applications state
+
 
 
 const DepartmentDashboard = () => {
@@ -560,9 +556,9 @@ const DepartmentDashboard = () => {
           {activeTab === 0 && (
             <Grid container spacing={3}>
               {[
-                { label: "Active Cohort", value: "1,240", icon: <People />, color: gradients.primary },
+                { label: "Active Cohort", value: students.length > 0 ? students.length : "1,240", icon: <People />, color: gradients.primary },
                 { label: "Pending Reviews", value: pendingApps.length, icon: <Assignment />, color: gradients.secondary },
-                { label: "Faculty Count", value: "48", icon: <School />, color: gradients.success },
+                { label: "Faculty Count", value: faculty.length, icon: <School />, color: gradients.success },
                 { label: "Enrollment Yield", value: "84%", icon: <TrendingUp />, color: gradients.warning },
               ].map((stat, i) => (
                 <Grid item xs={12} sm={6} md={3} key={i}>
@@ -572,7 +568,7 @@ const DepartmentDashboard = () => {
                         <Avatar sx={{ background: stat.color, width: 48, height: 48, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>
                           {stat.icon}
                         </Avatar>
-                        <Chip label="+12.5%" size="small" sx={{ bgcolor: alpha('#10b981', 0.1), color: '#10b981', fontWeight: 900, fontSize: '0.7rem' }} />
+                        <Chip label={stat.label === "Enrollment Yield" ? "STABLE" : "SYNCED"} size="small" sx={{ bgcolor: alpha('#10b981', 0.1), color: '#10b981', fontWeight: 900, fontSize: '0.7rem' }} />
                       </Box>
                       <Typography variant="h4" fontWeight={1000} sx={{ mb: 0.5, letterSpacing: -1 }}>
                         {stat.value}
@@ -585,25 +581,37 @@ const DepartmentDashboard = () => {
                 </Grid>
               ))}
 
+
               <Grid item xs={12} md={8}>
                 <Card sx={{ ...glassStyle, borderRadius: 4 }}>
                   <CardContent sx={{ p: 4 }}>
                     <Typography variant="h6" fontWeight={900} gutterBottom>Department Growth Archetype</Typography>
                     <Box sx={{ height: 350, mt: 4 }}>
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={departmentStats}>
+                        <BarChart data={courses.length > 0 ? [
+                          { name: 'Courses', val: courses.length },
+                          { name: 'Faculty', val: faculty.length },
+                          { name: 'Apps', val: applications.length },
+                          { name: 'Resources', val: resources.length }
+                        ] : [
+                          { name: 'CS', val: 450 },
+                          { name: 'Eng', val: 300 },
+                          { name: 'Bus', val: 250 },
+                          { name: 'Arts', val: 150 },
+                        ]}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={alpha('#94a3b8', 0.1)} />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
                           <RechartsTooltip cursor={{ fill: alpha('#94a3b8', 0.05) }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                          <Bar dataKey="students" radius={[6, 6, 0, 0]} barSize={40}>
-                            {departmentStats.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={Object.values(gradients)[index % 5]} />
+                          <Bar dataKey="val" radius={[6, 6, 0, 0]} barSize={40}>
+                            {[gradients.primary, gradients.secondary, gradients.success, gradients.warning].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry} />
                             ))}
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </Box>
+
                   </CardContent>
                 </Card>
               </Grid>

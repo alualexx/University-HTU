@@ -1645,10 +1645,10 @@ const RegistrarDashboard = () => {
         <Grid container spacing={4}>
           {/* Stat Cards */}
           {[
-            { label: "Active Cohort", value: students.length, icon: <People />, color: "#6366f1", trend: "+12% vs last sem", gradient: gradients.primary },
-            { label: "Module Catalog", value: courses.length, icon: <LibraryBooks />, color: "#10b981", trend: "4 new arrivals", gradient: gradients.success },
-            { label: "Admission Pool", value: applications.length, icon: <Assignment />, color: "#f59e0b", trend: "High Priority", gradient: gradients.warning },
-            { label: "Facility Load", value: schedules.length, icon: <Schedule />, color: "#8b5cf6", trend: "98% Capacity", gradient: gradients.secondary },
+            { label: "Active Cohort", value: students.length, icon: <People />, color: "#6366f1", trend: `+${students.filter(s => s.status === 'Active').length} Active`, gradient: gradients.primary },
+            { label: "Module Catalog", value: courses.length, icon: <LibraryBooks />, color: "#10b981", trend: `${courses.filter(c => c.status === 'pending_registrar_approval').length} Pending Review`, gradient: gradients.success },
+            { label: "Admission Pool", value: applications.length, icon: <Assignment />, color: "#f59e0b", trend: "Active Queue", gradient: gradients.warning },
+            { label: "Facility Load", value: schedules.length, icon: <Schedule />, color: "#8b5cf6", trend: schedules.length > 0 ? `${Math.min(100, Math.round((students.length / schedules.length) * 1.5))}% Estimated` : "0%", gradient: gradients.secondary },
           ].map((stat, i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
               <RegistrarStatCard stat={stat} glassStyle={glassStyle} isDark={isDark} alpha={alpha} />
