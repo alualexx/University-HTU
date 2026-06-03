@@ -32,7 +32,15 @@ router.post("/submit", async (req, res) => {
 // @access  Public
 router.get("/track/:referenceId", async (req, res) => {
   try {
-    const application = await Application.findOne({ referenceId: req.params.referenceId });
+    const { referenceId } = req.params;
+    // Normalize: remove all dashes, hyphens, and whitespace
+    const cleanId = referenceId.replace(/[\u2014\-\s]/g, "");
+
+    // Search using a flexible regex to handle dash variations
+    // Create a regex that allows an optional dash between char 4 and 5
+    const searchRegex = new RegExp(`^${cleanId.slice(0, 4)}[\u2014\-]?${cleanId.slice(4)}$`, "i");
+
+    const application = await Application.findOne({ referenceId: { $regex: searchRegex } });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
