@@ -375,15 +375,38 @@ const RegistrarDashboard = () => {
 
 
   const handleApproveApplication = async (app) => {
+    const appId = app._id || app.id;
+    if (!appId) {
+      showSnackbar("Invalid Application ID", "error");
+      return;
+    }
     try {
-      const res = await applicationsAPI.updateStatus(app._id || app.id, "final_approved", "Approved by Registrar");
+      const res = await applicationsAPI.updateStatus(appId, "final_approved", "Approved by Registrar");
       if (res.data) {
-        alert(`Application for ${app.name} approved. Student ID issued: ${res.data.studentId}`);
+        showSnackbar(`Application for ${app.name} approved. Student ID issued: ${res.data.studentId}`, "success");
         fetchApplications();
       }
     } catch (err) {
       console.error("Error approving application:", err);
-      alert("Failed to approve application.");
+      showSnackbar("Failed to approve application.", "error");
+    }
+  };
+
+  const handleDownloadDocument = async (url, fileName) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error("Download failed:", err);
+      // Fallback: open in new tab if fetch fails (e.g. CORS)
+      window.open(url, "_blank");
     }
   };
 
@@ -2198,7 +2221,7 @@ const RegistrarDashboard = () => {
             variant="contained" color="error"
             disabled={!rejectDialog.reason.trim()}
             onClick={async () => {
-              await handleRejectApplication(rejectDialog.app.id, rejectDialog.app, rejectDialog.reason);
+              await handleRejectApplication(rejectDialog.app?._id || rejectDialog.app?.id, rejectDialog.app, rejectDialog.reason);
               setRejectDialog({ open: false, app: null, reason: "" });
             }}
             sx={{ borderRadius: 3, textTransform: "none", fontWeight: 1000, px: 4, py: 1.2, boxShadow: '0 8px 20px rgba(239, 68, 68, 0.2)' }}
@@ -2388,31 +2411,41 @@ const RegistrarDashboard = () => {
                                     </Box>
                                   ) : (
                                     Object.entries(app.documents).map(([key, url]) => (
-                                      <Button
-                                        key={key}
-                                        fullWidth
-                                        variant="outlined"
-                                        component="a"
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        startIcon={<Description />}
-                                        endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
-                                        sx={{
-                                          borderRadius: 3, textTransform: 'none', py: 2, fontWeight: 800,
-                                          bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                                          borderColor: 'divider', color: 'text.primary',
-                                          '&:hover': { borderColor: 'primary.main', bgcolor: alpha('#6366f1', 0.05) }
-                                        }}
-                                      >
-                                        <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
-                                          <Typography variant="caption" display="block" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>STUDENT RECORD</Typography>
-                                          {key === 'idDocument' ? 'Identity / Passport' :
-                                            key === 'transcript' ? 'Academic Transcripts' :
-                                              key === 'photo' ? 'Biometric Photo' :
-                                                key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                        </Box>
-                                      </Button>
+                                      <Box key={key} sx={{ display: 'flex', gap: 1 }}>
+                                        <Button
+                                          fullWidth
+                                          variant="outlined"
+                                          component="a"
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          startIcon={<Description />}
+                                          endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+                                          sx={{
+                                            borderRadius: 3, textTransform: 'none', py: 2, fontWeight: 800,
+                                            bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                                            borderColor: 'divider', color: 'text.primary',
+                                            '&:hover': { borderColor: 'primary.main', bgcolor: alpha('#6366f1', 0.05) }
+                                          }}
+                                        >
+                                          <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
+                                            <Typography variant="caption" display="block" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>STUDENT RECORD</Typography>
+                                            {key === 'idDocument' ? 'Identity / Passport' :
+                                              key === 'transcript' ? 'Academic Transcripts' :
+                                                key === 'photo' ? 'Biometric Photo' :
+                                                  key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                          </Box>
+                                        </Button>
+                                        <IconButton
+                                          onClick={() => handleDownloadDocument(url, `${app.name}_${key}`)}
+                                          sx={{
+                                            bgcolor: alpha('#6366f1', 0.1), color: 'primary.main', borderRadius: 3, border: '1px solid', borderColor: alpha('#6366f1', 0.2), px: 2,
+                                            '&:hover': { bgcolor: 'primary.main', color: 'white' }
+                                          }}
+                                        >
+                                          <Print />
+                                        </IconButton>
+                                      </Box>
                                     ))
                                   )}
                                 </Stack>
