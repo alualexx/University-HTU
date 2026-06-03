@@ -7,7 +7,7 @@ import { doc, updateDoc, collection, query, where, getDocs } from "firebase/fire
 import { db } from "../../services/Firebase";
 
 const ChangePassword = () => {
-    const { user, changeUserPassword } = useAuth();
+    const { user, changeUserPassword, api } = useAuth();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({ newPassword: "", confirmPassword: "" });
@@ -63,17 +63,29 @@ const ChangePassword = () => {
 
         if (result.success) {
             try {
-                // Find the user's application by email to update status
-                const q = query(collection(db, "applications"), where("email", "==", user.email));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    const appDoc = querySnapshot.docs[0];
-                    await updateDoc(doc(db, "applications", appDoc.id), {
-                        status: "setup_completed"
+                // Update application status to awaiting_payment
+                const appsRes = await api.get(`/applications/track/${user.email}`);
+                if (appsRes.data && appsRes.data._id) {
+                    await api.put(`/applications/${appsRes.data._id}/status`, {
+                        status: "awaiting_payment",
+                        reviewNotes: "Password changed successfully. Awaiting enrollment payment."
                     });
                 }
             } catch (err) {
                 console.error("Failed to update application status:", err);
+                // Fallback to Firestore just in case (some flows might still use it)
+                try {
+                    const q = query(collection(db, "applications"), where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        const appDoc = querySnapshot.docs[0];
+                        await updateDoc(doc(db, "applications", appDoc.id), {
+                            status: "awaiting_payment"
+                        });
+                    }
+                } catch (e) {
+                    console.error("Firestore fallback failed:", e);
+                }
             }
 
             setSuccess(true);

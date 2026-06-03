@@ -208,9 +208,8 @@ const RegistrarDashboard = () => {
         app.status === "approved_by_dept" ||
         app.status === "pending_dept_review"
       ));
-      // Applications that are "final_approved" but haven't had an ID issued yet (setup_completed)
-      // move to the ID issuance pending list.
-      setPendingIds(res.data.filter(app => app.status === "final_approved" || app.status === "setup_completed"));
+      // Only students who have completed payment move to the ID issuance pending list.
+      setPendingIds(res.data.filter(app => app.status === "payment_completed" || app.status === "setup_completed"));
     } catch (err) {
       console.warn("applications fetch failed:", err);
     }
@@ -384,9 +383,9 @@ const RegistrarDashboard = () => {
       return;
     }
     try {
-      const res = await applicationsAPI.updateStatus(appId, "final_approved", "Approved by Registrar");
+      const res = await applicationsAPI.updateStatus(appId, "registrar_approved", "Approved by Registrar - Pending Admin Finalization");
       if (res.data) {
-        showSnackbar(`Application for ${app.name} approved. Student ID issued: ${res.data.studentId}`, "success");
+        showSnackbar(`Application for ${app.name} approved. Dossier forwarded to Admin.`, "success");
         fetchApplications();
       }
     } catch (err) {
@@ -2471,12 +2470,12 @@ const RegistrarDashboard = () => {
                                 Reject
                               </Button>
                               <Button
-                                variant="contained" color="success"
+                                variant="contained" color="primary"
                                 startIcon={<CheckCircleOutline />}
-                                sx={{ borderRadius: 4, textTransform: 'none', fontWeight: 1000, px: 4, py: 1.2, background: gradients.success, boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 25px rgba(16, 185, 129, 0.4)' } }}
+                                sx={{ borderRadius: 4, textTransform: 'none', fontWeight: 1000, px: 4, py: 1.2, background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 25px rgba(99, 102, 241, 0.3)' } }}
                                 onClick={() => handleApproveApplication(app)}
                               >
-                                Authorize & Deploy Credential
+                                Approve & Forward to Admin
                               </Button>
                             </Stack>
                           </Box>

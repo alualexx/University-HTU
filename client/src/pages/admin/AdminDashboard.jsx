@@ -187,7 +187,7 @@ const AdminDashboard = () => {
           usersAPI.getAll(),
           activityLogsAPI.getAll(),
           systemAPI.getSettings('settings').catch(() => ({ data: { maintenanceMode: false } })),
-          applicationsAPI.getAll({ status: 'final_approved' }),
+          applicationsAPI.getAll({ status: 'registrar_approved' }),
           announcementsAPI.getAll(),
           securityLogsAPI.getAll(),
           departmentsAPI.getAll(),

@@ -53,9 +53,16 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending_dept_review", "approved_by_dept", "rejected_by_dept", "final_approved", "rejected_by_registrar", "enrolled", "withdrawn"],
+      enum: ["pending_dept_review", "approved_by_dept", "rejected_by_dept", "registrar_approved", "final_approved", "rejected_by_registrar", "awaiting_payment", "payment_completed", "enrolled", "withdrawn"],
       default: "pending_dept_review",
     },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "completed"],
+      default: "pending"
+    },
+    paymentAmount: { type: Number },
+    paymentDate: { type: Date },
     ipAddress: {
       type: String,
     },

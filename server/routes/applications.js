@@ -30,28 +30,67 @@ router.post("/submit", async (req, res) => {
 // @route   GET /api/applications/track/:referenceId
 // @desc    Track application status by reference ID
 // @access  Public
-router.get("/track/:referenceId", async (req, res) => {
+router.get("/track/:id", async (req, res) => {
   try {
-    const { referenceId } = req.params;
+    const { id } = req.params;
 
-    // Normalize: remove all dashes, hyphens, and whitespace to extract the raw characters
-    const cleanId = referenceId.replace(/[\u2014\-\s]/g, "");
+    let application;
+    if (id.includes("@")) {
+      application = await Application.findOne({ email: id.toLowerCase() });
+    } else {
+      // Normalize: remove all dashes, hyphens, and whitespace to extract the raw characters
+      const cleanId = id.replace(/[\u2014\-\s]/g, "");
 
-    if (!cleanId || cleanId.length < 4) {
-      return res.status(400).json({ message: "Invalid Reference ID format" });
+      if (cleanId && cleanId.length >= 4) {
+        const part1 = cleanId.slice(0, 4);
+        const part2 = cleanId.slice(4);
+        const searchRegex = new RegExp(`^${part1}[\u2014\-]?${part2}$`, "i");
+        application = await Application.findOne({ referenceId: { $regex: searchRegex } });
+      }
     }
 
-    // Search using a regex that allows any type of dash (or none) at common positions
-    // We look for the raw characters with optional dashes in between groups
-    const part1 = cleanId.slice(0, 4);
-    const part2 = cleanId.slice(4);
-    const searchRegex = new RegExp(`^${part1}[\u2014\-]?${part2}$`, "i");
-
-    const application = await Application.findOne({ referenceId: { $regex: searchRegex } });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
     res.json(application);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/applications/:id/pay
+// @desc    Process admission payment
+// @access  Private (Student)
+router.post("/:id/pay", protect, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const application = await Application.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: "payment_completed",
+        paymentStatus: "completed",
+        paymentAmount: amount,
+        paymentDate: Date.now()
+      },
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Create Finance Notification
+    const notification = new Notification({
+      toEmail: application.email,
+      recipientName: application.name,
+      title: "Admission Fee Received",
+      message: `Your payment of $${amount} has been received. Your Student ID is now being generated.`,
+      type: "success",
+      status: "info"
+    });
+    await notification.save();
+
+    res.json({ success: true, application });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

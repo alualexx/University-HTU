@@ -30,22 +30,23 @@ const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
 const CreateAccount = React.lazy(() => import("./pages/admin/CreateAccount"));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
 const ChangePassword = React.lazy(() => import("./pages/public/ChangePassword"));
+const AdmissionPayment = React.lazy(() => import("./pages/student/AdmissionPayment"));
 const ChatBot = React.lazy(() => import("./components/common/ChatBot"));
 
 // Loading fallback component
 const PageLoader = () => (
-  <Box sx={{ 
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
     height: '60vh',
-    gap: 2 
+    gap: 2
   }}>
     <div className="loader-ripple"><div></div><div></div></div>
-    <div style={{ 
-      fontFamily: 'Outfit, sans-serif', 
-      color: '#4f46e5', 
+    <div style={{
+      fontFamily: 'Outfit, sans-serif',
+      color: '#4f46e5',
       fontWeight: 600,
       letterSpacing: '1px'
     }}>LOADING UNIVERSITY PORTAL...</div>
@@ -71,151 +72,159 @@ function App() {
       <Box component="main" sx={{ flexGrow: 1, mt: (isHomePage || isDashboard) ? 0 : { xs: 8, sm: 9, md: 10 }, mb: isDashboard ? 0 : 4 }}>
         <React.Suspense fallback={<PageLoader />}>
           <Routes>
-          {/* Public Routes - Affected by Maintenance Mode */}
-          <Route path="/" element={
-            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : 
-            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Home />)
-          } />
-          
-          <Route path="/login" element={
-            isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Login />
-          } />
+            {/* Public Routes - Affected by Maintenance Mode */}
+            <Route path="/" element={
+              maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
+                (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Home />)
+            } />
 
-          <Route path="/register" element={
-            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
-            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Register />)
-          } />
+            <Route path="/login" element={
+              isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Login />
+            } />
 
-          <Route path="/maintenance" element={<MaintenancePage />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          
-          <Route path="/courses" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Courses />} />
-          <Route path="/departments" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Departments />} />
-          <Route path="/about" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <AboutUs />} />
-          <Route path="/faculty" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Faculty />} />
-          <Route path="/news" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <News />} />
-          
-          <Route path="/apply" element={
-            maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
-            (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Apply />)
-          } />
-          
-          <Route path="/apply/:departmentId" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <ApplicationForm />} />
+            <Route path="/register" element={
+              maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
+                (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Register />)
+            } />
 
-          {/* Map /admin shortcut to the admin dashboard */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+            <Route path="/maintenance" element={<MaintenancePage />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-          <Route
-            path="/admin/create-account/:applicationId"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                <CreateAccount />
-              </ProtectedRoute>
-            }
-          />
+            <Route path="/courses" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Courses />} />
+            <Route path="/departments" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Departments />} />
+            <Route path="/about" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <AboutUs />} />
+            <Route path="/faculty" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <Faculty />} />
+            <Route path="/news" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <News />} />
 
-          <Route
-            path="/change-password"
-            element={
-              <ProtectedRoute>
-                <ChangePassword />
-              </ProtectedRoute>
-            }
-          />
+            <Route path="/apply" element={
+              maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> :
+                (isAuthenticated ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/dashboard"} replace /> : <Apply />)
+            } />
 
-          {/* Generic /dashboard — redirect to role-specific dashboard */}
-          <Route
-            path="/dashboard"
-            element={
-              isAuthenticated
-                ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/"} replace />
-                : <Navigate to="/login" replace />
-            }
-          />
+            <Route path="/apply/:departmentId" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <ApplicationForm />} />
 
-          {/* Student Dashboard */}
-          <Route
-            path="/student-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <StudentDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            {/* Map /admin shortcut to the admin dashboard */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Registrar Dashboard */}
-          <Route
-            path="/registrar-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.REGISTRAR]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <RegistrarDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/create-account/:applicationId"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                  <CreateAccount />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Teacher Dashboard */}
-          <Route
-            path="/teacher-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TeacherDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Department Head Dashboard (Legacy) */}
-          <Route
-            path="/department-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            {/* Generic /dashboard — redirect to role-specific dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                isAuthenticated
+                  ? <Navigate to={ROLE_DASHBOARD_ROUTES[user?.role] || "/"} replace />
+                  : <Navigate to="/login" replace />
+              }
+            />
 
-          {/* Faculty College Dashboard */}
-          <Route
-            path="/faculty-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/student-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <StudentDashboard />}
+                </ProtectedRoute>
+              }
+            />
 
-          {/* College Administrator Dashboard (Dean) */}
-          <Route
-            path="/college-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.COLLEGE_ADMIN]}>
-                {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <CollegeAdminDashboard />}
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admission-payment"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.STUDENT]}>
+                  <AdmissionPayment />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Admin Dashboard */}
-          <Route
-            path="/admin-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Registrar Dashboard */}
+            <Route
+              path="/registrar-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.REGISTRAR]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <RegistrarDashboard />}
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Track Application - Public */}
-          <Route path="/track" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TrackApplication />} />
+            {/* Teacher Dashboard */}
+            <Route
+              path="/teacher-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TeacherDashboard />}
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Department Head Dashboard (Legacy) */}
+            <Route
+              path="/department-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Faculty College Dashboard */}
+            <Route
+              path="/faculty-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* College Administrator Dashboard (Dean) */}
+            <Route
+              path="/college-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.COLLEGE_ADMIN]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <CollegeAdminDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Dashboard */}
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Track Application - Public */}
+            <Route path="/track" element={maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TrackApplication />} />
+
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </React.Suspense>
       </Box>
       {!isDashboard && <Footer />}
