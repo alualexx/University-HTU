@@ -731,9 +731,7 @@ const RegistrarDashboard = () => {
     setIsApprovingCourse(true);
     try {
       const updateData = {
-        status: action === 'approve' ? 'active' : 'draft',
-        approvedAt: serverTimestamp(),
-        approvedBy: user.uid
+        status: action === 'approve' ? 'active' : 'rejected'
       };
 
       if (data) {
@@ -741,9 +739,15 @@ const RegistrarDashboard = () => {
         if (data.registrarDescription) updateData.registrarDescription = data.registrarDescription;
       }
 
-      await updateDoc(doc(db, "courses", courseId), updateData);
+      await coursesAPI.update(courseId, updateData);
+      showSnackbar(`Course ${action === 'approve' ? 'approved' : 'rejected'} successfully`, "success");
+
+      // Refresh courses list
+      const res = await coursesAPI.getAll();
+      setCourses(res.data);
     } catch (err) {
       console.error("Course action error:", err);
+      showSnackbar(`Failed to ${action} course`, "error");
     } finally {
       setIsApprovingCourse(false);
       setOpenApprovalDialog(false);
@@ -814,17 +818,34 @@ const RegistrarDashboard = () => {
     if (!validateCourse()) return;
     try {
       if (courseDialog.mode === 'add') {
-        await addDoc(collection(db, "courses"), { ...courseDialog.data, createdAt: serverTimestamp() });
+        await coursesAPI.create(courseDialog.data);
+        showSnackbar("Course created successfully", "success");
       } else {
-        const { id, ...data } = courseDialog.data;
-        await updateDoc(doc(db, "courses", id), data);
+        const { _id, id, ...data } = courseDialog.data;
+        await coursesAPI.update(_id || id, data);
+        showSnackbar("Course updated successfully", "success");
       }
       setCourseDialog({ open: false, mode: 'add', data: { name: '', code: '', department: '', credits: 3, instructor: '', status: 'Active' } });
       setCourseErrors({});
-    } catch (err) { console.error("Course save error:", err); }
+
+      // Refresh courses list
+      const res = await coursesAPI.getAll();
+      setCourses(res.data);
+    } catch (err) {
+      console.error("Course save error:", err);
+      showSnackbar("Failed to save course", "error");
+    }
   };
   const handleDeleteCourse = async (id) => {
-    try { await deleteDoc(doc(db, "courses", id)); } catch (err) { console.error(err); }
+    if (!window.confirm("Are you sure you want to delete this course?")) return;
+    try {
+      await coursesAPI.delete(id);
+      showSnackbar("Course deleted successfully", "success");
+      setCourses(prev => prev.filter(c => c._id !== id && c.id !== id));
+    } catch (err) {
+      console.error(err);
+      showSnackbar("Failed to delete course", "error");
+    }
   };
 
   // --- Schedule CRUD ---
@@ -2988,7 +3009,7 @@ const RegistrarDashboard = () => {
                         </Avatar>
                       </Box>
 
-                      {course.status === 'pending_approval' && (
+                      {course.status === 'pending_registrar_approval' && (
                         <Box sx={{ p: 1.5, mb: 2, borderRadius: 3, bgcolor: alpha('#f59e0b', 0.1), border: '1px solid rgba(245, 158, 11, 0.2)' }}>
                           <Typography variant="caption" fontWeight={1000} color="warning.main">REVIEW REQUIRED: NEW SEMESTER PROPOSAL</Typography>
                         </Box>
@@ -3012,7 +3033,7 @@ const RegistrarDashboard = () => {
                       <Divider sx={{ mb: 2, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
 
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        {course.status === 'pending_approval' ? (
+                        {course.status === 'pending_registrar_approval' ? (
                           <>
                             <Button size="small" variant="outlined" color="error" onClick={() => handleCourseAction(course.id, 'reject')} sx={{ borderRadius: 2, fontWeight: 900, textTransform: 'none' }}>Reject</Button>
                             <Button size="small" variant="contained" color="success" onClick={() => { setSelectedCourseForApproval(course); setOpenApprovalDialog(true); }} sx={{ borderRadius: 2, fontWeight: 900, textTransform: 'none' }}>Approve</Button>
@@ -3036,7 +3057,7 @@ const RegistrarDashboard = () => {
   );
 
   const renderCurriculumApprovalTab = () => {
-    const pendingCourses = courses.filter(c => c.status === 'pending_approval');
+    const pendingCourses = courses.filter(c => c.status === 'pending_registrar_approval');
 
     return (
       <Box sx={{ mt: 4 }}>
@@ -3593,7 +3614,7 @@ const RegistrarDashboard = () => {
             { label: t("courses"), icon: <LibraryBooks />, index: 3 },
             { label: "Grading System", icon: <Grade />, index: 15 },
             { label: t("transcripts"), icon: <MenuBook />, index: 14 },
-            { label: t("curriculumApproval"), icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_approval').length },
+            { label: t("curriculumApproval"), icon: <School />, index: 13, badge: courses.filter(c => c.status === 'pending_registrar_approval').length },
             { label: t("schedules"), icon: <Schedule />, index: 4 },
             { label: t("applications"), icon: <SwapHoriz />, index: 5 },
             { label: t("pendingIds"), icon: <AssignmentInd />, index: 6, badge: pendingIds.length },

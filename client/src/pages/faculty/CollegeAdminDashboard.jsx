@@ -23,7 +23,7 @@ import {
 } from "recharts";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { collegesAPI, departmentsAPI, usersAPI } from "../../services/api";
+import { collegesAPI, departmentsAPI, usersAPI, academicEventsAPI, budgetsAPI, transcriptAPI } from "../../services/api";
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 
@@ -74,6 +74,21 @@ const CollegeAdminDashboard = () => {
   const [deptLoading, setDeptLoading] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
+  // --- New Real Data State ---
+  const [events, setEvents] = useState([]);
+  const [budget, setBudget] = useState(null);
+  const [gpaDistribution, setGpaDistribution] = useState([]);
+  const [completionRate, setCompletionRate] = useState([]);
+  const [researchProjects, setResearchProjects] = useState([]);
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
+
+  // Dialog States for Events & Budget
+  const [openEventDialog, setOpenEventDialog] = useState(false);
+  const [eventForm, setEventForm] = useState({ title: "", date: new Date().toISOString().split('T')[0], type: "Academic", description: "" });
+  const [openBudgetDialog, setOpenBudgetDialog] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({ totalBudget: 0, fiscalYear: "2026-2027", allocations: [] });
+
   const isDark = mode === 'dark';
 
   const glassStyle = {
@@ -89,41 +104,42 @@ const CollegeAdminDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch the college assigned to this Dean
         const resColleges = await collegesAPI.getAll({ deanEmail: user.email });
         if (resColleges.data.length > 0) {
           const collegeData = resColleges.data[0];
           setCollege(collegeData);
+          const collegeId = collegeData.id || collegeData._id;
 
-          // Fetch departments for this college
-          const resDepts = await departmentsAPI.getAll({ collegeId: collegeData.id });
-          const depts = resDepts.data;
-          setDepartments(depts);
+          // Fetch Departments
+          const resDepts = await departmentsAPI.getAll({ collegeId });
+          setDepartments(resDepts.data);
 
-          const deptNames = depts.map(d => d.name);
+          // Fetch Metrics (Student count, faculty count, GPA dist, etc.)
+          const metricsRes = await collegesAPI.getMetrics(collegeId);
+          const metrics = metricsRes.data;
+          setStudentsCount(metrics.studentCount);
+          setFacultyCount(metrics.facultyCount);
+          setGpaDistribution(metrics.gpaDistribution);
+          setCompletionRate(metrics.completionRate);
+
+          // Fetch Academic Events
+          const eventsRes = await academicEventsAPI.getAll({ collegeId });
+          setEvents(eventsRes.data);
+
+          // Fetch Budget
+          const budgetRes = await budgetsAPI.get(collegeId);
+          setBudget(budgetRes.data);
+
+          // Fetch Faculty List
+          const deptNames = resDepts.data.map(d => d.name);
           if (deptNames.length > 0) {
-            // Fetch Students and Faculty counts
-            const [resStudents, resFaculty] = await Promise.all([
-              usersAPI.getAll({ role: ROLES.STUDENT, department: deptNames }),
-              usersAPI.getAll({ role: "teacher", department: deptNames }),
-            ]);
-
-            setStudentsCount(resStudents.data.length);
-            setFacultyCount(resFaculty.data.length);
+            const resFaculty = await usersAPI.getAll({ role: "teacher", department: deptNames });
             setFacultyList(resFaculty.data);
           }
-        } else if (user.email === "dean@university.edu") {
-          // Demo Fallback
-          setCollege({
-            id: "demo-college-id",
-            name: "College of Engineering & Technology",
-            deanName: "James Moriarty",
-            deanEmail: "dean@university.edu",
-            color: "#6d28d9",
-          });
-          setDepartments([]);
-          setStudentsCount(450);
-          setFacultyCount(32);
+
+          // Fetch Research Projects
+          const researchRes = await researchAPI.getAll({ collegeId });
+          setResearchProjects(researchRes.data);
         }
       } catch (error) {
         console.error("Error fetching college admin data:", error);
@@ -134,6 +150,37 @@ const CollegeAdminDashboard = () => {
 
     fetchData();
   }, [user?.email]);
+
+  const handleSaveEvent = async (e) => {
+    if (e) e.preventDefault();
+    if (!college) return;
+    try {
+      await academicEventsAPI.create({ ...eventForm, collegeId: college.id || college._id });
+      setOpenEventDialog(false);
+      setEventForm({ title: "", date: new Date().toISOString().split('T')[0], type: "Academic", description: "" });
+      const eventsRes = await academicEventsAPI.getAll({ collegeId: college.id || college._id });
+      setEvents(eventsRes.data);
+      setSnackbarMsg("Event initialized successfully!");
+      setIsSnackbarOpen(true);
+    } catch (err) {
+      console.error("Error saving event:", err);
+    }
+  };
+
+  const handleSaveBudget = async (e) => {
+    if (e) e.preventDefault();
+    if (!college) return;
+    try {
+      await budgetsAPI.update({ ...budgetForm, collegeId: college.id || college._id });
+      setOpenBudgetDialog(false);
+      const budgetRes = await budgetsAPI.get(college.id || college._id);
+      setBudget(budgetRes.data);
+      setSnackbarMsg("Budget protocol updated!");
+      setIsSnackbarOpen(true);
+    } catch (err) {
+      console.error("Error saving budget:", err);
+    }
+  };
 
   const handleSaveDept = async (e) => {
     e.preventDefault();
@@ -205,7 +252,7 @@ const CollegeAdminDashboard = () => {
     { label: t("departments"), value: departments.length, icon: <Business />, color: "#6366f1", trend: "+2 this year" },
     { label: t("totalStudents"), value: studentsCount, icon: <People />, color: "#10b981", trend: "+12%" },
     { label: t("facultyMembers"), value: facultyCount, icon: <School />, color: "#f59e0b", trend: t("stable") },
-    { label: t("researchRate"), value: "88%", icon: <Assessment />, color: "#ec4899", trend: "+5.4%" },
+    { label: t("researchProjects"), value: researchProjects.length, icon: <Assessment />, color: "#ec4899", trend: "+5.4%" },
   ];
 
   const sidebarContent = (
@@ -466,7 +513,7 @@ const CollegeAdminDashboard = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={[
+                            data={gpaDistribution.length > 0 ? gpaDistribution : [
                               { name: 'GPA 3.5-4.0', value: 35 },
                               { name: 'GPA 3.0-3.5', value: 45 },
                               { name: 'GPA 2.5-3.0', value: 15 },
@@ -491,7 +538,7 @@ const CollegeAdminDashboard = () => {
                     <Typography variant="h6" fontWeight={1000} sx={{ mb: 4 }}>Credit Hour Completion</Typography>
                     <Box sx={{ height: 300 }}>
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={[
+                        <BarChart data={completionRate.length > 0 ? completionRate : [
                           { name: 'Freshman', val: 95 },
                           { name: 'Sophomore', val: 88 },
                           { name: 'Junior', val: 82 },
@@ -568,28 +615,42 @@ const CollegeAdminDashboard = () => {
         {activeTab === 4 && (
           <Fade in timeout={800}>
             <Box>
-              <Typography variant="h5" fontWeight={1000} sx={{ mb: 4 }}>{t("academicCalendar")}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Box>
+                  <Typography variant="h5" fontWeight={1000} sx={{ mb: 1 }}>{t("academicCalendar")}</Typography>
+                  <Typography variant="body2" color="text.secondary" fontWeight={700}>Strategic schedule of upcoming institutional milestones.</Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setOpenEventDialog(true)}
+                  sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 1000, bgcolor: college.color || 'primary.main' }}
+                >
+                  Initialize Event
+                </Button>
+              </Box>
               <Grid container spacing={3}>
-                {[
-                  { date: "Oct 12", event: "Mid-Term Assessment Cycle", type: "Academic" },
-                  { date: "Oct 25", event: "Faculty Research Symposium", type: "Research" },
-                  { date: "Nov 02", event: "Q4 Budget Review", type: "Administrative" },
-                  { date: "Nov 15", event: "Student Projects Exhibition", type: "Event" }
-                ].map((item, i) => (
-                  <Grid item xs={12} key={i}>
-                    <Paper sx={{ ...glassStyle, p: 3, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Box sx={{ bgcolor: alpha(college.color || '#6366f1', 0.1), p: 2, borderRadius: 3, textAlign: 'center', minWidth: 80 }}>
-                        <Typography variant="h6" fontWeight={1000} color={college.color || 'primary'}>{item.date.split(' ')[1]}</Typography>
-                        <Typography variant="caption" fontWeight={900}>{item.date.split(' ')[0]}</Typography>
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" fontWeight={900}>{item.event}</Typography>
-                        <Chip label={item.type} size="small" sx={{ mt: 1, fontWeight: 800, fontSize: '0.7rem' }} />
-                      </Box>
-                      <IconButton><ArrowForward /></IconButton>
-                    </Paper>
+                {events.length === 0 ? (
+                  <Grid item xs={12}>
+                    <Typography color="text.secondary" textAlign="center">No upcoming events scheduled.</Typography>
                   </Grid>
-                ))}
+                ) : (
+                  events.map((item, i) => (
+                    <Grid item xs={12} key={i}>
+                      <Paper sx={{ ...glassStyle, p: 3, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Box sx={{ bgcolor: alpha(college.color || '#6366f1', 0.1), p: 2, borderRadius: 3, textAlign: 'center', minWidth: 80 }}>
+                          <Typography variant="h6" fontWeight={1000} color={college.color || 'primary'}>{new Date(item.date).getDate()}</Typography>
+                          <Typography variant="caption" fontWeight={900}>{new Date(item.date).toLocaleDateString('en-US', { month: 'short' })}</Typography>
+                        </Box>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="h6" fontWeight={900}>{item.title}</Typography>
+                          <Chip label={item.type} size="small" sx={{ mt: 1, fontWeight: 800, fontSize: '0.7rem' }} />
+                        </Box>
+                        <IconButton><ArrowForward /></IconButton>
+                      </Paper>
+                    </Grid>
+                  ))
+                )}
               </Grid>
             </Box>
           </Fade>
@@ -602,10 +663,16 @@ const CollegeAdminDashboard = () => {
               <Grid container spacing={4}>
                 <Grid item xs={12} md={8}>
                   <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
-                    <Typography variant="h6" fontWeight={1000} sx={{ mb: 4 }}>Resource Allocation</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                      <Typography variant="h6" fontWeight={1000}>Resource Allocation ({budget?.fiscalYear || 'Pending'})</Typography>
+                      <Button variant="outlined" size="small" onClick={() => {
+                        if (budget) setBudgetForm({ totalBudget: budget.totalBudget, fiscalYear: budget.fiscalYear, allocations: budget.allocations });
+                        setOpenBudgetDialog(true);
+                      }} sx={{ borderRadius: 2, fontWeight: 1000 }}>Adjust Budget</Button>
+                    </Box>
                     <Box sx={{ height: 300 }}>
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={[
+                        <BarChart data={budget?.allocations?.length > 0 ? budget.allocations.map(a => ({ name: a.category, val: a.amount })) : [
                           { name: 'Research', val: 45000 },
                           { name: 'Faculty', val: 120000 },
                           { name: 'Infrastructure', val: 75000 },
@@ -624,7 +691,7 @@ const CollegeAdminDashboard = () => {
                 <Grid item xs={12} md={4}>
                   <Card sx={{ ...glassStyle, borderRadius: 6, p: 4, bgcolor: alpha(college.color || '#6366f1', 0.05) }}>
                     <Typography variant="h6" fontWeight={1000} sx={{ mb: 2 }}>Current Liquidity</Typography>
-                    <Typography variant="h3" fontWeight={1000} sx={{ mb: 1 }}>$248,500</Typography>
+                    <Typography variant="h3" fontWeight={1000} sx={{ mb: 1 }}>${budget?.balance?.toLocaleString() || '0'}</Typography>
                     <Typography variant="body2" color="text.secondary" fontWeight={700}>Remaining Fiscal Balance</Typography>
                     <Divider sx={{ my: 3 }} />
                     <Button fullWidth variant="contained" sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000 }}>Request Fund Allocation</Button>
@@ -698,6 +765,99 @@ const CollegeAdminDashboard = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Initialize Event Dialog */}
+        <Dialog open={openEventDialog} onClose={() => setOpenEventDialog(false)} PaperProps={{ sx: { borderRadius: 5, ...glassStyle, maxWidth: 450 } }}>
+          <DialogTitle sx={{ fontWeight: 1000, textAlign: 'center', pt: 4 }}>Initialize Academic Event</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
+              <TextField
+                label="Event Title" fullWidth
+                value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
+              />
+              <TextField
+                label="Date" type="date" fullWidth
+                value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
+              />
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={eventForm.type} label="Type"
+                  onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
+                  sx={{ borderRadius: 3, fontWeight: 700 }}
+                >
+                  <MenuItem value="Academic">Academic</MenuItem>
+                  <MenuItem value="Research">Research</MenuItem>
+                  <MenuItem value="Administrative">Administrative</MenuItem>
+                  <MenuItem value="Event">Event</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Description" fullWidth multiline rows={3}
+                value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 4 }}>
+            <Button onClick={() => setOpenEventDialog(false)} sx={{ fontWeight: 1000 }}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEvent} sx={{ borderRadius: 3, fontWeight: 1000, bgcolor: college.color }}>Finalize Protocol</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Adjust Budget Dialog */}
+        <Dialog open={openBudgetDialog} onClose={() => setOpenBudgetDialog(false)} PaperProps={{ sx: { borderRadius: 5, ...glassStyle, maxWidth: 500 } }}>
+          <DialogTitle sx={{ fontWeight: 1000, textAlign: 'center', pt: 4 }}>Adjust Budget Protocol</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
+              <TextField
+                label="Total Fiscal Budget" fullWidth type="number"
+                value={budgetForm.totalBudget} onChange={(e) => setBudgetForm({ ...budgetForm, totalBudget: Number(e.target.value) })}
+                InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
+              />
+              <TextField
+                label="Fiscal Year" fullWidth
+                value={budgetForm.fiscalYear} onChange={(e) => setBudgetForm({ ...budgetForm, fiscalYear: e.target.value })}
+                InputProps={{ sx: { borderRadius: 3, fontWeight: 700 } }}
+              />
+              <Typography variant="subtitle2" fontWeight={1000}>Department Allocations</Typography>
+              <Stack spacing={2}>
+                {['Research', 'Faculty', 'Infrastructure', 'Events'].map((cat, idx) => (
+                  <Box key={cat} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ minWidth: 100 }}>{cat}</Typography>
+                    <TextField
+                      size="small" type="number" fullWidth
+                      value={budgetForm.allocations.find(a => a.category === cat)?.amount || 0}
+                      onChange={(e) => {
+                        const newAllocations = [...budgetForm.allocations];
+                        const existingIdx = newAllocations.findIndex(a => a.category === cat);
+                        if (existingIdx >= 0) newAllocations[existingIdx].amount = Number(e.target.value);
+                        else newAllocations.push({ category: cat, amount: Number(e.target.value) });
+                        setBudgetForm({ ...budgetForm, allocations: newAllocations });
+                      }}
+                      InputProps={{ sx: { borderRadius: 2, fontWeight: 700 } }}
+                    />
+                  </Box>
+                ))}
+              </Stack>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 4 }}>
+            <Button onClick={() => setOpenBudgetDialog(false)} sx={{ fontWeight: 1000 }}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveBudget} sx={{ borderRadius: 3, fontWeight: 1000, bgcolor: college.color }}>Authorize Adjustment</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Global Notifications */}
+        <Box sx={{ position: 'fixed', bottom: 32, right: 32, zIndex: 9999 }}>
+          <Collapse in={isSnackbarOpen}>
+            <Alert severity="success" variant="filled" onClose={() => setIsSnackbarOpen(false)} sx={{ borderRadius: 4, fontWeight: 1000, boxShadow: '0 12px 24px rgba(0,0,0,0.2)' }}>
+              {snackbarMsg}
+            </Alert>
+          </Collapse>
+        </Box>
       </Box>
     </Box>
   );

@@ -74,6 +74,7 @@ export const collegesAPI = {
   create: (data) => api.post("/colleges", data),
   update: (id, data) => api.put(`/colleges/${id}`, data),
   delete: (id) => api.delete(`/colleges/${id}`),
+  getMetrics: (id) => api.get(`/colleges/${id}/metrics`),
 };
 
 // Departments API
@@ -180,6 +181,34 @@ export const otpsAPI = {
   create: (data) => api.post('/otps', data),
   update: (id, data) => api.patch(`/otps/${id}`, data),
   delete: (id) => api.delete(`/otps/${id}`),
+};
+
+// Academic Events API
+export const academicEventsAPI = {
+  getAll: (params) => api.get("/academic-events", { params }),
+  create: (data) => api.post("/academic-events", data),
+  update: (id, data) => api.put(`/academic-events/${id}`, data),
+  delete: (id) => api.delete(`/academic-events/${id}`),
+};
+
+// Budgets API
+export const budgetsAPI = {
+  get: (collegeId) => api.get("/budgets", { params: { collegeId } }),
+  update: (data) => api.post("/budgets", data),
+};
+
+// Attendance API
+export const attendanceAPI = {
+  get: (params) => api.get("/attendance", { params }),
+  create: (data) => api.post("/attendance", data),
+  getByStudent: (studentId) => api.get(`/attendance/student/${studentId}`),
+};
+
+// Assignments API
+export const assignmentsAPI = {
+  getAll: (params) => api.get("/assignments", { params }),
+  create: (data) => api.post("/assignments", data),
+  grade: (id, data) => api.post(`/assignments/${id}/grade`, data),
 };
 
 export default api;

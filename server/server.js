@@ -56,6 +56,10 @@ app.use("/api/security-logs", require("./routes/security_logs"));
 app.use("/api/password-resets", require("./routes/password_resets"));
 app.use("/api/system-broadcasts", require("./routes/system_broadcasts"));
 app.use("/api/otps", require("./routes/otps"));
+app.use("/api/academic-events", require("./routes/academic_events"));
+app.use("/api/budgets", require("./routes/budgets"));
+app.use("/api/attendance", require("./routes/attendance"));
+app.use("/api/assignments", require("./routes/assignments"));
 
 // Health check
 app.get("/api/health", (_req, res) => {

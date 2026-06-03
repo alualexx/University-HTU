@@ -27,14 +27,18 @@ const courseSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    credits: { type: Number, default: 3 },
+    instructorName: { type: String, default: "" },
+    registrarDescription: { type: String, default: "" },
+    tuitionFee: { type: Number, default: 0 },
     maxStudents: { type: Number, default: 40 },
     schedule: { type: String }, // e.g., "MWF 9:00-10:00 AM"
     room: { type: String },
     semester: { type: String }, // e.g., "1st Sem 2024-2025"
     status: {
       type: String,
-      enum: ["active", "closed", "cancelled"],
-      default: "active",
+      enum: ["pending_registrar_approval", "active", "archived", "rejected", "draft"],
+      default: "pending_registrar_approval",
     },
   },
   {

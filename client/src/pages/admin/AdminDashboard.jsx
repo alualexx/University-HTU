@@ -506,6 +506,7 @@ const AdminDashboard = () => {
   };
 
   const handleReviewApplication = (app) => {
+    const appId = app._id || app.id;
     const generatedEmail = generateUniversityEmail(app.name);
     const generatedOTP = generateOTP();
 
@@ -513,9 +514,9 @@ const AdminDashboard = () => {
       name: app.name || "",
       email: generatedEmail,
       password: generatedOTP,
-      role: app.role === "college_admin" ? ROLES.COLLEGE_ADMIN : ROLES.FACULTY,
-      studentId: "", year: "", employeeId: "", department: app.college || app.department || "",
-      applicationId: app.id
+      role: app.role === "college_admin" ? ROLES.COLLEGE_ADMIN : ROLES.STUDENT,
+      studentId: "", year: "", employeeId: "", department: app.college || app.department || app.intendedMajor || "",
+      applicationId: appId
     });
     setCreationError("");
     setCreationSuccess("");
@@ -523,12 +524,13 @@ const AdminDashboard = () => {
   };
 
   const handleRejectApplication = async (app) => {
+    const appId = app._id || app.id;
     if (!window.confirm(`Are you sure you want to reject the application for ${app.name}?`)) return;
     try {
-      await applicationsAPI.patch(app.id, { status: "rejected" });
-      logActivity("Application Rejected", `Rejected application for ${app.email}`);
-      // Refresh list
-      const appsRes = await applicationsAPI.getAll({ status: 'final_approved' });
+      await applicationsAPI.patch(appId, { status: "rejected" });
+      logActivity("Application Rejected", `Rejected application for ${app.email || app.name}`);
+      // Refresh list using the correct operational status
+      const appsRes = await applicationsAPI.getAll({ status: 'registrar_approved' });
       setApprovedApplications(appsRes.data);
     } catch (err) {
       console.error("Failed to reject application:", err);
@@ -550,8 +552,8 @@ const AdminDashboard = () => {
       if (res.success) {
         if (formData.applicationId) {
           try {
-            await applicationsAPI.patch(formData.applicationId, { status: "provisioned" });
-            const appsRes = await applicationsAPI.getAll({ status: 'final_approved' });
+            await applicationsAPI.patch(formData.applicationId, { status: "final_approved" });
+            const appsRes = await applicationsAPI.getAll({ status: 'registrar_approved' });
             setApprovedApplications(appsRes.data);
           } catch (appErr) {
             console.error("Failed to update application status:", appErr);

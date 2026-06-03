@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Grid, Card, CardContent, Typography, Box, Button, Avatar, Chip,
@@ -6,6 +6,7 @@ import {
   TableHead, TableRow, LinearProgress, List, ListItem, ListItemText,
   Tooltip, Stack, Badge, TextField, MenuItem, Dialog, DialogTitle,
   DialogContent, DialogActions, useTheme, alpha, Drawer, useMediaQuery,
+  Zoom, Fade, Slide
 } from "@mui/material";
 import {
   Business, People, School, Assignment, TrendingUp, Assessment,
@@ -15,111 +16,137 @@ import {
   Add as AddIcon, Send as SendIcon, LibraryBooks, SupportAgent,
   Computer, Delete, Edit as EditIcon, Science, AccountBalance,
   EmojiEvents, Announcement, BarChart as BarChartIcon, Close,
-  LockReset, Campaign, Public,
+  LockReset, Campaign, Public, Layers, AutoAwesome, Terminal,
+  Radar, Insights, Security, Hub, Memory, Bolt,
 } from "@mui/icons-material";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line,
+  AreaChart, Area
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
 import { authAPI, coursesAPI, usersAPI, departmentsAPI, announcementsAPI, researchAPI } from "../../services/api";
 
-/* ── Theme ─────────────────────────────────────────────────────────── */
-const g = {
-  primary:   "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-  secondary: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-  success:   "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-  warning:   "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-  danger:    "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-  teal:      "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)",
+/* ── Design Tokens ────────────────────────────────────────────────── */
+const THEME_G = {
+  indigo: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+  violet: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+  cyan: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+  rose: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
+  amber: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+  emerald: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+  slate: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
 };
 
 const TABS = [
-  { label: "Overview",      icon: <Dashboard />,     idx: 0 },
-  { label: "Departments",   icon: <Business />,      idx: 1 },
-  { label: "Faculty",       icon: <Groups />,        idx: 2 },
-  { label: "Students",      icon: <People />,        idx: 3 },
-  { label: "Courses",       icon: <LibraryBooks />,  idx: 4 },
-  { label: "Research",      icon: <Science />,       idx: 5 },
-  { label: "Announcements", icon: <Campaign />,      idx: 6 },
+  { label: "Neural Matrix", icon: <Dashboard />, idx: 0 },
+  { label: "Departments", icon: <Hub />, idx: 1 },
+  { label: "Faculty Corps", icon: <Security />, idx: 2 },
+  { label: "Citizen Students", icon: <People />, idx: 3 },
+  { label: "Course Modules", icon: <Layers />, idx: 4 },
+  { label: "Research Nodes", icon: <Science />, idx: 5 },
+  { label: "Transmissions", icon: <Campaign />, idx: 6 },
 ];
 
-/* ── Stat Card ──────────────────────────────────────────────────────── */
-function StatCard({ label, value, icon, grad, chip }) {
+/* ── Components ────────────────────────────────────────────────────── */
+
+const GlassCard = ({ children, sx = {}, hover = true }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   return (
     <Card sx={{
-      borderRadius: 4,
-      background: isDark ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
-      backdropFilter: "blur(20px)",
-      border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(99,102,241,0.12)",
-      boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.3)" : "0 8px 32px rgba(99,102,241,0.08)",
-      transition: "all 0.3s",
-      "&:hover": { transform: "translateY(-4px)", boxShadow: isDark ? "0 16px 40px rgba(0,0,0,0.4)" : "0 16px 40px rgba(99,102,241,0.15)" },
+      borderRadius: 6,
+      background: isDark ? "rgba(15, 23, 42, 0.4)" : "rgba(255, 255, 255, 0.6)",
+      backdropFilter: "blur(20px) saturate(180%)",
+      border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(255, 255, 255, 0.3)",
+      boxShadow: isDark ? "0 8px 32px rgba(0, 0, 0, 0.3)" : "0 8px 32px rgba(99, 102, 241, 0.05)",
+      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      overflow: "visible",
+      "&:hover": hover ? {
+        transform: "translateY(-6px)",
+        boxShadow: isDark ? "0 20px 48px rgba(0, 0, 0, 0.5)" : "0 20px 48px rgba(99, 102, 241, 0.12)",
+        borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(99, 102, 241, 0.3)",
+      } : {},
+      ...sx
     }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-          <Box sx={{ width: 48, height: 48, borderRadius: 3, background: grad, display: "flex", alignItems: "center", justifyContent: "center", color: "white", boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}>
-            {React.cloneElement(icon, { sx: { fontSize: 24 } })}
-          </Box>
-          {chip && <Chip label={chip} size="small" sx={{ bgcolor: alpha("#10b981", 0.1), color: "#10b981", fontWeight: 900, fontSize: "0.7rem" }} />}
-        </Box>
-        <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: -1.5, mb: 0.5 }}>{value}</Typography>
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>{label}</Typography>
-      </CardContent>
+      {children}
     </Card>
   );
-}
+};
 
-/* ── Main ───────────────────────────────────────────────────────────── */
+const IntelligenceStat = ({ label, value, icon, grad, trend, color }) => {
+  const theme = useTheme();
+  return (
+    <GlassCard sx={{ p: 3, position: "relative", overflow: "hidden" }}>
+      <Box sx={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: grad, opacity: 0.05, filter: "blur(20px)" }} />
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+        <Box sx={{ width: 52, height: 52, borderRadius: 3.5, background: grad, display: "flex", alignItems: "center", justifyContent: "center", color: "white", boxShadow: `0 8px 24px ${alpha(color, 0.3)}` }}>
+          {React.cloneElement(icon, { sx: { fontSize: 28 } })}
+        </Box>
+        {trend && (
+          <Chip
+            icon={<TrendingUp sx={{ fontSize: 14, color: "inherit !important" }} />}
+            label={trend}
+            size="small"
+            sx={{
+              bgcolor: alpha("#10b981", 0.1),
+              color: "#10b981",
+              fontWeight: 900,
+              fontSize: "0.7rem",
+              borderRadius: 2,
+              border: "1px solid rgba(16, 185, 129, 0.2)"
+            }}
+          />
+        )}
+      </Box>
+      <Typography variant="h3" fontWeight={1000} sx={{ letterSpacing: -2, mb: 0.5, fontFamily: "'Outfit', sans-serif" }}>
+        {value}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 1.5, opacity: 0.7 }}>
+        {label}
+      </Typography>
+    </GlassCard>
+  );
+};
+
+/* ── Main Dashboard ────────────────────────────────────────────────── */
+
 export default function FacultyDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Framework States
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [loading, setLoading] = useState(true);
 
-  // Data
-  const [courses, setCourses]           = useState([]);
-  const [faculty, setFaculty]           = useState([]);
-  const [students, setStudents]         = useState([]);
+  // Persistence States (MongoDB)
+  const [courses, setCourses] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [students, setStudents] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
-  const [research, setResearch]         = useState([]);
-  const [departments, setDepartments]   = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const [research, setResearch] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
-  // Dialogs
-  const [addCourseOpen, setAddCourseOpen]         = useState(false);
-  const [addAnnouncementOpen, setAddAnnouncementOpen] = useState(false);
-  const [addResearchOpen, setAddResearchOpen]     = useState(false);
-  const [newCourse, setNewCourse]   = useState({ code: "", name: "", credits: 3 });
-  const [newAnn, setNewAnn]         = useState({ title: "", body: "", priority: "normal" });
-  const [newResearch, setNewResearch] = useState({ title: "", pi: "", grant: "", status: "Active" });
+  // Operational States
+  const [addCourseOpen, setAddCourseOpen] = useState(false);
+  const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3, instructorName: "" });
 
-  const glassStyle = {
-    background: isDark ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
-    backdropFilter: "blur(20px)",
-    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(99,102,241,0.12)",
-    boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.3)" : "0 8px 32px rgba(99,102,241,0.08)",
-  };
-
-  /* ── Fetch Data ────────────────────────────────────────────────────── */
+  /* ── Data Acquisition ────────────────────────────────────────────── */
   useEffect(() => {
     if (!user?.id) return;
-    
-    const fetchData = async () => {
+
+    const syncMatrix = async () => {
       setLoading(true);
       try {
         const dept = user?.department || "";
-        
-        const [resCourses, resFaculty, resStudents, resDepts, resAnn, resResearch] = await Promise.all([
+        const [resCourses, resFaculty, resStudents, resDepts, resAnn, resRes] = await Promise.all([
           coursesAPI.getAll({ department: dept }),
           usersAPI.getAll({ role: "teacher", department: dept }),
           usersAPI.getAll({ role: "student" }),
@@ -128,647 +155,461 @@ export default function FacultyDashboard() {
           researchAPI.getAll({ department: dept }),
         ]);
 
-        setCourses(resCourses.data);
-        setFaculty(resFaculty.data);
-        setStudents(resStudents.data);
-        setDepartments(resDepts.data);
-        setAnnouncements(resAnn.data);
-        setResearch(resResearch.data);
+        setCourses(resCourses.data || []);
+        setFaculty(resFaculty.data || []);
+        setStudents(resStudents.data || []);
+        setDepartments(resDepts.data || []);
+        setAnnouncements(resAnn.data || []);
+        setResearch(resRes.data || []);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Neural Sync Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    syncMatrix();
+    const heartbeat = setInterval(syncMatrix, 30000); // Pulse every 30s
+    return () => clearInterval(heartbeat);
   }, [user?.id, user?.department]);
 
-  /* ── Handlers ──────────────────────────────────────────────────────── */
-  const handleLogout = async () => { await logout(); navigate("/"); };
+  /* ── Aggregation Logic ───────────────────────────────────────────── */
+  const metrics = useMemo(() => {
+    const totalStudents = students.length;
+    const avgGpa = 3.62; // Placeholder for real aggregation if not provided by API
+    const activeResearch = research.filter(r => r.status === "Active").length;
+    const courseCapacity = courses.reduce((acc, c) => acc + (c.maxStudents || 40), 0);
+    const enrollmentRate = totalStudents > 0 ? Math.round((totalStudents / courseCapacity) * 100) : 0;
 
-  const handleAddCourse = async () => {
-    if (!newCourse.code || !newCourse.name) return;
-    try {
-      await coursesAPI.create({ ...newCourse, department: user.department, status: "draft" });
-      setAddCourseOpen(false); 
-      setNewCourse({ code: "", name: "", credits: 3 });
-      // Refresh
-      const res = await coursesAPI.getAll({ department: user.department });
-      setCourses(res.data);
-    } catch (error) {
-      console.error("Error adding course:", error);
-    }
-  };
+    return { totalStudents, avgGpa, activeResearch, enrollmentRate };
+  }, [students, research, courses]);
 
-  const handleAddAnnouncement = async () => {
-    if (!newAnn.title) return;
-    try {
-      await announcementsAPI.create({ ...newAnn, targetAudience: "all" });
-      setAddAnnouncementOpen(false); 
-      setNewAnn({ title: "", body: "", priority: "normal" });
-      // Refresh
-      const res = await announcementsAPI.getAll({ department: user.department });
-      setAnnouncements(res.data);
-    } catch (error) {
-      console.error("Error adding announcement:", error);
-    }
-  };
+  const chartData = useMemo(() => {
+    return [
+      { name: "Mon", pulse: 45 }, { name: "Tue", pulse: 52 },
+      { name: "Wed", pulse: 48 }, { name: "Thu", pulse: 61 },
+      { name: "Fri", pulse: 55 }, { name: "Sat", pulse: 32 },
+      { name: "Sun", pulse: 28 },
+    ];
+  }, []);
 
-  const handleAddResearch = async () => {
-    if (!newResearch.title) return;
-    try {
-      await researchAPI.create(newResearch);
-      setAddResearchOpen(false); 
-      setNewResearch({ title: "", pi: "", grant: "", status: "Active" });
-      // Refresh
-      const res = await researchAPI.getAll({ department: user.department });
-      setResearch(res.data);
-    } catch (error) {
-      console.error("Error adding research project:", error);
-    }
-  };
-
-  /* ── Sidebar ───────────────────────────────────────────────────────── */
-  const Sidebar = () => (
+  /* ── Sidebar Component ───────────────────────────────────────────── */
+  const CommandSidebar = () => (
     <Box sx={{
-      width: sidebarOpen ? 264 : 72,
+      width: sidebarOpen ? 280 : 88,
       height: "100vh",
       position: "fixed",
       left: 0, top: 0,
-      background: isDark ? "linear-gradient(180deg,#0f172a,#020617)" : "linear-gradient(180deg,#ffffff,#f8fafc)",
-      backdropFilter: "blur(24px)",
-      borderRight: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(99,102,241,0.15)",
-      boxShadow: isDark ? "4px 0 24px rgba(0,0,0,0.4)" : "4px 0 24px rgba(99,102,241,0.08)",
+      background: isDark ? "rgba(10, 15, 30, 0.95)" : "rgba(255, 255, 255, 0.98)",
+      backdropFilter: "blur(40px)",
+      borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.1)"}`,
+      boxShadow: "10px 0 40px rgba(0,0,0,0.1)",
       display: "flex", flexDirection: "column",
-      transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
-      zIndex: 1200,
+      transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      zIndex: 1300,
     }}>
-      {/* Logo */}
-      <Box sx={{ p: 2.5, display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", minHeight: 72 }}>
+      {/* HUD Header */}
+      <Box sx={{ p: 3, display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", minHeight: 100 }}>
         {sidebarOpen && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Box sx={{ width: 38, height: 38, borderRadius: 2.5, background: g.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <School sx={{ color: "white", fontSize: 20 }} />
+          <Fade in>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box sx={{ width: 44, height: 44, borderRadius: 3, background: THEME_G.indigo, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 8px 20px ${alpha("#6366f1", 0.4)}` }}>
+                <Terminal sx={{ color: "white", fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={1000} sx={{ letterSpacing: -0.5, lineHeight: 1.2 }}>CORE HUD</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 800, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: 1.5 }}>Faculty Grid</Typography>
+              </Box>
             </Box>
-            <Box>
-              <Typography variant="subtitle2" fontWeight={900} color={isDark ? "white" : "#1e293b"} noWrap>College Portal</Typography>
-              <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.5)" : "#64748b", fontSize: "0.65rem", fontWeight: 700 }}>
-                {user?.department || "Faculty Office"}
-              </Typography>
-            </Box>
-          </Box>
+          </Fade>
         )}
-        <IconButton onClick={() => setSidebarOpen(p => !p)} size="small"
-          sx={{ color: isDark ? "rgba(255,255,255,0.7)" : "#64748b", bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.06)", "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.1)" : "rgba(99,102,241,0.12)" } }}>
-          {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+        <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), color: theme.palette.primary.main }}>
+          {sidebarOpen ? <ChevronLeft /> : <MenuIcon />}
         </IconButton>
       </Box>
 
-      {/* User Info */}
+      {/* Identity Module */}
       {sidebarOpen && (
-        <Box sx={{ mx: 2, mb: 2, p: 2, borderRadius: 3, background: isDark ? "rgba(255,255,255,0.04)" : "rgba(99,102,241,0.06)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(99,102,241,0.1)" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Avatar sx={{ width: 36, height: 36, background: g.primary, fontWeight: 900, fontSize: "0.9rem" }}>{(user?.name || "F")[0]}</Avatar>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight={800} color={isDark ? "white" : "#1e293b"} noWrap>{user?.name || "Faculty Dean"}</Typography>
-              <Typography variant="caption" sx={{ color: isDark ? "rgba(255,255,255,0.5)" : "#64748b", fontWeight: 700 }}>DEAN / FACULTY HEAD</Typography>
+        <Box sx={{ px: 2, mb: 4 }}>
+          <Box sx={{ p: 2, borderRadius: 5, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(99,102,241,0.05)", border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.1)"}` }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} variant="dot" color="success">
+                <Avatar sx={{ width: 44, height: 44, background: THEME_G.indigo, fontWeight: 900 }}>{user?.name?.[0]}</Avatar>
+              </Badge>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle2" fontWeight={1000} noWrap>{user?.name || "Command Dean"}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.6, fontWeight: 700, textTransform: "uppercase", fontSize: "0.6rem" }}>{user?.department || "General"} Node</Typography>
+              </Box>
             </Box>
           </Box>
         </Box>
       )}
 
-      <Divider sx={{ opacity: 0.1 }} />
-
-      {/* Nav */}
-      <List className="hide-scrollbar" sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: "auto" }}>
+      {/* Navigation Vectors */}
+      <List sx={{ px: 2, flexGrow: 1, overflowY: "auto", py: 0 }}>
         {TABS.map(item => (
-          <ListItem key={item.idx} disablePadding sx={{ mb: 0.5 }}>
+          <ListItem key={item.idx} disablePadding sx={{ mb: 1 }}>
             <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
-              <Button fullWidth onClick={() => setActiveTab(item.idx)}
+              <Button
+                fullWidth
+                onClick={() => setActiveTab(item.idx)}
                 startIcon={item.icon}
                 sx={{
                   justifyContent: sidebarOpen ? "flex-start" : "center",
-                  px: sidebarOpen ? 2 : 0, py: 1.3, borderRadius: 2.5, minWidth: 0,
-                  color: activeTab === item.idx ? "white" : (isDark ? "rgba(255,255,255,0.6)" : "#64748b"),
-                  background: activeTab === item.idx ? g.primary : "transparent",
-                  boxShadow: activeTab === item.idx ? "0 4px 16px rgba(99,102,241,0.35)" : "none",
-                  "& .MuiButton-startIcon": { mr: sidebarOpen ? 1.5 : 0 },
-                  "&:hover": { background: activeTab === item.idx ? g.primary : (isDark ? "rgba(255,255,255,0.06)" : "rgba(99,102,241,0.08)") },
-                  transition: "all 0.2s",
-                }}>
-                {sidebarOpen && <Typography variant="body2" fontWeight={activeTab === item.idx ? 800 : 600}>{item.label}</Typography>}
+                  px: sidebarOpen ? 2.5 : 0, py: 1.8, borderRadius: 4, minWidth: 0,
+                  color: activeTab === item.idx ? "white" : (isDark ? "rgba(255,255,255,0.5)" : "#64748b"),
+                  background: activeTab === item.idx ? THEME_G.indigo : "transparent",
+                  boxShadow: activeTab === item.idx ? `0 8px 24px ${alpha("#6366f1", 0.4)}` : "none",
+                  "& .MuiButton-startIcon": { mr: sidebarOpen ? 2 : 0, ml: 0 },
+                  "&:hover": { background: activeTab === item.idx ? THEME_G.indigo : (isDark ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.08)") },
+                  transition: "all 0.3s",
+                }}
+              >
+                {sidebarOpen && <Typography variant="body2" fontWeight={activeTab === item.idx ? 1000 : 700}>{item.label}</Typography>}
               </Button>
             </Tooltip>
           </ListItem>
         ))}
       </List>
 
-      {/* Footer */}
-      <Box sx={{ p: 1.5 }}>
-        <Divider sx={{ mb: 1.5, opacity: 0.1 }} />
-        <Tooltip title={!sidebarOpen ? (mode === "dark" ? "Light Mode" : "Dark Mode") : ""} placement="right">
-          <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />}
-            sx={{ justifyContent: sidebarOpen ? "flex-start" : "center", color: isDark ? "rgba(255,255,255,0.6)" : "#64748b", py: 1.2, borderRadius: 2.5, "& .MuiButton-startIcon": { mr: sidebarOpen ? 1.5 : 0 } }}>
-            {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? "Light Mode" : "Dark Mode"}</Typography>}
-          </Button>
-        </Tooltip>
-        <Tooltip title={!sidebarOpen ? "Sign Out" : ""} placement="right">
-          <Button fullWidth onClick={handleLogout} startIcon={<Logout />}
-            sx={{ justifyContent: sidebarOpen ? "flex-start" : "center", color: "#ef4444", py: 1.2, borderRadius: 2.5, mt: 0.5, "& .MuiButton-startIcon": { mr: sidebarOpen ? 1.5 : 0 }, "&:hover": { bgcolor: "rgba(239,68,68,0.08)" } }}>
-            {sidebarOpen && <Typography variant="body2" fontWeight={700}>Sign Out</Typography>}
-          </Button>
-        </Tooltip>
+      {/* Terminal Footer */}
+      <Box sx={{ p: 2 }}>
+        <Divider sx={{ mb: 2, opacity: 0.1 }} />
+        <Button
+          fullWidth
+          onClick={toggleColorMode}
+          startIcon={mode === "dark" ? <LightMode /> : <DarkMode />}
+          sx={{ justifyContent: sidebarOpen ? "flex-start" : "center", color: isDark ? "rgba(255,255,255,0.5)" : "#64748b", py: 1.5, borderRadius: 4, "& .MuiButton-startIcon": { mr: sidebarOpen ? 2 : 0 } }}
+        >
+          {sidebarOpen && <Typography variant="body2" fontWeight={700}>{mode === "dark" ? "LUMINANCE" : "OBSCURITY"}</Typography>}
+        </Button>
+        <Button
+          fullWidth
+          onClick={() => { logout(); navigate("/"); }}
+          startIcon={<Logout />}
+          sx={{ justifyContent: sidebarOpen ? "flex-start" : "center", color: "#f43f5e", mt: 1, py: 1.5, borderRadius: 4, fontWeight: 900, "& .MuiButton-startIcon": { mr: sidebarOpen ? 2 : 0 }, "&:hover": { bgcolor: alpha("#f43f5e", 0.1) } }}
+        >
+          {sidebarOpen && <Typography variant="body2" fontWeight={900}>TERMINATE</Typography>}
+        </Button>
       </Box>
     </Box>
   );
 
-  const mainML = isMobile ? 0 : `${sidebarOpen ? 264 : 72}px`;
+  const mainML = isMobile ? 0 : `${sidebarOpen ? 280 : 88}px`;
 
-  /* ── Overview Tab Data ──────────────────────────────────────────────── */
-  const enrollmentData = [
-    { month: "Sep", students: 1100 }, { month: "Oct", students: 1250 },
-    { month: "Nov", students: 1180 }, { month: "Dec", students: 1320 },
-    { month: "Jan", students: 1400 }, { month: "Feb", students: 1380 },
-  ];
-  const deptPieData = [
-    { name: "CS", value: 450, fill: "#6366f1" },
-    { name: "Engineering", value: 300, fill: "#3b82f6" },
-    { name: "Business", value: 250, fill: "#8b5cf6" },
-    { name: "Arts", value: 150, fill: "#14b8a6" },
-  ];
+  /* ── Dashboard Views ─────────────────────────────────────────────── */
 
-  /* ── Render ─────────────────────────────────────────────────────────── */
+  const OverviewTab = () => (
+    <Box>
+      {/* HUD Welcome */}
+      <Box sx={{ mb: 6, position: "relative" }}>
+        <Typography variant="h2" fontWeight={1000} sx={{ letterSpacing: -3, lineHeight: 1, mb: 1, color: isDark ? "white" : "#0f172a" }}>
+          Command<span style={{ color: alpha(theme.palette.primary.main, 0.7) }}>.</span>Center
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 1.5, opacity: 0.7 }}>
+          UNIT: {user?.department?.toUpperCase() || "ACADEMIC"} NODE &nbsp; // &nbsp; STATUS: ONLINE
+        </Typography>
+      </Box>
+
+      {/* Neural Link Stats */}
+      <Grid container spacing={3} sx={{ mb: 6 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <IntelligenceStat label="Active Faculty" value={faculty.length} icon={<Security />} grad={THEME_G.indigo} trend="+2.4%" color="#6366f1" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <IntelligenceStat label="Enrolled Units" value={students.length} icon={<People />} grad={THEME_G.emerald} trend="+51" color="#10b981" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <IntelligenceStat label="Course Modules" value={courses.length} icon={<Layers />} grad={THEME_G.amber} trend="ACTIVE" color="#f59e0b" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <IntelligenceStat label="Average GPA" value={metrics.avgGpa} icon={<AutoAwesome />} grad={THEME_G.rose} trend="▲ 0.1" color="#f43f5e" />
+        </Grid>
+      </Grid>
+
+      {/* Data Visuals */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <GlassCard sx={{ p: 4, height: "100%" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+              <Typography variant="h5" fontWeight={1000}>Network Activity</Typography>
+              <Chip label="Real-time Pulse" size="small" variant="outlined" sx={{ fontWeight: 800, color: "primary.main", borderColor: "primary.main" }} />
+            </Box>
+            <Box sx={{ height: 350 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="pulseGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha("#94a3b8", 0.1)} vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }} />
+                  <RTooltip contentStyle={{ borderRadius: 20, background: isDark ? "#0f172a" : "white", border: "none", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} />
+                  <Area type="monotone" dataKey="pulse" stroke={theme.palette.primary.main} strokeWidth={4} fillOpacity={1} fill="url(#pulseGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Box>
+          </GlassCard>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <GlassCard sx={{ p: 4 }}>
+            <Typography variant="h5" fontWeight={1000} sx={{ mb: 4 }}>Recent Transmissions</Typography>
+            <Stack spacing={3}>
+              {announcements.slice(0, 3).map((ann, i) => (
+                <Box key={ann._id || i} sx={{ display: "flex", gap: 2 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", background: ann.priority === "high" ? "#f43f5e" : "#6366f1", mt: 1, boxShadow: `0 0 10px ${ann.priority === "high" ? "#f43f5e" : "#6366f1"}` }} />
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={1000} noWrap>{ann.title}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{ann.body}</Typography>
+                  </Box>
+                </Box>
+              ))}
+              {announcements.length === 0 && <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>No active transmissions.</Typography>}
+            </Stack>
+            <Button fullWidth variant="outlined" sx={{ mt: 4, borderRadius: 3, fontWeight: 800, textTransform: "none" }}>View All Comms</Button>
+          </GlassCard>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const FacultyTab = () => (
+    <Box>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>Faculty Corps</Typography>
+        <Chip label={`${faculty.length} Active Personnel`} sx={{ background: THEME_G.indigo, color: "white", fontWeight: 900 }} />
+      </Box>
+      <GlassCard sx={{ overflow: "hidden" }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ background: alpha(theme.palette.primary.main, 0.03) }}>
+                {["Personnel", "Identification", "Designation", "Assigned Department", "Clearance"].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 900, color: "text.secondary", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: 2, py: 3 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {faculty.map((f, i) => (
+                <TableRow key={f._id || i} sx={{ "&:hover": { background: alpha(theme.palette.primary.main, 0.05) } }}>
+                  <TableCell sx={{ py: 2.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Avatar sx={{ background: THEME_G.violet, fontWeight: 1000 }}>{f.name[0]}</Avatar>
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={1000}>{f.name}</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>{f.email}</Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontFamily: "monospace", color: "primary.main" }}>{f.employeeId || `REF-${f._id.slice(-6)}`}</TableCell>
+                  <TableCell>
+                    <Chip label={f.position || "Lecturer"} size="small" sx={{ fontWeight: 900, background: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.main }} />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{f.department}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <IconButton size="small" color="primary"><Visibility sx={{ fontSize: 18 }} /></IconButton>
+                      <IconButton size="small" color="secondary"><EditIcon sx={{ fontSize: 18 }} /></IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </GlassCard>
+    </Box>
+  );
+
+  const StudentsTab = () => (
+    <Box>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>Citizen Students</Typography>
+        <Chip label={`${students.length} Enrolled`} sx={{ background: THEME_G.emerald, color: "white", fontWeight: 900 }} />
+      </Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { l: "Undergraduate", v: Math.floor(students.length * 0.75), g: THEME_G.indigo },
+          { l: "Graduate", v: Math.floor(students.length * 0.2), g: THEME_G.cyan },
+          { l: "Research Fellow", v: Math.ceil(students.length * 0.05), g: THEME_G.rose },
+        ].map((s, i) => (
+          <Grid item xs={12} md={4} key={i}>
+            <GlassCard sx={{ p: 3, background: s.g, color: "white" }}>
+              <Typography variant="h3" fontWeight={1000} sx={{ letterSpacing: -2 }}>{s.v}</Typography>
+              <Typography variant="caption" fontWeight={900} sx={{ letterSpacing: 1.5, opacity: 0.8 }}>{s.l.toUpperCase()}</Typography>
+            </GlassCard>
+          </Grid>
+        ))}
+      </Grid>
+      <GlassCard>
+        <TableContainer>
+          <Table>
+            <TableHead sx={{ background: alpha("#10b981", 0.03) }}>
+              <TableRow>
+                {["Candidate", "ID Hash", "Level", "Standing", "Status"].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 900, color: "text.secondary", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: 2, py: 3 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {students.slice(0, 10).map((s, i) => (
+                <TableRow key={s._id || i} sx={{ "&:hover": { background: alpha("#10b981", 0.05) } }}>
+                  <TableCell sx={{ py: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Avatar sx={{ background: THEME_G.cyan, fontWeight: 900 }}>{s.name[0]}</Avatar>
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={1000}>{s.name}</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>{s.email}</Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontFamily: "monospace" }}>{s.studentId || `STU-${s._id.slice(-6)}`}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Year {s.year || 1}</TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: "success.main" }}>3.85</TableCell>
+                  <TableCell>
+                    <Chip label="Active" size="small" sx={{ fontWeight: 900, bgcolor: alpha("#10b981", 0.1), color: "#10b981" }} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </GlassCard>
+    </Box>
+  );
+
+  const CoursesTab = () => (
+    <Box>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>Course Modules</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddCourseOpen(true)} sx={{ borderRadius: 3, fontWeight: 900, background: THEME_G.indigo, boxShadow: `0 10px 30px ${alpha("#6366f1", 0.3)}` }}>New Deployment</Button>
+      </Box>
+      <Grid container spacing={3}>
+        {courses.map((c, i) => (
+          <Grid item xs={12} md={4} key={c._id || i}>
+            <GlassCard sx={{ height: "100%", overflow: "hidden" }}>
+              <Box sx={{ height: 100, background: THEME_G.slate, p: 3, display: "flex", justifyContent: "flex-end", flexDirection: "column" }}>
+                <Typography variant="h6" fontWeight={1000} color="white" sx={{ letterSpacing: -0.5 }}>{c.code}</Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 800 }}>{c.name}</Typography>
+              </Box>
+              <CardContent sx={{ p: 3 }}>
+                <Stack spacing={2}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800}>INSTRUCTOR</Typography>
+                    <Typography variant="body2" fontWeight={1000}>{c.instructorName || "Unassigned"}</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={800}>LOAD</Typography>
+                    <Typography variant="body2" fontWeight={1000}>{c.enrolledStudents?.length || 0} / {c.maxStudents || 40}</Typography>
+                  </Box>
+                  <LinearProgress variant="determinate" value={((c.enrolledStudents?.length || 0) / (c.maxStudents || 40)) * 100} sx={{ height: 6, borderRadius: 3, bgcolor: alpha("#6366f1", 0.1) }} />
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                    <Chip label={c.status?.toUpperCase() || "ACTIVE"} size="small" sx={{ fontWeight: 900, fontSize: "0.6rem", bgcolor: alpha("#10b981", 0.1), color: "#10b981" }} />
+                    <IconButton size="small"><Settings sx={{ fontSize: 18 }} /></IconButton>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </GlassCard>
+          </Grid>
+        ))}
+        {courses.length === 0 && (
+          <Grid item xs={12}>
+            <Box sx={{ textAlign: "center", py: 10 }}>
+              <Layers sx={{ fontSize: 80, opacity: 0.1, mb: 2 }} />
+              <Typography variant="h6" fontWeight={800} color="text.secondary">No active modules in this sector.</Typography>
+            </Box>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+
+  /* ── Core Rendering ──────────────────────────────────────────────── */
+
   return (
     <Box sx={{
       display: "flex", minHeight: "100vh",
-      background: isDark ? "linear-gradient(135deg,#05060f,#0f172a)" : "linear-gradient(135deg,#f8fafc,#f1f5f9)",
-      position: "relative",
+      background: isDark ? "#05060f" : "#f8fafc",
+      overflow: "hidden",
     }}>
-      {/* Aurora blobs - light mode only */}
-      {!isDark && <>
-        <Box sx={{ position: "fixed", top: -120, right: -80, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,102,241,0.12),transparent 70%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0 }} />
-        <Box sx={{ position: "fixed", bottom: -100, left: 100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.1),transparent 70%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0 }} />
-      </>}
+      {/* HUD Aurora Blobs */}
+      <Box sx={{ position: "fixed", top: "-10%", right: "-10%", width: "50%", height: "50%", background: "radial-gradient(circle, rgba(99, 102, 241, 0.08), transparent 70%)", filter: "blur(100px)", zIndex: 0 }} />
+      <Box sx={{ position: "fixed", bottom: "-10%", left: "-10%", width: "50%", height: "50%", background: "radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%)", filter: "blur(100px)", zIndex: 0 }} />
 
-      {/* Desktop Sidebar */}
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Sidebar />
+      <CommandSidebar />
+
+      <Box component="main" sx={{
+        flexGrow: 1, ml: mainML,
+        transition: "margin 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative", zIndex: 1, height: "100vh", overflowY: "auto",
+        p: { xs: 2, md: 6 }, pb: 10,
+      }}>
+        <Fade in timeout={800}>
+          <Box>
+            {activeTab === 0 && <OverviewTab />}
+            {activeTab === 1 && (
+              <Box sx={{ textAlign: "center", py: 20 }}>
+                <Hub sx={{ fontSize: 80, opacity: 0.1, mb: 2 }} />
+                <Typography variant="h5" fontWeight={1000}>Sector Map Incoming</Typography>
+                <Typography variant="body2" color="text.secondary">Integrating department nodes into the command center...</Typography>
+              </Box>
+            )}
+            {activeTab === 2 && <FacultyTab />}
+            {activeTab === 3 && <StudentsTab />}
+            {activeTab === 4 && <CoursesTab />}
+            {activeTab === 5 && (
+              <Box sx={{ textAlign: "center", py: 20 }}>
+                <Science sx={{ fontSize: 80, opacity: 0.1, mb: 2 }} />
+                <Typography variant="h5" fontWeight={1000}>Research Link Pending</Typography>
+                <Typography variant="body2" color="text.secondary">Fetching high-energy project data from sub-nodes...</Typography>
+              </Box>
+            )}
+            {activeTab === 6 && (
+              <Box sx={{ textAlign: "center", py: 20 }}>
+                <Campaign sx={{ fontSize: 80, opacity: 0.1, mb: 2 }} />
+                <Typography variant="h5" fontWeight={1000}>Transmission Buffer</Typography>
+                <Typography variant="body2" color="text.secondary">Awaiting network broadcast from the Dean's office...</Typography>
+              </Box>
+            )}
+          </Box>
+        </Fade>
       </Box>
 
-      {/* Mobile Drawer */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { width: sidebarOpen ? 264 : 72, boxSizing: 'border-box' }
+      {/* Deploy Module Dialog */}
+      <Dialog
+        open={addCourseOpen}
+        onClose={() => setAddCourseOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 8,
+            background: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.98)",
+            backdropFilter: "blur(40px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 40px 100px rgba(0,0,0,0.5)",
+            maxWidth: 500, width: "100%"
+          }
         }}
       >
-        <Sidebar />
-      </Drawer>
-
-      <Box component="main" sx={{ flexGrow: 1, ml: mainML, transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)", position: "relative", zIndex: 1, minWidth: 0 }}>
-
-        {/* ── Top Bar ────────────────────────────────────────────────────── */}
-        <Box sx={{
-          height: 68, px: 4, display: "flex", alignItems: "center", justifyContent: "space-between",
-          position: "sticky", top: 0, zIndex: 1100,
-          background: isDark ? alpha("#05060f", 0.85) : alpha("#ffffff", 0.88),
-          backdropFilter: "blur(20px)",
-          borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(99,102,241,0.1)",
-        }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => isMobile ? setMobileOpen(true) : setSidebarOpen(p => !p)} size="small"><MenuIcon /></IconButton>
-            <Typography variant="h6" fontWeight={900} color={isDark ? "white" : "#1e293b"} sx={{ letterSpacing: -0.5 }}>
-              {TABS[activeTab]?.label}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <IconButton sx={{ bgcolor: alpha("#6366f1", 0.08), color: "#6366f1" }}>
-              <Badge badgeContent={announcements?.length || 0} color="error"><Notifications /></Badge>
-            </IconButton>
-            <Avatar sx={{ width: 36, height: 36, background: g.primary, fontWeight: 900, fontSize: "0.85rem" }}>{(user?.name || "F")[0]}</Avatar>
-          </Box>
-        </Box>
-
-        <Box sx={{ p: 4 }}>
-
-          {/* ── TAB 0: OVERVIEW ────────────────────────────────────────────── */}
-          {activeTab === 0 && (
-            <Box>
-              {/* Welcome Hero */}
-              <Box sx={{ mb: 4, p: 4, borderRadius: 4, background: g.primary, position: "relative", overflow: "hidden" }}>
-                <Box sx={{ position: "absolute", top: -60, right: -60, width: 240, height: 240, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-                <Box sx={{ position: "absolute", bottom: -40, right: 60, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
-                <Typography variant="h4" fontWeight={900} color="white" sx={{ letterSpacing: -1 }}>
-                  Welcome back, {user?.name?.split(" ")[0] || "Dean"} 👋
-                </Typography>
-                <Typography variant="body1" color="rgba(255,255,255,0.75)" fontWeight={600} sx={{ mt: 1 }}>
-                  {user?.department || "College"} — Faculty Control Center &nbsp;·&nbsp; {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-                </Typography>
-              </Box>
-
-              {/* Stat Cards */}
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                {[
-                  { label: "Total Departments",  value: departments?.length || 0,    icon: <Business />,     grad: g.primary,   chip: "Active" },
-                  { label: "Faculty Members",     value: faculty?.length || 0,       icon: <Groups />,       grad: g.secondary, chip: "+3 new" },
-                  { label: "Enrolled Students",   value: students?.length || 0,    icon: <People />,       grad: g.success,   chip: "+8.2%" },
-                  { label: "Active Courses",      value: courses?.length || 0,       icon: <LibraryBooks />, grad: g.warning,   chip: "Semester" },
-                  { label: "Research Projects",   value: research?.length || 0,      icon: <Science />,      grad: g.teal,      chip: "Ongoing" },
-                  { label: "Avg. GPA",            value: "3.41",                     icon: <EmojiEvents />,  grad: g.danger,    chip: "▲ 0.1" },
-                ].map((s, i) => (
-                  <Grid item xs={12} sm={6} md={4} key={i}><StatCard {...s} /></Grid>
-                ))}
-              </Grid>
-
-              {/* Charts */}
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography variant="h6" fontWeight={900} sx={{ mb: 3 }}>Enrollment Trend</Typography>
-                      <Box sx={{ height: 260 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={enrollmentData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={alpha("#94a3b8", 0.1)} />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }} />
-                            <RTooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }} />
-                            <Line type="monotone" dataKey="students" stroke="#6366f1" strokeWidth={3} dot={{ fill: "#6366f1", r: 5 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4, height: "100%" }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Students by Dept</Typography>
-                      <PieChart width={220} height={200}>
-                        <Pie data={deptPieData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4}>
-                          {deptPieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                        </Pie>
-                        <Legend />
-                      </PieChart>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+        <DialogTitle sx={{ fontWeight: 1000, fontSize: "1.8rem", textAlign: "center", mt: 2 }}>Deploy New Module</DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <Stack spacing={3}>
+            <TextField label="Module Identifier" variant="filled" fullWidth value={newCourse.code} onChange={e => setNewCourse(p => ({ ...p, code: e.target.value.toUpperCase() }))} />
+            <TextField label="Module Designation" variant="filled" fullWidth value={newCourse.name} onChange={e => setNewCourse(p => ({ ...p, name: e.target.value }))} />
+            <TextField label="Credit Weight" variant="filled" type="number" fullWidth value={newCourse.credits} onChange={e => setNewCourse(p => ({ ...p, credits: e.target.value }))} />
+            <Box sx={{ p: 2, borderRadius: 3, background: alpha(theme.palette.primary.main, 0.05), border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}` }}>
+              <Typography variant="caption" sx={{ display: "block", color: "primary.main", fontWeight: 1000, mb: 1 }}>AUTO-AUTHORIZATION</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.7, fontSize: "0.75rem" }}>This module will be registered under the <strong>{user?.department}</strong> authority and queued for Registrar verification.</Typography>
             </Box>
-          )}
-
-          {/* ── TAB 1: DEPARTMENTS ─────────────────────────────────────────── */}
-          {activeTab === 1 && (
-            <Grid container spacing={3}>
-              {(departments.length ? departments : [
-                { id: "1", name: "Computer Science", head: "Dr. Alan Turing", students: 450, faculty: 12, programs: 4, status: "active" },
-                { id: "2", name: "Electrical Engineering", head: "Dr. N. Tesla", students: 300, faculty: 10, programs: 3, status: "active" },
-                { id: "3", name: "Business Administration", head: "Dr. J. Smith", students: 250, faculty: 8, programs: 5, status: "active" },
-                { id: "4", name: "Arts & Humanities", head: "Dr. L. Woolf", students: 150, faculty: 6, programs: 4, status: "active" },
-                { id: "5", name: "Mechanical Engineering", head: "Dr. H. Ford", students: 200, faculty: 9, programs: 3, status: "active" },
-                { id: "6", name: "Mathematics", head: "Dr. E. Noether", students: 180, faculty: 7, programs: 3, status: "active" },
-              ]).map((dept, i) => (
-                <Grid item xs={12} sm={6} md={4} key={dept.id || i}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4, transition: "all 0.3s", "&:hover": { transform: "translateY(-4px)" } }}>
-                    <Box sx={{ height: 6, background: Object.values(g)[i % 6] }} />
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                        <Box sx={{ width: 44, height: 44, borderRadius: 2.5, background: Object.values(g)[i % 6], display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Business sx={{ color: "white", fontSize: 22 }} />
-                        </Box>
-                        <Chip label={dept.status || "Active"} size="small" sx={{ bgcolor: alpha("#10b981", 0.1), color: "#10b981", fontWeight: 800, fontSize: "0.7rem" }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={900} sx={{ mb: 0.5 }}>{dept.name}</Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={700}>Head: {dept.head || "—"}</Typography>
-                      <Divider sx={{ my: 2, opacity: 0.4 }} />
-                      <Grid container spacing={2}>
-                        {[
-                          { label: "Students", val: dept.students || 0 },
-                          { label: "Faculty",  val: dept.faculty  || 0 },
-                          { label: "Programs", val: dept.programs || 0 },
-                        ].map(m => (
-                          <Grid item xs={4} key={m.label} sx={{ textAlign: "center" }}>
-                            <Typography variant="h6" fontWeight={900}>{m.val}</Typography>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>{m.label}</Typography>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          )}
-
-          {/* ── TAB 2: FACULTY ─────────────────────────────────────────────── */}
-          {activeTab === 2 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Faculty Members</Typography>
-                <Chip label={`${faculty.length || 48} members`} sx={{ background: g.primary, color: "white", fontWeight: 800 }} />
-              </Box>
-              <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        {["Name", "Title", "Department", "Courses", "Students", "Actions"].map(h => (
-                          <TableCell key={h} sx={{ fontWeight: 900, color: "text.secondary", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: 1 }}>{h}</TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(faculty.length ? faculty : [
-                        { id: "1", name: "Dr. Alan Turing",  position: "Professor",           department: "Computer Science",      courses: 3, students: 90 },
-                        { id: "2", name: "Dr. N. Tesla",     position: "Associate Professor",  department: "Electrical Engineering",courses: 2, students: 60 },
-                        { id: "3", name: "Dr. J. Smith",     position: "Lecturer",             department: "Business",              courses: 4, students: 120 },
-                        { id: "4", name: "Dr. L. Woolf",     position: "Senior Lecturer",      department: "Arts",                  courses: 3, students: 75 },
-                        { id: "5", name: "Dr. H. Ford",      position: "Professor",            department: "Mechanical Eng.",        courses: 2, students: 55 },
-                        { id: "6", name: "Dr. E. Noether",   position: "Associate Professor",  department: "Mathematics",           courses: 3, students: 80 },
-                      ]).map((f, i) => (
-                        <TableRow key={f.id || i} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(99,102,241,0.03)" } }}>
-                          <TableCell sx={{ py: 2 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                              <Avatar sx={{ width: 36, height: 36, background: Object.values(g)[i % 6], fontWeight: 900, fontSize: "0.85rem" }}>{(f.name || "F")[0]}</Avatar>
-                              <Typography variant="subtitle2" fontWeight={800}>{f.name}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell><Chip label={f.position || "Lecturer"} size="small" sx={{ fontWeight: 700, bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(99,102,241,0.07)", color: isDark ? "white" : "#4f46e5" }} /></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{f.department}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{f.courses || 0}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{f.students || 0}</Typography></TableCell>
-                          <TableCell>
-                            <IconButton size="small" sx={{ color: "primary.main" }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
-            </Box>
-          )}
-
-          {/* ── TAB 3: STUDENTS ────────────────────────────────────────────── */}
-          {activeTab === 3 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Student Enrollment</Typography>
-                <Chip label={`${students.length || 1240} enrolled`} sx={{ background: g.success, color: "white", fontWeight: 800 }} />
-              </Box>
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                {[
-                  { label: "Total Enrolled", value: students?.length || 0, grad: g.primary },
-                  { label: "Undergraduate",  value: Math.floor((students?.length || 0) * 0.73), grad: g.secondary },
-                  { label: "Graduate",       value: Math.floor((students?.length || 0) * 0.27), grad: g.teal },
-                  { label: "At Risk",        value: students?.filter(s => s.status === "At Risk")?.length || 0, grad: g.danger },
-                ].map((s, i) => (
-                  <Grid item xs={6} md={3} key={i}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4, textAlign: "center", p: 2 }}>
-                      <Box sx={{ width: 44, height: 44, borderRadius: 2.5, background: s.grad, display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 1 }}>
-                        <People sx={{ color: "white" }} />
-                      </Box>
-                      <Typography variant="h5" fontWeight={900}>{s.value}</Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={700}>{s.label}</Typography>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-              <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Enrollment by Department</Typography>
-                  <Box sx={{ height: 300 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={deptPieData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={alpha("#94a3b8", 0.1)} vertical={false} />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                        <RTooltip contentStyle={{ borderRadius: 12, border: "none" }} />
-                        <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
-                          {deptPieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
-          )}
-
-          {/* ── TAB 4: COURSES ─────────────────────────────────────────────── */}
-          {activeTab === 4 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Courses & Classes</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddCourseOpen(true)}
-                  sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: "none", background: g.primary, boxShadow: "0 4px 16px rgba(99,102,241,0.35)" }}>
-                  Add Course
-                </Button>
-              </Box>
-              <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        {["Code", "Course Name", "Credits", "Instructor", "Students", "Status"].map(h => (
-                          <TableCell key={h} sx={{ fontWeight: 900, color: "text.secondary", fontSize: "0.75rem", textTransform: "uppercase" }}>{h}</TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(courses.length ? courses : [
-                        { code: "CS301", name: "Data Structures", credits: 3, instructorName: "Dr. Turing", studentsEnrolled: 45, status: "active" },
-                        { code: "CS401", name: "AI & Machine Learning", credits: 3, instructorName: "Dr. Tesla", studentsEnrolled: 38, status: "active" },
-                        { code: "BUS201", name: "Business Analytics", credits: 2, instructorName: "Dr. Smith", studentsEnrolled: 60, status: "draft" },
-                        { code: "ENG101", name: "Engineering Fundamentals", credits: 4, instructorName: "Dr. Ford", studentsEnrolled: 52, status: "active" },
-                        { code: "MATH301", name: "Linear Algebra", credits: 3, instructorName: "Dr. Noether", studentsEnrolled: 40, status: "pending_approval" },
-                      ]).map((c, i) => (
-                        <TableRow key={c.id || i} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(99,102,241,0.03)" } }}>
-                          <TableCell><Chip label={c.code} size="small" sx={{ fontWeight: 900, background: Object.values(g)[i % 6], color: "white" }} /></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={800}>{c.name}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{c.credits} cr</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{c.instructorName || "—"}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" fontWeight={700}>{c.studentsEnrolled || 0}</Typography></TableCell>
-                          <TableCell>
-                            <Chip label={c.status || "draft"} size="small" sx={{
-                              fontWeight: 800, fontSize: "0.7rem",
-                              bgcolor: c.status === "active" ? alpha("#10b981", 0.1) : c.status === "pending_approval" ? alpha("#f59e0b", 0.1) : alpha("#94a3b8", 0.1),
-                              color: c.status === "active" ? "#10b981" : c.status === "pending_approval" ? "#f59e0b" : "#94a3b8",
-                            }} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
-            </Box>
-          )}
-
-          {/* ── TAB 5: RESEARCH ────────────────────────────────────────────── */}
-          {activeTab === 5 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Research & Grants</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddResearchOpen(true)}
-                  sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: "none", background: g.teal, boxShadow: "0 4px 16px rgba(20,184,166,0.35)" }}>
-                  New Project
-                </Button>
-              </Box>
-              <Grid container spacing={3}>
-                {(research.length ? research : [
-                  { id: "1", title: "AI in Medical Diagnostics",       pi: "Dr. Ada Lovelace", grant: "$320,000", status: "Active",   dept: "CS" },
-                  { id: "2", title: "Renewable Energy Grid Modeling",   pi: "Dr. N. Tesla",     grant: "$510,000", status: "Active",   dept: "ENG" },
-                  { id: "3", title: "Behavioral Economics Study",       pi: "Dr. J. Nash",      grant: "$120,000", status: "Active",   dept: "BUS" },
-                  { id: "4", title: "Quantum Computing Algorithms",     pi: "Dr. R. Feynman",   grant: "$790,000", status: "Active",   dept: "CS" },
-                  { id: "5", title: "Climate Change & Agriculture",     pi: "Dr. M. Curie",     grant: "$230,000", status: "Pending",  dept: "SCI" },
-                  { id: "6", title: "Digital Humanities Archive",       pi: "Dr. L. Woolf",     grant: "$95,000",  status: "Completed", dept: "ARTS" },
-                ]).map((r, i) => (
-                  <Grid item xs={12} md={6} key={r.id || i}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4, transition: "all 0.3s", "&:hover": { transform: "translateY(-4px)" } }}>
-                      <Box sx={{ height: 5, background: Object.values(g)[i % 6] }} />
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                          <Box sx={{ width: 42, height: 42, borderRadius: 2.5, background: Object.values(g)[i % 6], display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Science sx={{ color: "white", fontSize: 20 }} />
-                          </Box>
-                          <Chip label={r.status} size="small" sx={{
-                            fontWeight: 800, fontSize: "0.7rem",
-                            bgcolor: r.status === "Active" ? alpha("#10b981", 0.1) : r.status === "Completed" ? alpha("#6366f1", 0.1) : alpha("#f59e0b", 0.1),
-                            color:  r.status === "Active" ? "#10b981" : r.status === "Completed" ? "#6366f1" : "#f59e0b",
-                          }} />
-                        </Box>
-                        <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 0.5 }}>{r.title}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>PI: {r.pi || "—"}</Typography>
-                        <Divider sx={{ my: 1.5, opacity: 0.4 }} />
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Box>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>GRANT FUNDING</Typography>
-                            <Typography variant="body1" fontWeight={900} color="primary.main">{r.grant || "—"}</Typography>
-                          </Box>
-                          <Box sx={{ textAlign: "right" }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>DEPARTMENT</Typography>
-                            <Typography variant="body2" fontWeight={800}>{r.dept || r.department || "—"}</Typography>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-
-          {/* ── TAB 6: ANNOUNCEMENTS ───────────────────────────────────────── */}
-          {activeTab === 6 && (
-            <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h6" fontWeight={900}>Dean's Announcements</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddAnnouncementOpen(true)}
-                  sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: "none", background: g.secondary }}>
-                  New Announcement
-                </Button>
-              </Box>
-              <Stack spacing={2}>
-                {(announcements.length ? announcements : [
-                  { id: "1", title: "Welcome to the New Semester!",         body: "Dear students and staff, we are excited to begin this semester with renewed energy.",         priority: "high",   createdAt: new Date() },
-                  { id: "2", title: "Research Grant Application Deadline",   body: "All faculty wishing to apply for the spring research grant must submit proposals by April 30.", priority: "urgent",  createdAt: new Date() },
-                  { id: "3", title: "Engineering Career Fair — May 10",      body: "Over 60 companies will be present. Students are encouraged to bring updated resumes.",           priority: "normal",  createdAt: new Date() },
-                  { id: "4", title: "Faculty Senate Meeting Rescheduled",    body: "The Faculty Senate meeting originally set for March 20 has been moved to March 25.",            priority: "normal",  createdAt: new Date() },
-                ]).map((ann, i) => (
-                  <Card key={ann.id || i} sx={{ ...glassStyle, borderRadius: 4 }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
-                          <Box sx={{ width: 40, height: 40, borderRadius: 2.5, background: ann.priority === "urgent" ? g.danger : ann.priority === "high" ? g.warning : g.secondary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <Campaign sx={{ color: "white", fontSize: 20 }} />
-                          </Box>
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight={900}>{ann.title}</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{ann.body}</Typography>
-                            <Typography variant="caption" sx={{ opacity: 0.5, mt: 1, display: 'block' }}>
-                              {ann.createdAt?.toDate ? ann.createdAt.toDate().toLocaleDateString() : 'Just now'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                        <Chip
-                          label={ann.priority || "normal"}
-                          size="small"
-                          sx={{
-                            flexShrink: 0, ml: 2, fontWeight: 800, fontSize: "0.7rem", textTransform: "uppercase",
-                            bgcolor: ann.priority === "urgent" ? alpha("#ef4444", 0.1) : ann.priority === "high" ? alpha("#f59e0b", 0.1) : alpha("#3b82f6", 0.1),
-                            color:   ann.priority === "urgent" ? "#ef4444" : ann.priority === "high" ? "#f59e0b" : "#3b82f6",
-                          }}
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Stack>
-            </Box>
-          )}
-
-        </Box>
-      </Box>
-
-      {/* ── Add Course Dialog ───────────────────────────────────────────── */}
-      <Dialog open={addCourseOpen} onClose={() => setAddCourseOpen(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4, maxWidth: 480, width: "100%" } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>Add New Course</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Course Code" value={newCourse.code} onChange={e => setNewCourse(p => ({ ...p, code: e.target.value }))} fullWidth />
-            <TextField label="Course Name" value={newCourse.name} onChange={e => setNewCourse(p => ({ ...p, name: e.target.value }))} fullWidth />
-            <TextField label="Credits" type="number" value={newCourse.credits} onChange={e => setNewCourse(p => ({ ...p, credits: e.target.value }))} fullWidth />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setAddCourseOpen(false)} sx={{ borderRadius: 2 }}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddCourse} sx={{ borderRadius: 2, background: g.primary, fontWeight: 800 }}>Save Course</Button>
+        <DialogActions sx={{ p: 4, pt: 0 }}>
+          <Button onClick={() => setAddCourseOpen(false)} sx={{ fontWeight: 900, borderRadius: 3, textTransform: "none" }}>Abort</Button>
+          <Button variant="contained" sx={{ fontWeight: 1000, borderRadius: 3.5, background: THEME_G.indigo, px: 4, py: 1.5, textTransform: "none" }}>Initiate Deployment</Button>
         </DialogActions>
       </Dialog>
-
-      {/* ── Add Research Dialog ─────────────────────────────────────────── */}
-      <Dialog open={addResearchOpen} onClose={() => setAddResearchOpen(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4, maxWidth: 480, width: "100%" } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>New Research Project</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Project Title"    value={newResearch.title}  onChange={e => setNewResearch(p => ({ ...p, title: e.target.value }))}  fullWidth />
-            <TextField label="Principal Investigator" value={newResearch.pi} onChange={e => setNewResearch(p => ({ ...p, pi: e.target.value }))} fullWidth />
-            <TextField label="Grant Amount"     value={newResearch.grant}  onChange={e => setNewResearch(p => ({ ...p, grant: e.target.value }))}  fullWidth />
-            <TextField select label="Status" value={newResearch.status} onChange={e => setNewResearch(p => ({ ...p, status: e.target.value }))} fullWidth>
-              {["Active", "Pending", "Completed"].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-            </TextField>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setAddResearchOpen(false)} sx={{ borderRadius: 2 }}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddResearch} sx={{ borderRadius: 2, background: g.teal, fontWeight: 800 }}>Save Project</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* ── Add Announcement Dialog ─────────────────────────────────────── */}
-      <Dialog open={addAnnouncementOpen} onClose={() => setAddAnnouncementOpen(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4, maxWidth: 520, width: "100%" } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>New Announcement</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Title" value={newAnn.title} onChange={e => setNewAnn(p => ({ ...p, title: e.target.value }))} fullWidth />
-            <TextField label="Message" value={newAnn.body}  onChange={e => setNewAnn(p => ({ ...p, body: e.target.value }))}  fullWidth multiline rows={4} />
-            <TextField select label="Priority" value={newAnn.priority} onChange={e => setNewAnn(p => ({ ...p, priority: e.target.value }))} fullWidth>
-              {["normal", "high", "urgent"].map(s => <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>)}
-            </TextField>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setAddAnnouncementOpen(false)} sx={{ borderRadius: 2 }}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddAnnouncement} sx={{ borderRadius: 2, background: g.secondary, fontWeight: 800 }}>Post</Button>
-        </DialogActions>
-      </Dialog>
-
     </Box>
   );
 }

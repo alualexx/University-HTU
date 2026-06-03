@@ -51,9 +51,16 @@ router.get("/:id", async (req, res) => {
 // @route   POST /api/courses
 // @desc    Create a new course (Admin/Faculty)
 // @access  Private/Admin,Faculty
-router.post("/", protect, requireRole("admin", "faculty", "registrar"), async (req, res) => {
+router.post("/", protect, requireRole("admin", "faculty", "registrar", "department_head"), async (req, res) => {
   try {
-    const course = await Course.create(req.body);
+    const courseData = { ...req.body };
+
+    // Enforce pending status if not registrar or admin
+    if (req.user.role !== "registrar" && req.user.role !== "admin") {
+      courseData.status = "pending_registrar_approval";
+    }
+
+    const course = await Course.create(courseData);
     res.status(201).json(course);
   } catch (error) {
     if (error.code === 11000) {
