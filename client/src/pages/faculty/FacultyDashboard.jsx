@@ -218,7 +218,7 @@ export default function FacultyDashboard() {
               </Box>
               <Box>
                 <Typography variant="subtitle1" fontWeight={1000} sx={{ letterSpacing: -0.5, lineHeight: 1.2 }}>DASHBOARD</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 800, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: 1.5 }}>Faculty Portal</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 800, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: 1.5 }}>Department Command</Typography>
               </Box>
             </Box>
           </Fade>
