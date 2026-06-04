@@ -34,10 +34,11 @@ const courseSchema = new mongoose.Schema(
     maxStudents: { type: Number, default: 40 },
     schedule: { type: String }, // e.g., "MWF 9:00-10:00 AM"
     room: { type: String },
-    semester: { type: String }, // e.g., "1st Sem 2024-2025"
+    year: { type: Number, required: true, default: 1 },
+    semester: { type: Number, required: true, default: 1 },
     status: {
       type: String,
-      enum: ["pending_registrar_approval", "active", "archived", "rejected", "draft"],
+      enum: ["pending_college_approval", "pending_registrar_approval", "active", "archived", "rejected", "draft"],
       default: "pending_registrar_approval",
     },
   },

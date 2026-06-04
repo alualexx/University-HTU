@@ -16,12 +16,12 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { 
-  coursesAPI, 
-  announcementsAPI as newsAPI, 
-  enrollmentsAPI, 
-  tuitionAPI, 
-  notificationsAPI, 
+import {
+  coursesAPI,
+  announcementsAPI as newsAPI,
+  enrollmentsAPI,
+  tuitionAPI,
+  notificationsAPI,
   transcriptAPI,
   schedulesAPI,
   systemAPI
@@ -31,7 +31,7 @@ import jsPDF from "jspdf";
 /* ─── Constants ───────────────────────────────────────────────────────── */
 const TUITION_PER_CREDIT = 100;
 const CURRENT_SEMESTER = "Fall 2026";
-const DAY_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SIDEBAR_WIDTH = 280;
 const gradeToPoints = { A: 4.0, "A-": 3.7, "B+": 3.3, B: 3.0, "B-": 2.7, "C+": 2.3, C: 2.0, "C-": 1.7, "D+": 1.3, D: 1.0, F: 0.0 };
 const gradients = [
@@ -198,7 +198,7 @@ export default function StudentDashboard() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ cardNumber: "", expiry: "", cvv: "" });
   const [processingPayment, setProcessingPayment] = useState(false);
-   const [systemConfig, setSystemConfig] = useState({ registrationLock: false, admissionWindow: true, globalMaintenance: false, targetYear: 1, targetSemester: 1 });
+  const [systemConfig, setSystemConfig] = useState({ registrationLock: false, admissionWindow: true, globalMaintenance: false, targetYear: 1, targetSemester: 1 });
 
   useEffect(() => {
     if (!user?.id) return;
@@ -217,7 +217,7 @@ export default function StudentDashboard() {
           globalSettings
         ] = await Promise.all([
           enrollmentsAPI.getAll({ studentId: user.id }),
-          coursesAPI.getAll(),
+          coursesAPI.getAll({ status: "active" }),
           newsAPI.getAll(),
           tuitionAPI.getAll({ studentId: user.id }),
           schedulesAPI.getAll(),
@@ -232,7 +232,7 @@ export default function StudentDashboard() {
         if (newsRes.data) setNewsList(newsRes.data);
         if (tuitionRes.data) setTuitionPayments(tuitionRes.data);
         if (schedulesRes.data) setSchedules(schedulesRes.data);
-        
+
         if (notificationsRes.data) {
           const n = notificationsRes.data;
           if (n.length > prevNotifCount.current && prevNotifCount.current > 0) {
@@ -243,11 +243,11 @@ export default function StudentDashboard() {
         }
 
         if (transcriptRes.data) setTranscriptData(transcriptRes.data);
-        
+
         if (registrarSettings?.data) {
           setSystemConfig(prev => ({ ...prev, ...registrarSettings.data }));
         }
-        
+
         if (globalSettings?.data) {
           setSystemConfig(prev => ({ ...prev, globalMaintenance: globalSettings.data.maintenanceMode || false }));
         }
@@ -273,8 +273,8 @@ export default function StudentDashboard() {
   const gpa = gradedE.length > 0
     ? gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (gradeToPoints[e.grade] || 0) * (c ? (Number(c.credits) || 3) : 3); }, 0) / gradedE.reduce((s, e) => { const c = availableCourses?.find(c => c.id === e.courseId); return s + (c ? (Number(c.credits) || 3) : 3); }, 0)
     : 0;
-   const mySchedules = schedules?.filter(s => myActiveCourses?.some(c => c.id === s.courseId || c.name === s.courseName))?.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)) || [];
-  
+  const mySchedules = schedules?.filter(s => myActiveCourses?.some(c => c.id === s.courseId || c.name === s.courseName))?.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)) || [];
+
   // Year/Semester Filtering Logic
   const isMyWindow = !systemConfig.registrationLock && Number(user?.year) === Number(systemConfig.targetYear);
   const filteredAvailableCourses = availableCourses.filter(c => {
@@ -294,7 +294,7 @@ export default function StudentDashboard() {
     setProcessingPayment(true);
     try {
       const courseNames = cart.map(c => c.name).join(", ");
-      
+
       // 1. Create Tuition Payment
       const paymentRes = await tuitionAPI.create({
         studentId: user.id,
@@ -338,8 +338,8 @@ export default function StudentDashboard() {
     }
   };
 
-  const gpaRaw = transcriptData?.cumulativeGPA 
-    ? Math.round(transcriptData.cumulativeGPA * 100) 
+  const gpaRaw = transcriptData?.cumulativeGPA
+    ? Math.round(transcriptData.cumulativeGPA * 100)
     : Math.round(gpa * 100);
   const stats = [
     { label: "GPA", raw: gpaRaw, isGpa: true, suffix: "/ 4.00", gradient: gradients[0], icon: <EmojiEvents />, progress: (gpaRaw / 400) * 100 },
@@ -581,8 +581,8 @@ export default function StudentDashboard() {
                                     <TableCell colSpan={4} sx={{ textAlign: 'center', py: 3, fontStyle: 'italic', color: 'text.secondary', border: 'none' }}>No courses added for this semester.</TableCell>
                                   </TableRow>
                                 ) : (
-                                    term.courses.map((course, cIndex) => (
-                                    <TableRow key={cIndex} sx={{ 
+                                  term.courses.map((course, cIndex) => (
+                                    <TableRow key={cIndex} sx={{
                                       '& td': { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}` },
                                       opacity: course.status === 'Dropped' ? 0.5 : 1,
                                       textDecoration: course.status === 'Dropped' ? 'line-through' : 'none'
@@ -591,14 +591,14 @@ export default function StudentDashboard() {
                                       <TableCell fontWeight={700}>{course.title}</TableCell>
                                       <TableCell>{course.credits}</TableCell>
                                       <TableCell>
-                                        <Chip 
-                                          label={course.status === 'Dropped' ? 'W/D' : course.grade} 
-                                          size="small" 
-                                          sx={{ 
-                                            fontWeight: 900, 
-                                            bgcolor: course.status === 'Dropped' ? alpha('#94a3b8', 0.1) : alpha('#10b981', 0.1), 
-                                            color: course.status === 'Dropped' ? '#64748b' : '#10b981' 
-                                          }} 
+                                        <Chip
+                                          label={course.status === 'Dropped' ? 'W/D' : course.grade}
+                                          size="small"
+                                          sx={{
+                                            fontWeight: 900,
+                                            bgcolor: course.status === 'Dropped' ? alpha('#94a3b8', 0.1) : alpha('#10b981', 0.1),
+                                            color: course.status === 'Dropped' ? '#64748b' : '#10b981'
+                                          }}
                                         />
                                       </TableCell>
                                     </TableRow>
@@ -616,40 +616,40 @@ export default function StudentDashboard() {
             </Grid>
           )}
 
-           {/* TAB 4: SEMESTER REGISTRATION */}
+          {/* TAB 4: SEMESTER REGISTRATION */}
           {activeTab === 4 && (
             <Grid container spacing={4}>
               <Grid item xs={12}>
-                <Card sx={{ 
+                <Card sx={{
                   ...cardSx, p: 3, borderRadius: 4, mb: 1,
-                  background: isMyWindow 
+                  background: isMyWindow
                     ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)'
                     : 'linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
                   border: `1px solid ${isMyWindow ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2)}`
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{ 
-                        width: 12, height: 12, borderRadius: '50%', 
+                      <Box sx={{
+                        width: 12, height: 12, borderRadius: '50%',
                         bgcolor: isMyWindow ? '#10b981' : '#ef4444',
                         boxShadow: `0 0 10px ${isMyWindow ? '#10b981' : '#ef4444'}`
                       }} />
                       <Box>
                         <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1 }}>REGISTRATION INTELLIGENCE</Typography>
                         <Typography variant="h6" fontWeight={1000}>
-                          {systemConfig.registrationLock 
-                            ? "Registration is Currently Closed" 
-                            : !isMyWindow 
-                              ? `Window Open for Year ${systemConfig.targetYear} Cohort` 
+                          {systemConfig.registrationLock
+                            ? "Registration is Currently Closed"
+                            : !isMyWindow
+                              ? `Window Open for Year ${systemConfig.targetYear} Cohort`
                               : `Welcome! Window Open for Year ${user?.year || 1} - Semester ${systemConfig.targetSemester}`}
                         </Typography>
                       </Box>
                     </Box>
                     {isMyWindow && (
-                      <Chip 
-                        label={`ACTIVE: Y${user?.year || 1} S${systemConfig.targetSemester}`} 
-                        color="success" 
-                        sx={{ fontWeight: 900, borderRadius: 2 }} 
+                      <Chip
+                        label={`ACTIVE: Y${user?.year || 1} S${systemConfig.targetSemester}`}
+                        color="success"
+                        sx={{ fontWeight: 900, borderRadius: 2 }}
                       />
                     )}
                   </Box>
@@ -663,7 +663,7 @@ export default function StudentDashboard() {
                       <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
                       <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>Registration Locked</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
-                        {systemConfig.registrationLock 
+                        {systemConfig.registrationLock
                           ? "The registrar has paused all enrollment activities. Please check the news feed for updates."
                           : `Your academic cohort (Year ${user?.year || 1}) is not scheduled for this registration window. Currently serving Year ${systemConfig.targetYear}.`}
                       </Typography>
@@ -720,11 +720,11 @@ export default function StudentDashboard() {
                       })}
                       <Divider />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="subtitle2" fontWeight={900}>Total</Typography><Typography variant="subtitle2" fontWeight={900} color="primary.main">{cartCredits} Cr · ${cartTotal.toLocaleString()}</Typography></Box>
-                      <Button 
-                        fullWidth variant="contained" 
-                        onClick={() => setPaymentModalOpen(true)} 
+                      <Button
+                        fullWidth variant="contained"
+                        onClick={() => setPaymentModalOpen(true)}
                         disabled={systemConfig.registrationLock || systemConfig.globalMaintenance}
-                        sx={{ 
+                        sx={{
                           borderRadius: 3, fontWeight: 900, py: 1.2, textTransform: 'none',
                           background: (systemConfig.registrationLock || systemConfig.globalMaintenance) ? 'rgba(0,0,0,0.1)' : gradients[0]
                         }}

@@ -89,6 +89,7 @@ const CollegeAdminDashboard = () => {
   const [gpaDistribution, setGpaDistribution] = useState([]);
   const [completionRate, setCompletionRate] = useState([]);
   const [researchProjects, setResearchProjects] = useState([]);
+  const [pendingCourses, setPendingCourses] = useState([]);
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
 
@@ -120,12 +121,13 @@ const CollegeAdminDashboard = () => {
           const collegeId = collegeData.id || collegeData._id;
 
           // Parallel Fetching
-          const [resDepts, metricsRes, eventsRes, budgetRes, researchRes] = await Promise.all([
+          const [resDepts, metricsRes, eventsRes, budgetRes, researchRes, pendingCoursesRes] = await Promise.all([
             departmentsAPI.getAll({ collegeId }),
             collegesAPI.getMetrics(collegeId),
             academicEventsAPI.getAll({ collegeId }),
             budgetsAPI.get(collegeId),
             researchAPI.getAll({ collegeId }),
+            coursesAPI.getAll({ status: "pending_college_approval" }),
           ]);
 
           setDepartments(resDepts.data);
@@ -139,6 +141,9 @@ const CollegeAdminDashboard = () => {
           setEvents(eventsRes.data || []);
           setBudget(budgetRes.data || null);
           setResearchProjects(researchRes.data || []);
+
+          // Filter courses precisely since our courses API fetches all for that status right now
+          setPendingCourses(pendingCoursesRes.data.filter(c => resDepts.data.some(d => d.name === c.department || d.code === c.department)));
 
           // Fetch Faculty List
           const deptNames = resDepts.data.map(d => d.name);
@@ -247,6 +252,7 @@ const CollegeAdminDashboard = () => {
     { label: t("collegeFaculty"), icon: <People />, index: 3 },
     { label: t("academicCalendar"), icon: <CalendarToday />, index: 4 },
     { label: t("budgetOverview"), icon: <AccountBalance />, index: 5 },
+    { label: t("curriculumApproval") || "Curriculum Approval", icon: <Assignment />, index: 6 },
   ];
 
   if (loading) {
@@ -703,6 +709,63 @@ const CollegeAdminDashboard = () => {
                   </Stack>
                 </Grid>
               </Grid>
+            </Box>
+          </Fade>
+        )}
+
+        {activeTab === 6 && (
+          <Fade in timeout={800}>
+            <Box>
+              <Typography variant="h4" fontWeight={1000} sx={{ mb: 4 }}>Curriculum Approval</Typography>
+              <TableContainer component={Paper} sx={{ ...glassStyle, borderRadius: 5, overflow: 'hidden' }}>
+                <Table>
+                  <TableHead sx={{ bgcolor: alpha(college.color || '#6366f1', 0.05) }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 1000 }}>Module</TableCell>
+                      <TableCell sx={{ fontWeight: 1000 }}>Code</TableCell>
+                      <TableCell sx={{ fontWeight: 1000 }}>Target</TableCell>
+                      <TableCell sx={{ fontWeight: 1000 }}>Department</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 1000 }}>Authorization</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pendingCourses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary', fontWeight: 800 }}>No curriculum awaits approval.</TableCell>
+                      </TableRow>
+                    ) : (
+                      pendingCourses.map(course => (
+                        <TableRow key={course._id || course.id}>
+                          <TableCell sx={{ fontWeight: 1000 }}>{course.name}</TableCell>
+                          <TableCell sx={{ fontWeight: 800, fontFamily: 'monospace' }}>{course.code}</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Yr {course.year || 1} Sem {course.semester || 1}</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>{course.department}</TableCell>
+                          <TableCell align="right">
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              sx={{ fontWeight: 900, borderRadius: 3, textTransform: 'none', px: 3 }}
+                              onClick={async () => {
+                                try {
+                                  await coursesAPI.update(course._id || course.id, { status: "active" });
+                                  setPendingCourses(prev => prev.filter(c => (c._id || c.id) !== (course._id || course.id)));
+                                  setSnackbarMsg("Module authorized for registration.");
+                                  setIsSnackbarOpen(true);
+                                } catch (e) {
+                                  console.error(e);
+                                }
+                              }}
+                            >
+                              Authorize
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Box>
           </Fade>
         )}

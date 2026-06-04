@@ -10,7 +10,13 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const filter = {};
-    if (req.query.department) filter.department = req.query.department;
+    if (req.query.department) {
+      if (req.query.department.includes(",")) {
+        filter.department = { $in: req.query.department.split(",") };
+      } else {
+        filter.department = req.query.department;
+      }
+    }
     if (req.query.status) filter.status = req.query.status;
 
     const courses = await Course.find(filter).populate("instructor", "name email");
@@ -55,8 +61,10 @@ router.post("/", protect, requireRole("admin", "faculty", "registrar", "departme
   try {
     const courseData = { ...req.body };
 
-    // Enforce pending status if not registrar or admin
-    if (req.user.role !== "registrar" && req.user.role !== "admin") {
+    // Enforce pending status if created by faculty
+    if (req.user.role === "faculty" || req.user.role === "department_head") {
+      courseData.status = "pending_college_approval";
+    } else if (req.user.role !== "registrar" && req.user.role !== "admin") {
       courseData.status = "pending_registrar_approval";
     }
 

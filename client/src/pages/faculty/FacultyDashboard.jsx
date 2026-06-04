@@ -135,7 +135,7 @@ export default function FacultyDashboard() {
 
   // Operational States
   const [addCourseOpen, setAddCourseOpen] = useState(false);
-  const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3 });
+  const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3, year: 1, semester: 1 });
 
   /* ── Data Acquisition ────────────────────────────────────────────── */
   useEffect(() => {
@@ -579,6 +579,40 @@ export default function FacultyDashboard() {
           </Box>
         </Fade>
       </Box>
+
+      {/* Deploy Module Dialog */}
+      <Dialog open={addCourseOpen} onClose={() => setAddCourseOpen(false)} PaperProps={{ sx: { background: isDark ? "rgba(15, 23, 42, 0.95)" : "white", backdropFilter: "blur(40px)", borderRadius: 8, p: 2, maxWidth: 500, width: "100%" } }}>
+        <DialogTitle sx={{ fontWeight: 1000, fontSize: "1.8rem", textAlign: "center" }}>Deploy New Module</DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField label="Module Title" fullWidth value={newCourse.name} onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} autoFocus />
+            <TextField label="Designation Code (e.g., CS101)" fullWidth value={newCourse.code} onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value.toUpperCase() })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <TextField label="Credits" type="number" fullWidth value={newCourse.credits} onChange={(e) => setNewCourse({ ...newCourse, credits: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField label="Year" type="number" fullWidth value={newCourse.year} onChange={(e) => setNewCourse({ ...newCourse, year: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField label="Semester" type="number" fullWidth value={newCourse.semester} onChange={(e) => setNewCourse({ ...newCourse, semester: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 4, pt: 2, gap: 1 }}>
+          <Button onClick={() => setAddCourseOpen(false)} sx={{ fontWeight: 900, borderRadius: 3 }}>Abort</Button>
+          <Button variant="contained" disabled={!newCourse.name || !newCourse.code} onClick={async () => {
+            try {
+              await coursesAPI.create({ ...newCourse, department: user.department, instructor: user.id, instructorName: user.name });
+              setAddCourseOpen(false);
+              setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 });
+            } catch (err) {
+              console.error(err);
+            }
+          }} sx={{ background: THEME_G.indigo, borderRadius: 4, fontWeight: 1000, px: 4 }}>Deploy</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
