@@ -601,7 +601,7 @@ export default function FacultyDashboard() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 4, pt: 2, gap: 1 }}>
-          <Button onClick={() => setAddCourseOpen(false)} sx={{ fontWeight: 900, borderRadius: 3 }}>Abort</Button>
+          <Button onClick={() => { setAddCourseOpen(false); setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 }); }} sx={{ fontWeight: 900, borderRadius: 3 }}>Abort</Button>
           <Button variant="contained" disabled={!newCourse.name || !newCourse.code} onClick={async () => {
             try {
               await coursesAPI.create({ ...newCourse, department: user.department, instructor: user.id, instructorName: user.name });
