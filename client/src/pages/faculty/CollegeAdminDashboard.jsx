@@ -189,7 +189,7 @@ const CollegeAdminDashboard = () => {
   };
 
   const handleSaveDept = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (!college) return;
     setDeptLoading(true);
 
@@ -732,7 +732,84 @@ const CollegeAdminDashboard = () => {
           <Button variant="contained" onClick={handleSaveEvent} sx={{ background: college?.color || THEME_G.indigo, borderRadius: 4, fontWeight: 1000, px: 4 }}>Deploy Milestone</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Initialize / Configure Department Dialog */}
+      <Dialog
+        open={openDeptDialog}
+        onClose={() => { setOpenDeptDialog(false); setEditingDept(null); setDeptForm({ name: "", code: "", faculty: "", color: "#6366f1" }); }}
+        PaperProps={{ sx: { background: isDark ? "rgba(15, 23, 42, 0.95)" : "white", backdropFilter: "blur(40px)", borderRadius: 8, p: 2, maxWidth: 500, width: "100%" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 1000, fontSize: "1.8rem", textAlign: "center" }}>
+          {editingDept ? "Configure Department" : "Initialize Department"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              label={t("deptFullName")}
+              fullWidth
+              required
+              value={deptForm.name}
+              onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            />
+            <TextField
+              label={t("deptCode")}
+              fullWidth
+              required
+              value={deptForm.code}
+              onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+              helperText="Short code e.g. CS, THEO, ENG"
+            />
+            <TextField
+              label={t("facultyGroup")}
+              fullWidth
+              value={deptForm.faculty}
+              onChange={(e) => setDeptForm({ ...deptForm, faculty: e.target.value })}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+              placeholder="e.g. Faculty of Science"
+            />
+            <Box>
+              <Typography variant="caption" fontWeight={800} sx={{ mb: 1, display: "block", opacity: 0.7 }}>
+                {t("hexColor")} (Department Color)
+              </Typography>
+              <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+                <input
+                  type="color"
+                  value={deptForm.color}
+                  onChange={(e) => setDeptForm({ ...deptForm, color: e.target.value })}
+                  style={{ width: 52, height: 52, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }}
+                />
+                <TextField
+                  size="small"
+                  value={deptForm.color}
+                  onChange={(e) => setDeptForm({ ...deptForm, color: e.target.value })}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3, fontFamily: "monospace" } }}
+                />
+                <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: deptForm.color, boxShadow: `0 4px 12px ${deptForm.color}66` }} />
+              </Box>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 4, pt: 2, gap: 1 }}>
+          <Button
+            onClick={() => { setOpenDeptDialog(false); setEditingDept(null); setDeptForm({ name: "", code: "", faculty: "", color: "#6366f1" }); }}
+            sx={{ fontWeight: 900, borderRadius: 3 }}
+          >
+            {t("cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={deptLoading || !deptForm.name || !deptForm.code}
+            onClick={handleSaveDept}
+            sx={{ background: college?.color || THEME_G.indigo, borderRadius: 4, fontWeight: 1000, px: 4 }}
+          >
+            {deptLoading ? <CircularProgress size={22} color="inherit" /> : (editingDept ? "Save Changes" : t("finalizeProtocol"))}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
+
   );
 };
 
