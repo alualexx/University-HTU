@@ -601,14 +601,28 @@ export default function FacultyDashboard() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 4, pt: 2, gap: 1 }}>
-          <Button onClick={() => { setAddCourseOpen(false); setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 }); }} sx={{ fontWeight: 900, borderRadius: 3 }}>Abort</Button>
-          <Button variant="contained" disabled={!newCourse.name || !newCourse.code} onClick={async () => {
+          <Button onClick={(e) => {
+            e.preventDefault();
+            setAddCourseOpen(false);
+            setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 });
+          }} sx={{ fontWeight: 900, borderRadius: 3 }}>Abort</Button>
+
+          <Button variant="contained" disabled={!newCourse.name || !newCourse.code} onClick={async (e) => {
+            e.preventDefault();
             try {
-              await coursesAPI.create({ ...newCourse, department: user.department, instructor: user.id, instructorName: user.name });
+              const payload = {
+                ...newCourse,
+                department: user?.department || "General",
+                instructor: user?.id || user?._id,
+                instructorName: user?.name || "Unknown Instructor"
+              };
+              await coursesAPI.create(payload);
+              window.alert("Course Module Deployed Successfully! Awaiting College Admin Approval.");
               setAddCourseOpen(false);
               setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 });
             } catch (err) {
               console.error(err);
+              window.alert("Error Deploying Course: " + (err.response?.data?.message || err.message));
             }
           }} sx={{ background: THEME_G.indigo, borderRadius: 4, fontWeight: 1000, px: 4 }}>Deploy</Button>
         </DialogActions>
