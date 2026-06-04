@@ -97,11 +97,17 @@ router.post("/:id/pay", protect, async (req, res) => {
 });
 
 // @route   GET /api/applications
-// @desc    Get all applications
+// @desc    Get all applications (optionally filtered by status)
 // @access  Private (Registrar/Admin)
 router.get("/", protect, async (req, res) => {
   try {
-    const applications = await Application.find().sort({ createdAt: -1 });
+    const filter = {};
+    if (req.query.status) {
+      // Support comma-separated statuses: ?status=registrar_approved,pending
+      const statuses = req.query.status.split(",").map(s => s.trim());
+      filter.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+    }
+    const applications = await Application.find(filter).sort({ createdAt: -1 });
     res.json(applications);
   } catch (error) {
     res.status(400).json({ message: error.message });
