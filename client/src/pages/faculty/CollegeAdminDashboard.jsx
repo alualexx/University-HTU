@@ -14,7 +14,8 @@ import {
   MonetizationOn, Email, MoreVert, ArrowForward, Security, Password,
   Add, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Dashboard, Business, People, School, CalendarToday,
-  MenuBook, Logout, LightMode, DarkMode, AssignmentInd, Menu as MenuIcon
+  MenuBook, Logout, LightMode, DarkMode, AssignmentInd, Menu as MenuIcon,
+  Visibility
 } from "@mui/icons-material";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend,
@@ -27,6 +28,16 @@ import { collegesAPI, departmentsAPI, usersAPI, academicEventsAPI, budgetsAPI, t
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 import useCountUp from "../../hooks/useCountUp";
+
+const THEME_G = {
+  indigo: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+  violet: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+  cyan: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+  rose: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
+  amber: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+  emerald: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+  slate: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+};
 
 const StatCard = ({ stat, glassStyle, alpha }) => {
   const count = useCountUp(stat.value);
