@@ -227,6 +227,19 @@ const CollegeAdminDashboard = () => {
     }
   };
 
+  // Derived growth data for chart
+  const growthData = useMemo(() => {
+    // Generate some deterministic values based on counts so it's not a placeholder
+    return [
+      { name: 'Jan', val: studentsCount * 0.8 },
+      { name: 'Feb', val: studentsCount * 0.85 },
+      { name: 'Mar', val: studentsCount * 0.9 },
+      { name: 'Apr', val: studentsCount * 0.95 },
+      { name: 'May', val: studentsCount * 0.98 },
+      { name: 'Jun', val: studentsCount },
+    ];
+  }, [studentsCount]);
+
   const navItems = [
     { label: t("overview"), icon: <Dashboard />, index: 0 },
     { label: t("departments"), icon: <Business />, index: 1 },
@@ -260,19 +273,6 @@ const CollegeAdminDashboard = () => {
     { label: t("facultyMembers"), value: facultyCount, icon: <School />, color: "#f59e0b", trend: "STABLE" },
     { label: t("researchProjects"), value: researchProjects.length, icon: <Assessment />, color: "#ec4899", trend: "ACTIVE" },
   ];
-
-  // Derived growth data for chart
-  const growthData = useMemo(() => {
-    // Generate some deterministic values based on counts so it's not a placeholder
-    return [
-      { name: 'Jan', val: studentsCount * 0.8 },
-      { name: 'Feb', val: studentsCount * 0.85 },
-      { name: 'Mar', val: studentsCount * 0.9 },
-      { name: 'Apr', val: studentsCount * 0.95 },
-      { name: 'May', val: studentsCount * 0.98 },
-      { name: 'Jun', val: studentsCount },
-    ];
-  }, [studentsCount]);
 
   const sidebarContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
