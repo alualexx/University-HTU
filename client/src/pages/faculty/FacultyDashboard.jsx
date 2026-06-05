@@ -616,7 +616,8 @@ export default function FacultyDashboard() {
                 instructor: user?.id || user?._id,
                 instructorName: user?.name || "Unknown Instructor"
               };
-              await coursesAPI.create(payload);
+              const response = await coursesAPI.create(payload);
+              setCourses(prev => [...prev, response.data]);
               window.alert("Course Module Deployed Successfully! Awaiting College Admin Approval.");
               setAddCourseOpen(false);
               setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 });

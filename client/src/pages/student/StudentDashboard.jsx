@@ -276,10 +276,14 @@ export default function StudentDashboard() {
   const mySchedules = schedules?.filter(s => myActiveCourses?.some(c => c.id === s.courseId || c.name === s.courseName))?.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)) || [];
 
   // Year/Semester Filtering Logic
-  const isMyWindow = !systemConfig.registrationLock && Number(user?.year) === Number(systemConfig.targetYear);
+  const safeUserYear = Number(user?.year) || 1;
+  const safeTargetYear = Number(systemConfig.targetYear) || 1;
+  const safeTargetSemester = Number(systemConfig.targetSemester) || 1;
+
+  const isMyWindow = !systemConfig.registrationLock && safeUserYear === safeTargetYear;
   const filteredAvailableCourses = availableCourses.filter(c => {
     // Only show courses for the student's academic year AND the currently active semester window
-    return Number(c.year) === Number(user?.year) && Number(c.semester) === Number(systemConfig.targetSemester);
+    return (Number(c.year) || 1) === safeUserYear && (Number(c.semester) || 1) === safeTargetSemester;
   });
 
   const alreadyEnrolledIds = enrollments?.map(e => e.courseId) || [];
@@ -640,14 +644,14 @@ export default function StudentDashboard() {
                           {systemConfig.registrationLock
                             ? "Registration is Currently Closed"
                             : !isMyWindow
-                              ? `Window Open for Year ${systemConfig.targetYear} Cohort`
-                              : `Welcome! Window Open for Year ${user?.year || 1} - Semester ${systemConfig.targetSemester}`}
+                              ? `Window Open for Year ${safeTargetYear} Cohort`
+                              : `Welcome! Window Open for Year ${safeUserYear} - Semester ${safeTargetSemester}`}
                         </Typography>
                       </Box>
                     </Box>
                     {isMyWindow && (
                       <Chip
-                        label={`ACTIVE: Y${user?.year || 1} S${systemConfig.targetSemester}`}
+                        label={`ACTIVE: Y${safeUserYear} S${safeTargetSemester}`}
                         color="success"
                         sx={{ fontWeight: 900, borderRadius: 2 }}
                       />
@@ -665,7 +669,7 @@ export default function StudentDashboard() {
                       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
                         {systemConfig.registrationLock
                           ? "The registrar has paused all enrollment activities. Please check the news feed for updates."
-                          : `Your academic cohort (Year ${user?.year || 1}) is not scheduled for this registration window. Currently serving Year ${systemConfig.targetYear}.`}
+                          : `Your academic cohort (Year ${safeUserYear}) is not scheduled for this registration window. Currently serving Year ${safeTargetYear}.`}
                       </Typography>
                     </Box>
                   ) : filteredAvailableCourses.length === 0 ? (
@@ -673,7 +677,7 @@ export default function StudentDashboard() {
                       <Book sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
                       <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>No Modules Found</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        There are no courses currently prepared for Year {user?.year || 1} Semester {systemConfig.targetSemester}.
+                        There are no courses currently prepared for Year {safeUserYear} Semester {safeTargetSemester}.
                       </Typography>
                     </Box>
                   ) : (
