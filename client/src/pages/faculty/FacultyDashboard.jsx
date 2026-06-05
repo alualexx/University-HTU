@@ -477,37 +477,7 @@ export default function FacultyDashboard() {
     </Box>
   );
 
-  const CoursesTab = () => (
-    <Box>
-      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>Course Modules</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddCourseOpen(true)} sx={{ borderRadius: 3, fontWeight: 900, background: THEME_G.indigo }}>Deploy Module</Button>
-      </Box>
-      <Grid container spacing={3}>
-        {courses.map((c) => (
-          <Grid item xs={12} md={4} key={c._id}>
-            <GlassCard sx={{ height: "100%", borderBottom: `4px solid ${c.status === "active" ? "#10b981" : "#f59e0b"}` }}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={1000}>{c.name}</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.6, letterSpacing: 1 }}>{c.code.toUpperCase()}</Typography>
-                <Stack spacing={2} sx={{ mt: 3 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="caption" fontWeight={800} color="text.secondary">INSTRUCTOR</Typography>
-                    <Typography variant="body2" fontWeight={1000}>{c.instructorName}</Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="caption" fontWeight={800} color="text.secondary">LOAD</Typography>
-                    <Typography variant="body2" fontWeight={1000}>{c.enrolledStudents?.length || 0} / {c.maxStudents || 40}</Typography>
-                  </Box>
-                  <LinearProgress variant="determinate" value={((c.enrolledStudents?.length || 0) / (c.maxStudents || 40)) * 100} sx={{ height: 6, borderRadius: 3 }} />
-                </Stack>
-              </Box>
-            </GlassCard>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
+  // CoursesTab content is rendered inline in the return block below to prevent nested-component remount bug
 
   const ResearchTab = () => (
     <Box>
@@ -573,7 +543,37 @@ export default function FacultyDashboard() {
             {activeTab === 1 && <DepartmentsTab />}
             {activeTab === 2 && <FacultyTab />}
             {activeTab === 3 && <StudentsTab />}
-            {activeTab === 4 && <CoursesTab />}
+            {activeTab === 4 && (
+              <Box>
+                <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1 }}>Course Modules</Typography>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddCourseOpen(true)} sx={{ borderRadius: 3, fontWeight: 900, background: THEME_G.indigo }}>Deploy Module</Button>
+                </Box>
+                <Grid container spacing={3}>
+                  {courses.map((c) => (
+                    <Grid item xs={12} md={4} key={c._id}>
+                      <GlassCard sx={{ height: "100%", borderBottom: `4px solid ${c.status === "active" ? "#10b981" : "#f59e0b"}` }}>
+                        <Box sx={{ p: 3 }}>
+                          <Typography variant="h6" fontWeight={1000}>{c.name}</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.6, letterSpacing: 1 }}>{c.code?.toUpperCase()}</Typography>
+                          <Stack spacing={2} sx={{ mt: 3 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                              <Typography variant="caption" fontWeight={800} color="text.secondary">INSTRUCTOR</Typography>
+                              <Typography variant="body2" fontWeight={1000}>{c.instructorName}</Typography>
+                            </Box>
+                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                              <Typography variant="caption" fontWeight={800} color="text.secondary">LOAD</Typography>
+                              <Typography variant="body2" fontWeight={1000}>{c.enrolledStudents?.length || 0} / {c.maxStudents || 40}</Typography>
+                            </Box>
+                            <LinearProgress variant="determinate" value={((c.enrolledStudents?.length || 0) / (c.maxStudents || 40)) * 100} sx={{ height: 6, borderRadius: 3 }} />
+                          </Stack>
+                        </Box>
+                      </GlassCard>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
             {activeTab === 5 && <ResearchTab />}
             {activeTab === 6 && <AnnouncementsTab />}
           </Box>
