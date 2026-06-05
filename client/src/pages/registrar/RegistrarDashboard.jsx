@@ -396,6 +396,16 @@ const RegistrarDashboard = () => {
 
   const handleDownloadDocument = async (url, fileName) => {
     try {
+      if (typeof url === 'string' && url.startsWith('data:')) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
       const response = await fetch(url);
       const blob = await response.blob();
       const link = document.createElement("a");
@@ -2438,12 +2448,9 @@ const RegistrarDashboard = () => {
                                         <Button
                                           fullWidth
                                           variant="outlined"
-                                          component="a"
-                                          href={url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
+                                          component="button"
+                                          onClick={() => handleDownloadDocument(url, `${app.name}_${key}`)}
                                           startIcon={<Description />}
-                                          endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
                                           sx={{
                                             borderRadius: 3, textTransform: 'none', py: 2, fontWeight: 800,
                                             bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',

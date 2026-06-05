@@ -220,9 +220,8 @@ const ApplicationForm = () => {
         const refId = `${part1}\u2014${part2}`;
 
         try {
-            // 1. Upload Documents to Firebase Storage
+            // 1. Upload Documents via Base64 to MongoDB (Bypassing Firebase)
             const docUrls = {};
-            const uploadPromises = [];
             const filesToUpload = [
                 { key: 'idDocument', file: form.idDocument },
                 { key: 'transcript', file: form.transcript },
@@ -230,27 +229,24 @@ const ApplicationForm = () => {
                 { key: 'recommendationLetter', file: form.recommendationLetter }
             ];
 
-            if (storage) {
-                for (const item of filesToUpload) {
-                    if (item.file) {
-                        const fileRef = storageRef(storage, `applications/${refId}/${item.key}_${item.file.name}`);
-                        const uploadTask = Promise.race([
-                            uploadBytes(fileRef, item.file).then(async (snapshot) => {
-                                const url = await getDownloadURL(snapshot.ref);
-                                docUrls[item.key] = url;
-                            }),
-                            new Promise((_, reject) => setTimeout(() => reject(new Error(`Upload too long: ${item.key}`)), 20000))
-                        ]);
-                        uploadPromises.push(uploadTask);
+            const toBase64 = file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+
+            for (const item of filesToUpload) {
+                if (item.file) {
+                    try {
+                        const base64Str = await toBase64(item.file);
+                        docUrls[item.key] = base64Str;
+                    } catch (e) {
+                        console.error(`Failed to convert ${item.key} to Base64`, e);
                     }
                 }
             }
 
-            try {
-                await Promise.all(uploadPromises);
-            } catch (uErr) {
-                console.error("Upload process error:", uErr);
-            }
             setUploading(false);
 
             const data = {
