@@ -12,26 +12,35 @@ const deptColors = {
   "Physics": "linear-gradient(135deg,#6a1b9a,#ba68c8)",
 };
 
-const courses = [
-  { id: 1, code: "CS101", name: "Introduction to Computer Science", department: "Computer Science", credits: 4, instructor: "Dr. Smith", semester: "Fall 2024", schedule: "Mon/Wed 10:00–11:30", description: "Fundamental concepts of computer science including algorithms, data structures, and programming basics." },
-  { id: 2, code: "CS201", name: "Data Structures and Algorithms", department: "Computer Science", credits: 4, instructor: "Dr. Johnson", semester: "Fall 2024", schedule: "Tue/Thu 14:00–15:30", description: "Study of fundamental data structures and algorithms with emphasis on implementation and analysis." },
-  { id: 3, code: "MATH101", name: "Calculus I", department: "Mathematics", credits: 4, instructor: "Prof. Williams", semester: "Fall 2024", schedule: "Mon/Wed/Fri 09:00–10:00", description: "Introduction to differential calculus including limits, derivatives, and applications." },
-  { id: 4, code: "ENG101", name: "English Composition", department: "English", credits: 3, instructor: "Ms. Davis", semester: "Fall 2024", schedule: "Tue/Thu 11:00–12:30", description: "Development of academic writing skills including essays, research papers, and critical analysis." },
-  { id: 5, code: "PHY101", name: "Physics I", department: "Physics", credits: 4, instructor: "Dr. Brown", semester: "Fall 2024", schedule: "Mon/Wed 14:00–16:00", description: "Introduction to mechanics, thermodynamics, and waves with laboratory component." },
-  { id: 6, code: "CS301", name: "Database Systems", department: "Computer Science", credits: 3, instructor: "Dr. Miller", semester: "Spring 2024", schedule: "Wed 16:00–19:00", description: "Study of database design, SQL, transaction processing, and database management systems." },
-];
+import { coursesAPI } from "../../services/api";
 
 const Courses = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const depts = ["All", ...new Set(courses.map(c => c.department))];
+  React.useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await coursesAPI.getAll({ status: "active" });
+        setCourses(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch courses", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  const depts = ["All", ...new Set(courses.map(c => c.department).filter(Boolean))];
 
   const filtered = courses.filter(c =>
     (selectedDept === "All" || c.department === selectedDept) &&
-    (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.department.toLowerCase().includes(searchTerm.toLowerCase()))
+    ((c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.department || "").toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -114,7 +123,7 @@ const Courses = () => {
             {filtered.map(course => {
               const gradient = deptColors[course.department] || "linear-gradient(135deg,#6366f1,#a855f7)";
               return (
-                <Grid item xs={12} md={6} key={course.id}>
+                <Grid item xs={12} md={6} key={course._id || course.id}>
                   <Card elevation={0} sx={{
                     height: "100%", borderRadius: 6, border: "1px solid", borderColor: "divider",
                     overflow: "hidden", display: "flex", flexDirection: "column",
@@ -138,9 +147,9 @@ const Courses = () => {
 
                       <Grid container spacing={2}>
                         {[
-                          { icon: <Person />, label: 'INSTRUCTOR', val: course.instructor },
-                          { icon: <CalendarToday />, label: 'SEMESTER', val: course.semester },
-                          { icon: <AccessTime />, label: 'SCHEDULE', val: course.schedule },
+                          { icon: <Person />, label: 'INSTRUCTOR', val: course.instructorName || course.instructor || "TBA" },
+                          { icon: <CalendarToday />, label: 'SEMESTER', val: `Year ${course.year || 1} Sem ${course.semester || 1}` },
+                          { icon: <AccessTime />, label: 'SCHEDULE', val: course.schedule || "TBA" },
                         ].map((item, i) => (
                           <Grid item xs={12} sm={4} key={i}>
                             <Typography variant="caption" fontWeight={900} color="text.disabled" sx={{ display: 'block', mb: 0.5, letterSpacing: 1 }}>{item.label}</Typography>
