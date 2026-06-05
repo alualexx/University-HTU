@@ -24,7 +24,7 @@ import {
 } from "recharts";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { collegesAPI, departmentsAPI, usersAPI, academicEventsAPI, budgetsAPI, transcriptAPI, researchAPI } from "../../services/api";
+import { collegesAPI, departmentsAPI, usersAPI, academicEventsAPI, budgetsAPI, transcriptAPI, researchAPI, coursesAPI } from "../../services/api";
 import { useLanguage } from "../../context/LanguageContext";
 import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 import useCountUp from "../../hooks/useCountUp";
@@ -748,9 +748,9 @@ const CollegeAdminDashboard = () => {
                               sx={{ fontWeight: 900, borderRadius: 3, textTransform: 'none', px: 3 }}
                               onClick={async () => {
                                 try {
-                                  await coursesAPI.update(course._id || course.id, { status: "active" });
+                                  await coursesAPI.update(course._id || course.id, { status: "pending_registrar_approval" });
                                   setPendingCourses(prev => prev.filter(c => (c._id || c.id) !== (course._id || course.id)));
-                                  setSnackbarMsg("Module authorized for registration.");
+                                  setSnackbarMsg("Module forwarded to Registrar for final approval & fee assignment.");
                                   setIsSnackbarOpen(true);
                                 } catch (e) {
                                   console.error(e);

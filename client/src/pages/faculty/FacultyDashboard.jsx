@@ -135,7 +135,7 @@ export default function FacultyDashboard() {
 
   // Operational States
   const [addCourseOpen, setAddCourseOpen] = useState(false);
-  const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3, year: 1, semester: 1 });
+  const [newCourse, setNewCourse] = useState({ code: "", name: "", description: "", credits: 3, year: 1, semester: 1, instructorId: "", schedule: "", room: "", maxStudents: 40 });
 
   /* ── Data Acquisition ────────────────────────────────────────────── */
   useEffect(() => {
@@ -587,17 +587,45 @@ export default function FacultyDashboard() {
           <Stack spacing={3} sx={{ mt: 2 }}>
             <TextField label="Module Title" fullWidth value={newCourse.name} onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} autoFocus />
             <TextField label="Designation Code (e.g., CS101)" fullWidth value={newCourse.code} onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value.toUpperCase() })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+            <TextField label="Description" fullWidth multiline rows={2} value={newCourse.description} onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
             <Grid container spacing={2}>
               <Grid item xs={4}>
-                <TextField label="Credits" type="number" fullWidth value={newCourse.credits} onChange={(e) => setNewCourse({ ...newCourse, credits: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+                <TextField label="Credit Hours" type="number" fullWidth inputProps={{ min: 1, max: 6 }} value={newCourse.credits} onChange={(e) => setNewCourse({ ...newCourse, credits: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
               </Grid>
               <Grid item xs={4}>
-                <TextField label="Year" type="number" fullWidth value={newCourse.year} onChange={(e) => setNewCourse({ ...newCourse, year: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+                <TextField label="Year" select fullWidth value={newCourse.year} onChange={(e) => setNewCourse({ ...newCourse, year: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}>
+                  {[1, 2, 3, 4].map(y => <MenuItem key={y} value={y}>Year {y}</MenuItem>)}
+                </TextField>
               </Grid>
               <Grid item xs={4}>
-                <TextField label="Semester" type="number" fullWidth value={newCourse.semester} onChange={(e) => setNewCourse({ ...newCourse, semester: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+                <TextField label="Semester" select fullWidth value={newCourse.semester} onChange={(e) => setNewCourse({ ...newCourse, semester: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}>
+                  <MenuItem value={1}>Semester 1</MenuItem>
+                  <MenuItem value={2}>Semester 2</MenuItem>
+                </TextField>
               </Grid>
             </Grid>
+            <TextField
+              label="Assign Instructor"
+              select fullWidth
+              value={newCourse.instructorId}
+              onChange={(e) => {
+                const sel = faculty.find(f => (f._id || f.id) === e.target.value);
+                setNewCourse({ ...newCourse, instructorId: e.target.value, instructorName: sel?.name || "" });
+              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+            >
+              <MenuItem value="">-- Not Assigned --</MenuItem>
+              {faculty.map(f => <MenuItem key={f._id || f.id} value={f._id || f.id}>{f.name}</MenuItem>)}
+            </TextField>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField label="Schedule (e.g., MWF 9-10 AM)" fullWidth value={newCourse.schedule} onChange={(e) => setNewCourse({ ...newCourse, schedule: e.target.value })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField label="Room" fullWidth value={newCourse.room} onChange={(e) => setNewCourse({ ...newCourse, room: e.target.value })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
+              </Grid>
+            </Grid>
+            <TextField label="Max Students" type="number" fullWidth inputProps={{ min: 1 }} value={newCourse.maxStudents} onChange={(e) => setNewCourse({ ...newCourse, maxStudents: Number(e.target.value) })} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }} />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 4, pt: 2, gap: 1 }}>
@@ -610,17 +638,19 @@ export default function FacultyDashboard() {
           <Button variant="contained" disabled={!newCourse.name || !newCourse.code} onClick={async (e) => {
             e.preventDefault();
             try {
+              const sel = faculty.find(f => (f._id || f.id) === newCourse.instructorId);
               const payload = {
                 ...newCourse,
                 department: user?.department || "General",
-                instructor: user?.id || user?._id,
-                instructorName: user?.name || "Unknown Instructor"
+                instructor: newCourse.instructorId || user?.id || user?._id,
+                instructorName: sel?.name || user?.name || "Unknown Instructor",
+                status: "pending_college_approval",
               };
               const response = await coursesAPI.create(payload);
               setCourses(prev => [...prev, response.data]);
-              window.alert("Course Module Deployed Successfully! Awaiting College Admin Approval.");
+              window.alert("Course Module Deployed! Awaiting College Admin Approval.");
               setAddCourseOpen(false);
-              setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1 });
+              setNewCourse({ code: "", name: "", description: "", credits: 3, year: 1, semester: 1, instructorId: "", schedule: "", room: "", maxStudents: 40 });
             } catch (err) {
               console.error(err);
               window.alert("Error Deploying Course: " + (err.response?.data?.message || err.message));

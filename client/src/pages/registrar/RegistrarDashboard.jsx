@@ -124,6 +124,10 @@ const RegistrarDashboard = () => {
   const [scheduleDialog, setScheduleDialog] = useState({ open: false, mode: 'add', data: { courseId: '', courseName: '', day: '', startTime: '', endTime: '', room: '', semester: 'Fall 2026' } });
   const [studentDialog, setStudentDialog] = useState({ open: false, student: null, name: '', status: 'Active', statusReason: '', gender: '', year: 1, department: '', phone: '', email: '', intellectualIdentity: '' });
   const [idRequests, setIdRequests] = useState([]);
+  // Course fee approval dialog state
+  const [selectedCourseForApproval, setSelectedCourseForApproval] = useState(null);
+  const [openApprovalDialog, setOpenApprovalDialog] = useState(false);
+  const [courseFee, setCourseFee] = useState("");
 
   // Sidebar & Notifications State
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -4309,6 +4313,72 @@ const RegistrarDashboard = () => {
             sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 3, boxShadow: "0 8px 25px rgba(16, 185, 129, 0.4)" }}
           >
             Launch Window
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Course Fee Approval Dialog */}
+      <Dialog
+        open={openApprovalDialog}
+        onClose={() => { setOpenApprovalDialog(false); setSelectedCourseForApproval(null); setCourseFee(""); }}
+        PaperProps={{ sx: { background: isDark ? "rgba(15,23,42,0.97)" : "white", backdropFilter: "blur(40px)", borderRadius: 6, p: 2, maxWidth: 480, width: "100%" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 1000, fontSize: "1.4rem" }}>
+          Set Course Fee &amp; Activate Module
+        </DialogTitle>
+        <DialogContent>
+          {selectedCourseForApproval && (
+            <Box>
+              <Box sx={{ p: 2, mb: 3, borderRadius: 3, bgcolor: isDark ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.15)" }}>
+                <Typography fontWeight={1000} sx={{ mb: 0.5 }}>{selectedCourseForApproval.name}</Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>{selectedCourseForApproval.code} &bull; Year {selectedCourseForApproval.year} Sem {selectedCourseForApproval.semester} &bull; {selectedCourseForApproval.credits} Credits</Typography>
+                {selectedCourseForApproval.instructorName && (
+                  <Typography variant="caption" display="block" color="primary.main" fontWeight={800} sx={{ mt: 0.5 }}>Instructor: {selectedCourseForApproval.instructorName}</Typography>
+                )}
+              </Box>
+              <TextField
+                label="Tuition Fee (USD)"
+                type="number"
+                fullWidth
+                autoFocus
+                value={courseFee}
+                onChange={(e) => setCourseFee(e.target.value)}
+                inputProps={{ min: 0 }}
+                helperText="Set the tuition fee students will see when registering for this module."
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button onClick={() => { setOpenApprovalDialog(false); setSelectedCourseForApproval(null); setCourseFee(""); }} sx={{ fontWeight: 900, borderRadius: 3 }}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="success"
+            disabled={courseFee === "" || Number(courseFee) < 0}
+            onClick={async () => {
+              try {
+                await coursesAPI.update(selectedCourseForApproval._id || selectedCourseForApproval.id, {
+                  status: "active",
+                  tuitionFee: Number(courseFee),
+                });
+                setCourses(prev => prev.map(c =>
+                  (c._id || c.id) === (selectedCourseForApproval._id || selectedCourseForApproval.id)
+                    ? { ...c, status: "active", tuitionFee: Number(courseFee) }
+                    : c
+                ));
+                setOpenApprovalDialog(false);
+                setSelectedCourseForApproval(null);
+                setCourseFee("");
+                setSnackbar({ open: true, message: "Module activated and published to students!", severity: "success" });
+              } catch (err) {
+                console.error(err);
+                setSnackbar({ open: true, message: "Failed to activate course.", severity: "error" });
+              }
+            }}
+            sx={{ borderRadius: 3, fontWeight: 1000, px: 4, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}
+          >
+            Activate &amp; Publish
           </Button>
         </DialogActions>
       </Dialog>
