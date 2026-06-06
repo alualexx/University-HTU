@@ -179,12 +179,12 @@ function App() {
               }
             />
 
-            {/* Department Head Dashboard (Legacy) */}
+            {/* Department Head Dashboard */}
             <Route
               path="/department-dashboard"
               element={
                 <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
-                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <DepartmentDashboard />}
                 </ProtectedRoute>
               }
             />
