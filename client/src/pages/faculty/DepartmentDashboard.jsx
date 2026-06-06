@@ -16,7 +16,9 @@ import {
   School as SchoolIcon, Assignment as AssignmentIcon, Grade, CalendarToday,
   Phone, Close as CloseIcon, Email, ArrowForward, ChevronLeft, ChevronRight,
   Menu as MenuIcon, Add as AddIcon, Send as SendIcon, LibraryBooks,
-  SupportAgent, Computer, Delete, MenuBook, Edit as EditIcon, LockReset
+  SupportAgent, Computer, Delete, MenuBook, Edit as EditIcon, LockReset,
+  TableChart, IntegrationInstructions, FolderOpen, BarChart as ReportIcon,
+  EventNote, PersonSearch
 } from "@mui/icons-material";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -27,6 +29,13 @@ import { useColorMode } from "../../context/ThemeContext";
 import { db } from "../../services/Firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import useCountUp from "../../hooks/useCountUp";
+import TimetableTab from "./tabs/TimetableTab";
+import StudentsTab from "./tabs/StudentsTab";
+import GradingTab from "./tabs/GradingTab";
+import DocumentsTab from "./tabs/DocumentsTab";
+import ReportsTab from "./tabs/ReportsTab";
+import IntegrationsTab from "./tabs/IntegrationsTab";
+import { usersAPI, enrollmentsAPI } from "../../services/api";
 
 const gradients = {
   primary: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
@@ -59,6 +68,8 @@ const DepartmentDashboard = () => {
   // Curriculum & Faculty States
   const [courses, setCourses] = useState([]);
   const [faculty, setFaculty] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [allEnrollments, setAllEnrollments] = useState([]);
   const [openAddCourse, setOpenAddCourse] = useState(false);
   const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3, year: 1, semester: 1, instructorId: "", instructorName: "", modules: [] });
   const [openEditCourse, setOpenEditCourse] = useState(false);
@@ -112,7 +123,26 @@ const DepartmentDashboard = () => {
       } catch (err) { console.error("Fetch courses error:", err); }
     };
     fetchCourses();
-    const courseInterval = setInterval(fetchCourses, 10000); // Poll every 10s
+    const courseInterval = setInterval(fetchCourses, 10000);
+
+    // Fetch Students
+    const fetchStudents = async () => {
+      try {
+        const res = await usersAPI.getAll();
+        const all = res.data || [];
+        setStudents(all.filter(u => u.role === "student" && u.department === (user?.department || "")));
+      } catch (err) { console.error("Fetch students error:", err); }
+    };
+    fetchStudents();
+
+    // Fetch All Enrollments
+    const fetchAllEnrollments = async () => {
+      try {
+        const res = await enrollmentsAPI.getAll({ department: user?.department || "" });
+        setAllEnrollments(res.data || []);
+      } catch (err) { console.error("Fetch enrollments error:", err); }
+    };
+    fetchAllEnrollments();
 
     // Listen to Faculty
     const qFaculty = query(collection(db, "users"), where("role", "==", "faculty"), where("department", "==", user?.department || ""));
@@ -1408,15 +1438,67 @@ const DepartmentDashboard = () => {
             </DialogActions>
           </Dialog>
 
-          {/* Placeholder for other tabs */}
+          {/* Timetable Tab */}
+          {activeTab === 8 && (
+            <TimetableTab
+              courses={courses}
+              department={user?.department || ""}
+              user={user}
+            />
+          )}
+
+          {/* Students Tab */}
+          {activeTab === 9 && (
+            <StudentsTab
+              courses={courses}
+              department={user?.department || ""}
+              user={user}
+              advisors={advisors}
+            />
+          )}
+
+          {/* Grading Tab (new comprehensive) */}
+          {activeTab === 10 && (
+            <GradingTab
+              courses={courses}
+              user={user}
+              department={user?.department || ""}
+            />
+          )}
+
+          {/* Documents Tab */}
+          {activeTab === 11 && (
+            <DocumentsTab
+              department={user?.department || ""}
+              user={user}
+            />
+          )}
+
+          {/* Reports Tab */}
+          {activeTab === 12 && (
+            <ReportsTab
+              courses={courses}
+              faculty={faculty}
+              students={students}
+              enrollments={allEnrollments}
+              attendance={[]}
+            />
+          )}
+
+          {/* Integrations Tab */}
+          {activeTab === 13 && (
+            <IntegrationsTab user={user} />
+          )}
+
+          {/* Settings placeholder */}
           {[7].includes(activeTab) && (
             <Box sx={{ textAlign: 'center', py: 15, ...glassStyle, borderRadius: 4 }}>
               <Box sx={{ mb: 3 }}>
                 {activeTab === 7 && <Settings sx={{ fontSize: 80, color: '#94a3b8' }} />}
               </Box>
-              <Typography variant="h4" fontWeight={1000} gutterBottom>Feature Under Development</Typography>
+              <Typography variant="h4" fontWeight={1000} gutterBottom>Department Settings</Typography>
               <Typography variant="h6" color="text.secondary" fontWeight={700}>
-                We are working hard to bring this feature to your department portal.
+                Configure department preferences, academic calendar constraints, and access policies.
               </Typography>
             </Box>
           )}
