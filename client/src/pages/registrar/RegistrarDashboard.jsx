@@ -186,8 +186,7 @@ const RegistrarDashboard = () => {
   };
 
   // --- Curriculum Approval State ---
-  const [openApprovalDialog, setOpenApprovalDialog] = useState(false);
-  const [selectedCourseForApproval, setSelectedCourseForApproval] = useState(null);
+
   const [approvalForm, setApprovalForm] = useState({ tuitionFee: "", registrarDescription: "" });
   const [targetYear, setTargetYear] = useState(1);
   const [targetSemester, setTargetSemester] = useState(1);
