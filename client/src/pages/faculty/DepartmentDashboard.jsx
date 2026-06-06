@@ -1035,65 +1035,111 @@ const DepartmentDashboard = () => {
 
           {activeTab === 2 && (
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
                 <Box>
-                  <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Faculty Roster</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800}>DEPARTMENTAL STAFF & ASSIGNMENTS</Typography>
+                  <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -0.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Groups sx={{ color: '#6366f1', fontSize: 32 }} /> Faculty Roster
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1 }}>
+                    DEPARTMENTAL STAFF & COURSE ASSIGNMENTS
+                  </Typography>
+                </Box>
+
+                {/* Search Bar (Visual Polish) */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', bgcolor: alpha('#fff', isDark ? 0.05 : 0.6), p: 0.5, pr: 2, borderRadius: 10, ...glassStyle }}>
+                  <IconButton size="small"><Search /></IconButton>
+                  <Typography variant="body2" color="text.secondary" fontWeight={700}>Search faculty...</Typography>
                 </Box>
               </Box>
 
-              <Grid container spacing={3}>
-                {faculty.map((member) => (
-                  <Grid item xs={12} md={6} lg={4} key={member.id}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                          <Avatar sx={{ width: 56, height: 56, bgcolor: gradients.secondary, fontWeight: 900 }}>
-                            {member.name?.[0]}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="h6" fontWeight={900}>{member.name}</Typography>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>{member.email}</Typography>
+              {faculty.length === 0 ? (
+                <Card sx={{ ...glassStyle, borderRadius: 4, textAlign: 'center', py: 10, borderStyle: 'dashed', borderWidth: 2, borderColor: alpha('#6366f1', 0.2) }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                    <Avatar sx={{ width: 80, height: 80, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }}>
+                      <Groups sx={{ fontSize: 40 }} />
+                    </Avatar>
+                  </Box>
+                  <Typography variant="h5" fontWeight={1000} gutterBottom>No Faculty Found</Typography>
+                  <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ maxWidth: 400, mx: 'auto', mb: 4 }}>
+                    Your department currently has no assigned faculty members in the system. Faculty accounts are typically provisioned by the Administrator.
+                  </Typography>
+                  <Button variant="outlined" sx={{ borderRadius: 3, fontWeight: 800, textTransform: 'none', borderColor: '#6366f1', color: '#6366f1' }}>
+                    Request Provisioning
+                  </Button>
+                </Card>
+              ) : (
+                <Grid container spacing={4}>
+                  {faculty.map((member) => (
+                    <Grid item xs={12} sm={6} md={4} key={member.id}>
+                      <Card sx={{
+                        ...glassStyle,
+                        borderRadius: 4,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': { transform: 'translateY(-8px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }
+                      }}>
+                        <CardContent sx={{ p: 4 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                              <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={<CheckCircle sx={{ color: '#10b981', fontSize: 16 }} />}>
+                                <Avatar sx={{ width: 64, height: 64, background: gradients.secondary, fontWeight: 900, boxShadow: '0 8px 16px rgba(59,130,246,0.3)' }}>
+                                  {member.name?.[0]}
+                                </Avatar>
+                              </Badge>
+                              <Box>
+                                <Typography variant="h6" fontWeight={900} sx={{ lineHeight: 1.2 }}>{member.name}</Typography>
+                                <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                  <Email sx={{ fontSize: 12 }} /> {member.email}
+                                </Typography>
+                              </Box>
+                            </Box>
                           </Box>
-                        </Box>
 
-                        <Typography variant="subtitle2" fontWeight={800} gutterBottom>Current Assignments</Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                          {courses.filter(c => c.instructorId === member.id).map(c => (
-                            <Chip key={c.id} label={c.code} size="small" variant="outlined" sx={{ fontWeight: 800 }} />
-                          ))}
-                          {courses.filter(c => c.instructorId === member.id).length === 0 && (
-                            <Typography variant="caption" color="text.secondary">No courses assigned yet</Typography>
-                          )}
-                        </Stack>
+                          <Divider sx={{ my: 2.5, opacity: 0.1 }} />
 
-                        <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-                          <Button
-                            fullWidth variant="outlined" sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: 'none' }}
-                            startIcon={<AddIcon />}
-                            onClick={() => { setSelectedFaculty(member); setOpenAssignModal(true); }}
-                          >
-                            Assign Course
-                          </Button>
-                          <Tooltip title="Reset Password">
-                            <IconButton
-                              onClick={() => handleDirectPasswordReset(member.email, member.name)}
-                              sx={{
-                                borderRadius: 2.5,
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                color: 'primary.main',
-                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
-                              }}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                            <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              Active Assignments
+                            </Typography>
+                            <Chip size="small" label={`${courses.filter(c => c.instructorId === member.id).length} Courses`} sx={{ fontWeight: 900, fontSize: '0.65rem' }} />
+                          </Box>
+
+                          <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} sx={{ minHeight: 40 }}>
+                            {courses.filter(c => c.instructorId === member.id).map(c => (
+                              <Chip key={c.id} label={c.code} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1', border: '1px solid', borderColor: alpha('#6366f1', 0.2) }} />
+                            ))}
+                            {courses.filter(c => c.instructorId === member.id).length === 0 && (
+                              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>Pending assignments</Typography>
+                            )}
+                          </Stack>
+
+                          <Stack direction="row" spacing={1} sx={{ mt: 4 }}>
+                            <Button
+                              fullWidth variant="contained" sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none', background: gradients.primary, boxShadow: '0 8px 16px rgba(99,102,241,0.25)' }}
+                              startIcon={<AddIcon />}
+                              onClick={() => { setSelectedFaculty(member); setOpenAssignModal(true); }}
                             >
-                              <LockReset />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+                              Assign
+                            </Button>
+                            <Tooltip title="Reset Credentials">
+                              <IconButton
+                                onClick={() => handleDirectPasswordReset(member.email, member.name)}
+                                sx={{
+                                  borderRadius: 3,
+                                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                                  color: 'error.main',
+                                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
+                                }}
+                              >
+                                <LockReset />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
 
               {/* Assign Course Modal */}
               <Dialog open={openAssignModal} onClose={() => setOpenAssignModal(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
