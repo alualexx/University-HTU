@@ -27,6 +27,7 @@ const TeacherDashboard = React.lazy(() => import("./pages/faculty/TeacherDashboa
 const FacultyDashboard = React.lazy(() => import("./pages/faculty/FacultyDashboard"));
 const CollegeAdminDashboard = React.lazy(() => import("./pages/faculty/CollegeAdminDashboard"));
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const FinanceDashboard = React.lazy(() => import("./pages/finance/FinanceDashboard"));
 const CreateAccount = React.lazy(() => import("./pages/admin/CreateAccount"));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
 const ChangePassword = React.lazy(() => import("./pages/public/ChangePassword"));
@@ -205,6 +206,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={[ROLES.COLLEGE_ADMIN]}>
                   {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <CollegeAdminDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Finance Dashboard */}
+            <Route
+              path="/finance-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.FINANCE, ROLES.ADMIN]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FinanceDashboard />}
                 </ProtectedRoute>
               }
             />

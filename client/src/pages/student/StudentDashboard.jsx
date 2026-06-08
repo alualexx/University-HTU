@@ -12,8 +12,15 @@ import {
   LightMode, DarkMode, Notifications, Dashboard, Campaign,
   CheckCircle, AccessTime, Warning, TrendingUp, MenuBook,
   AccountBalanceWallet, Receipt, CheckCircleOutline,
-  Close, Download, ShoppingCart, EventNote, Remove, Menu as MenuIcon
+  Close, Download, ShoppingCart, EventNote, Remove, Menu as MenuIcon,
+  Person, AppRegistration, Assessment, AssignmentTurnedIn, AttachMoney,
+  Support, MiscellaneousServices
 } from "@mui/icons-material";
+import {
+  DashboardTab, ProfileTab, RegistrationTab, AcademicRecordsTab, AttendanceTab,
+  GradesTab, FinanceTab, TimetableTab, LearningTab, AdvisingTab, GraduationTab,
+  NotificationsTab, ServicesTab
+} from './tabs';
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
 import {
@@ -24,7 +31,9 @@ import {
   notificationsAPI,
   transcriptAPI,
   schedulesAPI,
-  systemAPI
+  systemAPI,
+  attendanceAPI,
+  academicEventsAPI
 } from "../../services/api";
 import jsPDF from "jspdf";
 
@@ -45,11 +54,18 @@ const courseColors = ["#6366f1", "#a855f7", "#10b981", "#3b82f6", "#f59e0b"];
 /* ─── Sidebar Nav Items ────────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { label: "Dashboard", icon: <Dashboard /> },
-  { label: "My Courses", icon: <MenuBook /> },
-  { label: "My Schedules", icon: <EventNote /> },
-  { label: "Grades & Transcripts", icon: <TrendingUp /> },
-  { label: "Semester Registration", icon: <ShoppingCart /> },
-  { label: "News Feed", icon: <Campaign /> },
+  { label: "Profile & Account", icon: <Person /> },
+  { label: "Semester Registration", icon: <AppRegistration /> },
+  { label: "Academic Records", icon: <Assessment /> },
+  { label: "Attendance Tracker", icon: <AssignmentTurnedIn /> },
+  { label: "Grades & Results", icon: <Grade /> },
+  { label: "Finance & Fees", icon: <AttachMoney /> },
+  { label: "Timetable & Exams", icon: <EventNote /> },
+  { label: "Learning & Materials", icon: <Book /> },
+  { label: "Advising & Support", icon: <Support /> },
+  { label: "Graduation Clearance", icon: <EmojiEvents /> },
+  { label: "University News", icon: <Campaign /> },
+  { label: "Other Services", icon: <MiscellaneousServices /> }
 ];
 
 /* ─── useCountUp ───────────────────────────────────────────────────────── */
@@ -193,6 +209,8 @@ export default function StudentDashboard() {
   const [tuitionPayments, setTuitionPayments] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [transcriptData, setTranscriptData] = useState(null);
+  const [attendanceData, setAttendanceData] = useState(null);
+  const [academicEvents, setAcademicEvents] = useState([]);
 
   const [cart, setCart] = useState([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -214,7 +232,9 @@ export default function StudentDashboard() {
           notificationsRes,
           transcriptRes,
           registrarSettings,
-          globalSettings
+          globalSettings,
+          attendanceRes,
+          eventsRes
         ] = await Promise.all([
           enrollmentsAPI.getAll({ studentId: user.id }),
           coursesAPI.getAll({ status: "active" }),
@@ -224,7 +244,9 @@ export default function StudentDashboard() {
           notificationsAPI.getAll({ studentId: user.id }),
           transcriptAPI.getMe().catch(() => ({ data: null })),
           systemAPI.getSettings("registrar").catch(() => ({ data: null })),
-          systemAPI.getSettings("settings").catch(() => ({ data: null }))
+          systemAPI.getSettings("settings").catch(() => ({ data: null })),
+          attendanceAPI.getByStudent(user.id).catch(() => ({ data: null })),
+          academicEventsAPI.getAll().catch(() => ({ data: [] }))
         ]);
 
         if (enrollmentsRes.data) setEnrollments(enrollmentsRes.data);
@@ -243,6 +265,8 @@ export default function StudentDashboard() {
         }
 
         if (transcriptRes.data) setTranscriptData(transcriptRes.data);
+        if (attendanceRes?.data) setAttendanceData(attendanceRes.data);
+        if (eventsRes?.data) setAcademicEvents(eventsRes.data);
 
         if (registrarSettings?.data) {
           setSystemConfig(prev => ({ ...prev, ...registrarSettings.data }));
@@ -458,307 +482,19 @@ export default function StudentDashboard() {
 
         {/* Page content */}
         <Box sx={{ p: 5, pb: 10 }}>
-
-          {/* TAB 0: DASHBOARD */}
-          {activeTab === 0 && (
-            <Box>
-              {/* Phase 18: Global Vitals Panel */}
-              <Box sx={{ mb: 4, p: 2, borderRadius: 4, background: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.1) : 'rgba(255,255,255,0.03)', border: '1px solid', borderColor: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.3) : 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: systemConfig.globalMaintenance ? '#f59e0b' : '#10b981', boxShadow: `0 0 10px ${systemConfig.globalMaintenance ? '#f59e0b' : '#10b981'}` }} />
-                  <Box>
-                    <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1.5 }}>SYSTEM INTEGRITY</Typography>
-                    <Typography variant="body2" fontWeight={1000} color={systemConfig.globalMaintenance ? 'warning.main' : 'success.main'}>
-                      {systemConfig.globalMaintenance ? "MAINTENANCE ACTIVE - SOME SERVICES RESTRICTED" : "ALL SYSTEMS NOMINAL"}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Stack direction="row" spacing={4} sx={{ mr: 4, display: { xs: 'none', md: 'flex' } }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="caption" fontWeight={900} color="text.secondary">PROTOCOL</Typography>
-                    <Typography variant="body2" fontWeight={1000} color={systemConfig.registrationLock ? 'error.main' : 'primary.main'}>
-                      {systemConfig.registrationLock ? "REG LOCKED" : "REG OPEN"}
-                    </Typography>
-                  </Box>
-
-                </Stack>
-              </Box>
-
-              <Grid container spacing={3} sx={{ mb: 4 }}>{stats.map((s, i) => <Grid item xs={12} sm={6} md={3} key={i}><StatCard stat={s} mode={mode} /></Grid>)}</Grid>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ ...cardSx, borderRadius: 4, p: 4 }}>
-                    <Typography variant="h5" fontWeight={900} sx={{ mb: 1 }}>Welcome back, {user?.name}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.8 }}>Your profile is synced. Use <strong>Semester Registration</strong> to enroll, or check <strong>My Schedules</strong> for your timetable.</Typography>
-                    <Stack direction="row" spacing={2}><Button variant="contained" onClick={() => setActiveTab(4)} sx={{ borderRadius: 3, fontWeight: 900, px: 3.5, textTransform: 'none' }}>Register for Semester</Button><Button variant="outlined" onClick={() => setActiveTab(2)} sx={{ borderRadius: 3, fontWeight: 900, px: 3.5, textTransform: 'none' }}>View Timetable</Button></Stack>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ ...cardSx, borderRadius: 4, p: 4, height: '100%' }}>
-                    <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Financial Summary</Typography>
-                    {tuitionPayments.filter(p => p.status === 'approved').length > 0 ? (
-                      <Box sx={{ bgcolor: alpha('#10b981', 0.08), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><CheckCircleOutline sx={{ color: '#10b981', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="success.main">Cleared</Typography><Typography variant="caption" color="text.secondary">No balance</Typography></Box></Box>
-                    ) : tuitionPayments.length > 0 ? (
-                      <Box sx={{ bgcolor: alpha('#f59e0b', 0.08), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><Warning sx={{ color: '#f59e0b', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="warning.main">Pending</Typography><Typography variant="caption" color="text.secondary">Awaiting review</Typography></Box></Box>
-                    ) : (
-                      <Box sx={{ bgcolor: alpha('#3b82f6', 0.06), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><AccountBalanceWallet sx={{ color: '#3b82f6', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="info.main">No Payments</Typography><Typography variant="caption" color="text.secondary">Register to begin</Typography></Box></Box>
-                    )}
-                    <Box sx={{ mt: 3 }}><Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}><Typography variant="caption" color="text.secondary" fontWeight={800}>Degree Progress</Typography><Typography variant="caption" color="text.secondary" fontWeight={800}>{totalCredits}/{requiredCredits}</Typography></Box><LinearProgress variant="determinate" value={Math.min((totalCredits / requiredCredits) * 100, 100)} sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', '& .MuiLinearProgress-bar': { background: gradients[0], borderRadius: 3 } }} /></Box>
-                  </Card>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          {/* TAB 1: MY COURSES */}
-          {activeTab === 1 && (
-            <Box>
-              {myActiveCourses.length === 0 ? (
-                <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><MenuBook sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.25, mb: 2 }} /><Typography color="text.secondary" fontWeight={800}>No active enrollments.</Typography><Button variant="outlined" sx={{ mt: 2, borderRadius: 3, fontWeight: 900 }} onClick={() => setActiveTab(4)}>Go to Registration</Button></Card>
-              ) : (
-                <Card sx={{ ...cardSx, borderRadius: 4 }}><TableContainer><Table>
-                  <TableHead><TableRow>{["#", "Course Name", "Code", "Credits", "Instructor", "Grade", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                  <TableBody>{myActiveCourses.map((c, i) => {
-                    const gc = gradeToPoints[c.grade] >= 3.0 ? 'success.main' : gradeToPoints[c.grade] >= 2.0 ? 'warning.main' : c.grade === "N/A" ? 'text.secondary' : 'error.main';
-                    return (<TableRow key={i} hover><TableCell sx={tC}>{i + 1}</TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code || '—'}</Typography></TableCell><TableCell sx={tC}>{c.credits || 3}</TableCell><TableCell sx={tC}><Typography variant="body2" color="text.secondary">{c.instructor || "TBA"}</Typography></TableCell><TableCell sx={tC}><Chip label={c.grade} size="small" sx={{ fontWeight: 900, color: gc }} /></TableCell><TableCell sx={tC}><Chip label="ENROLLED" size="small" sx={{ fontWeight: 900, fontSize: '0.6rem', height: 22, bgcolor: alpha('#10b981', 0.1), color: '#10b981' }} /></TableCell></TableRow>);
-                  })}</TableBody>
-                </Table></TableContainer></Card>
-              )}
-            </Box>
-          )}
-
-          {/* TAB 2: MY SCHEDULES */}
-          {activeTab === 2 && (
-            <Box>
-              {mySchedules.length === 0 ? (
-                <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><EventNote sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.25, mb: 2 }} /><Typography color="text.secondary" fontWeight={800}>No schedules found.</Typography></Card>
-              ) : (
-                <Card sx={{ ...cardSx, borderRadius: 4 }}><TableContainer><Table>
-                  <TableHead><TableRow>{["Day", "Time", "Course", "Room", "Semester"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                  <TableBody>{mySchedules.map((s, i) => (
-                    <TableRow key={i} hover><TableCell sx={tC}><Chip label={s.day} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} /></TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={800}>{s.startTime} — {s.endTime}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{s.courseName}</Typography></TableCell><TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{s.room || '—'}</Typography></TableCell><TableCell sx={tC}><Typography variant="caption" color="text.secondary">{s.semester || CURRENT_SEMESTER}</Typography></TableCell></TableRow>
-                  ))}</TableBody>
-                </Table></TableContainer></Card>
-              )}
-            </Box>
-          )}
-
-          {/* TAB 3: GRADES & TRANSCRIPTS */}
-          {activeTab === 3 && (
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={4}>
-                <Card sx={{ ...cardSx, borderRadius: 4, p: 4, textAlign: 'center' }}>
-                  <Box sx={{ width: 100, height: 100, borderRadius: '50%', mx: 'auto', mb: 2, background: gradients[0], display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 28px ${alpha('#6366f1', 0.3)}` }}><Typography variant="h3" fontWeight={900} color="white">{transcriptData?.cumulativeGPA?.toFixed(2) || gpa.toFixed(2)}</Typography></Box>
-                  <Typography variant="h6" fontWeight={900}>Cumulative GPA</Typography><Typography variant="caption" color="text.secondary">Out of 4.00</Typography>
-                  <Divider sx={{ my: 2 }} />
-                  <Grid container spacing={2}><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="primary.main">{totalCredits}</Typography><Typography variant="caption" color="text.secondary">Enrolled</Typography></Grid><Grid item xs={6}><Typography variant="h5" fontWeight={900} color="success.main">{earnedCredits}</Typography><Typography variant="caption" color="text.secondary">Earned</Typography></Grid></Grid>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={8}>
-                <Card sx={{ ...cardSx, borderRadius: 4 }}><CardContent sx={{ p: 4 }}>
-                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Official Transcript Records</Typography>
-                  {!transcriptData || !transcriptData.termRecords || transcriptData.termRecords.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 5 }}>
-                      <Grade sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} />
-                      <Typography color="text.secondary" fontWeight={800}>No official transcript records yet.</Typography>
-                    </Box>
-                  ) : (
-                    <Stack spacing={4}>
-                      {transcriptData.termRecords.map((term, tIndex) => (
-                        <Paper key={tIndex} sx={{ p: 3, borderRadius: 4, bgcolor: isDark ? 'rgba(0,0,0,0.2)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="subtitle1" fontWeight={900}>{term.term}</Typography>
-                          </Box>
-                          <TableContainer sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Code</TableCell>
-                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Title</TableCell>
-                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Credits</TableCell>
-                                  <TableCell sx={{ fontWeight: 800, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>Grade</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {term.courses.length === 0 ? (
-                                  <TableRow>
-                                    <TableCell colSpan={4} sx={{ textAlign: 'center', py: 3, fontStyle: 'italic', color: 'text.secondary', border: 'none' }}>No courses added for this semester.</TableCell>
-                                  </TableRow>
-                                ) : (
-                                  term.courses.map((course, cIndex) => (
-                                    <TableRow key={cIndex} sx={{
-                                      '& td': { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}` },
-                                      opacity: course.status === 'Dropped' ? 0.5 : 1,
-                                      textDecoration: course.status === 'Dropped' ? 'line-through' : 'none'
-                                    }}>
-                                      <TableCell sx={{ fontWeight: 800 }}>{course.code}</TableCell>
-                                      <TableCell fontWeight={700}>{course.title}</TableCell>
-                                      <TableCell>{course.credits}</TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          label={course.status === 'Dropped' ? 'W/D' : course.grade}
-                                          size="small"
-                                          sx={{
-                                            fontWeight: 900,
-                                            bgcolor: course.status === 'Dropped' ? alpha('#94a3b8', 0.1) : alpha('#10b981', 0.1),
-                                            color: course.status === 'Dropped' ? '#64748b' : '#10b981'
-                                          }}
-                                        />
-                                      </TableCell>
-                                    </TableRow>
-                                  ))
-                                )}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        </Paper>
-                      ))}
-                    </Stack>
-                  )}
-                </CardContent></Card>
-              </Grid>
-            </Grid>
-          )}
-
-          {/* TAB 4: SEMESTER REGISTRATION */}
-          {activeTab === 4 && (
-            <Grid container spacing={4}>
-              <Grid item xs={12}>
-                <Card sx={{
-                  ...cardSx, p: 3, borderRadius: 4, mb: 1,
-                  background: isMyWindow
-                    ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)'
-                    : 'linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                  border: `1px solid ${isMyWindow ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2)}`
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{
-                        width: 12, height: 12, borderRadius: '50%',
-                        bgcolor: isMyWindow ? '#10b981' : '#ef4444',
-                        boxShadow: `0 0 10px ${isMyWindow ? '#10b981' : '#ef4444'}`
-                      }} />
-                      <Box>
-                        <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1 }}>REGISTRATION INTELLIGENCE</Typography>
-                        <Typography variant="h6" fontWeight={1000}>
-                          {systemConfig.registrationLock
-                            ? "Registration is Currently Closed"
-                            : !isMyWindow
-                              ? `Window Open for Year ${safeTargetYear} Cohort`
-                              : `Welcome! Window Open for Year ${safeUserYear} - Semester ${safeTargetSemester}`}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    {isMyWindow && (
-                      <Chip
-                        label={`ACTIVE: Y${safeUserYear} S${safeTargetSemester}`}
-                        color="success"
-                        sx={{ fontWeight: 900, borderRadius: 2 }}
-                      />
-                    )}
-                  </Box>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={8}>
-                <Card sx={{ ...cardSx, borderRadius: 4 }}>
-                  {(!isMyWindow || systemConfig.registrationLock) ? (
-                    <Box sx={{ p: 8, textAlign: 'center' }}>
-                      <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                      <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>Registration Locked</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
-                        {systemConfig.registrationLock
-                          ? "The registrar has paused all enrollment activities. Please check the news feed for updates."
-                          : `Your academic cohort (Year ${safeUserYear}) is not scheduled for this registration window. Currently serving Year ${safeTargetYear}.`}
-                      </Typography>
-                    </Box>
-                  ) : filteredAvailableCourses.length === 0 ? (
-                    <Box sx={{ p: 8, textAlign: 'center' }}>
-                      <Book sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                      <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>No Modules Found</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        There are no courses currently prepared for Year {safeUserYear} Semester {safeTargetSemester}.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <TableContainer><Table>
-                      <TableHead><TableRow>{["", "Course", "Code", "Credits", "Tuition", "Instructor", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                      <TableBody>{filteredAvailableCourses.map((c, i) => {
-                        const enrolled = alreadyEnrolledIds.includes(c.id);
-                        const inCart = cart.find(x => x.id === c.id);
-                        const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
-                        return (<TableRow key={i} sx={{ bgcolor: inCart ? alpha(theme.palette.primary.main, 0.04) : 'transparent' }} hover>
-                          <TableCell sx={tC} padding="checkbox">{!enrolled && <Checkbox checked={!!inCart} onChange={() => toggleCart(c)} color="primary" />}</TableCell>
-                          <TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell>
-                          <TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code}</Typography></TableCell>
-                          <TableCell sx={tC}>{c.credits || 3}</TableCell>
-                          <TableCell sx={tC}><Typography variant="body2" fontWeight={800} color="success.main">${fee.toLocaleString()}</Typography></TableCell>
-                          <TableCell sx={tC}><Typography variant="body2" color="text.secondary">{c.instructor || "TBA"}</Typography></TableCell>
-                          <TableCell sx={tC}>{enrolled ? <Chip label="Registered" size="small" color="success" sx={{ fontWeight: 900 }} /> : inCart ? <Chip label="In Cart" size="small" color="primary" sx={{ fontWeight: 900 }} /> : <Chip label="Available" size="small" variant="outlined" sx={{ fontWeight: 800 }} />}</TableCell>
-                        </TableRow>);
-                      })}</TableBody>
-                    </Table></TableContainer>
-                  )}
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Card sx={{ ...cardSx, borderRadius: 4, p: 3.5, mb: 3 }}>
-                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><ShoppingCart fontSize="small" /> Cart ({cart.length})</Typography>
-                  {cart.length === 0 ? <Typography variant="body2" color="text.secondary">Select courses to add to cart.</Typography> : (
-                    <Stack spacing={1.5}>
-                      {cart.map((c, i) => {
-                        const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
-                        return (
-                          <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2 }}>
-                            <Box>
-                              <Typography variant="subtitle2" fontWeight={900}>{c.name}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {c.credits || 3} Cr · ${fee.toLocaleString()}
-                              </Typography>
-                            </Box>
-                            <IconButton size="small" onClick={() => toggleCart(c)} color="error">
-                              <Remove fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        );
-                      })}
-                      <Divider />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="subtitle2" fontWeight={900}>Total</Typography><Typography variant="subtitle2" fontWeight={900} color="primary.main">{cartCredits} Cr · ${cartTotal.toLocaleString()}</Typography></Box>
-                      <Button
-                        fullWidth variant="contained"
-                        onClick={() => setPaymentModalOpen(true)}
-                        disabled={systemConfig.registrationLock || systemConfig.globalMaintenance}
-                        sx={{
-                          borderRadius: 3, fontWeight: 900, py: 1.2, textTransform: 'none',
-                          background: (systemConfig.registrationLock || systemConfig.globalMaintenance) ? 'rgba(0,0,0,0.1)' : gradients[0]
-                        }}
-                      >
-                        {systemConfig.globalMaintenance ? "Locked for Maintenance" : systemConfig.registrationLock ? "Registration Window Closed" : "Proceed to Checkout"}
-                      </Button>
-                    </Stack>
-                  )}
-                </Card>
-                <Card sx={{ ...cardSx, borderRadius: 4, p: 3.5 }}>
-                  <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>My Documents</Typography>
-                  {myActiveCourses.length > 0 && <Box sx={{ mb: 2 }}><Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1, mb: 1, display: 'block' }}>SEMESTER SLIP</Typography><Button fullWidth variant="outlined" startIcon={<Download />} onClick={() => generateSemesterSlipPDF(user, myActiveCourses)} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>Download Slip (PDF)</Button></Box>}
-                  {tuitionPayments.filter(p => p.status === "approved").length > 0 && <Box><Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1, mb: 1, display: 'block' }}>RECEIPTS</Typography><List disablePadding>{tuitionPayments.filter(p => p.status === "approved").map((p, i) => (<ListItem key={i} sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', mb: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', pr: 1 }}><ListItemText primary={<Typography variant="subtitle2" fontWeight={800}>${(p.amount || 0).toLocaleString()}</Typography>} secondary="Paid" /><Tooltip title="Download PDF"><IconButton color="success" onClick={() => generateReceiptPDF(user, p)}><Download fontSize="small" /></IconButton></Tooltip></ListItem>))}</List></Box>}
-                  {myActiveCourses.length === 0 && tuitionPayments.filter(p => p.status === "approved").length === 0 && <Box sx={{ textAlign: 'center', py: 3 }}><Receipt sx={{ fontSize: 36, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography variant="body2" color="text.secondary">No documents yet.</Typography></Box>}
-                </Card>
-              </Grid>
-            </Grid>
-          )}
-
-          {/* TAB 5: NEWS */}
-          {activeTab === 5 && (
-            <Stack spacing={3}>{newsList.map((a, i) => (
-              <Card key={i} sx={{ ...cardSx, borderRadius: 4, p: 4, transition: '0.3s', '&:hover': { transform: 'translateY(-3px)' } }}>
-                <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 1 }}>{a.category?.toUpperCase() || "UPDATE"}</Typography>
-                <Typography variant="h5" fontWeight={900} sx={{ mt: 0.5, mb: 0.5 }}>{a.title}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{a.date?.toDate ? a.date.toDate().toLocaleDateString() : new Date(a.date).toLocaleDateString()}</Typography>
-                <Typography variant="body1">{a.content}</Typography>
-              </Card>
-            ))}{newsList.length === 0 && <Card sx={{ ...cardSx, p: 6, textAlign: 'center', borderRadius: 4 }}><Campaign sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No news.</Typography></Card>}</Stack>
-          )}
+          {activeTab === 0 && <DashboardTab user={user} systemConfig={systemConfig} myActiveCourses={myActiveCourses} totalCredits={totalCredits} requiredCredits={requiredCredits} newsList={newsList} tuitionPayments={tuitionPayments} isDark={isDark} cardSx={cardSx} gradients={gradients} setActiveTab={setActiveTab} gpa={gpa} />}
+          {activeTab === 1 && <ProfileTab user={user} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
+          {activeTab === 2 && <RegistrationTab user={user} systemConfig={systemConfig} isMyWindow={isMyWindow} safeUserYear={safeUserYear} safeTargetYear={safeTargetYear} safeTargetSemester={safeTargetSemester} filteredAvailableCourses={filteredAvailableCourses} alreadyEnrolledIds={alreadyEnrolledIds} cart={cart} cartCredits={cartCredits} cartTotal={cartTotal} toggleCart={toggleCart} setPaymentModalOpen={setPaymentModalOpen} generateSemesterSlipPDF={generateSemesterSlipPDF} generateReceiptPDF={generateReceiptPDF} myActiveCourses={myActiveCourses} tuitionPayments={tuitionPayments} isDark={isDark} cardSx={cardSx} theme={theme} gradients={gradients} TUITION_PER_CREDIT={TUITION_PER_CREDIT} academicEvents={academicEvents} />}
+          {activeTab === 3 && <AcademicRecordsTab myActiveCourses={myActiveCourses} gradeToPoints={gradeToPoints} isDark={isDark} cardSx={cardSx} transcriptData={transcriptData} />}
+          {activeTab === 4 && <AttendanceTab user={user} enrollments={enrollments} availableCourses={availableCourses} attendanceData={attendanceData} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
+          {activeTab === 5 && <GradesTab transcriptData={transcriptData} gpa={gpa} isDark={isDark} cardSx={cardSx} gradients={gradients} />}
+          {activeTab === 6 && <FinanceTab myActiveCourses={myActiveCourses} tuitionPayments={tuitionPayments} user={user} generateSemesterSlipPDF={generateSemesterSlipPDF} generateReceiptPDF={generateReceiptPDF} isDark={isDark} cardSx={cardSx} />}
+          {activeTab === 7 && <TimetableTab mySchedules={mySchedules} CURRENT_SEMESTER={CURRENT_SEMESTER} isDark={isDark} cardSx={cardSx} />}
+          {activeTab === 8 && <LearningTab user={user} myActiveCourses={myActiveCourses} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
+          {activeTab === 9 && <AdvisingTab user={user} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
+          {activeTab === 10 && <GraduationTab user={user} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
+          {activeTab === 11 && <NotificationsTab newsList={newsList} isDark={isDark} cardSx={cardSx} />}
+          {activeTab === 12 && <ServicesTab user={user} isDark={isDark} glassStyle={cardSx} gradients={gradients} />}
         </Box>
       </Box>
 

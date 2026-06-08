@@ -1,0 +1,13 @@
+export { default as DashboardTab } from './DashboardTab';
+export { default as ProfileTab } from './ProfileTab';
+export { default as RegistrationTab } from './RegistrationTab';
+export { default as AcademicRecordsTab } from './AcademicRecordsTab';
+export { default as AttendanceTab } from './AttendanceTab';
+export { default as GradesTab } from './GradesTab';
+export { default as FinanceTab } from './FinanceTab';
+export { default as TimetableTab } from './TimetableTab';
+export { default as LearningTab } from './LearningTab';
+export { default as AdvisingTab } from './AdvisingTab';
+export { default as GraduationTab } from './GraduationTab';
+export { default as NotificationsTab } from './NotificationsTab';
+export { default as ServicesTab } from './ServicesTab';

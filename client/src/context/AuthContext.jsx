@@ -17,7 +17,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// User roles
 export const ROLES = {
   STUDENT: "student",
   FACULTY: "faculty",
@@ -25,6 +24,7 @@ export const ROLES = {
   ADMIN: "admin",
   TEACHER: "teacher",
   COLLEGE_ADMIN: "college_admin",
+  FINANCE: "finance",
 };
 
 // Role-based dashboard routes
@@ -35,6 +35,7 @@ export const ROLE_DASHBOARD_ROUTES = {
   [ROLES.REGISTRAR]: "/registrar-dashboard",
   [ROLES.ADMIN]: "/admin-dashboard",
   [ROLES.COLLEGE_ADMIN]: "/college-dashboard",
+  [ROLES.FINANCE]: "/finance-dashboard",
 };
 
 export const useAuth = () => {
