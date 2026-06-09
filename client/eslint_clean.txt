@@ -1,0 +1,413 @@
+
+D:\Alex_File\university-system\client\src\pages\faculty\CollegeAdminDashboard.jsx
+   27:80  error  'transcriptAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+   82:10  error  'deptOtp' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u           no-unused-vars
+   82:19  error  'setDeptOtp' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u        no-unused-vars
+   93:10  error  'isSnackbarOpen' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+   94:10  error  'snackbarMsg' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   99:10  error  'openBudgetDialog' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  100:22  error  'setBudgetForm' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  181:9   error  'handleSaveBudget' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\DepartmentDashboard.jsx
+   30:89  error  'writeBatch' is defined but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+   31:8   error  'useCountUp' is defined but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+   60:9   error  'isMobile' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   62:10  error  'loadingApps' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  121:27  error  'coursesAPI' is not defined                                                                  no-undef
+  196:13  error  'coursesAPI' is not defined                                                                  no-undef
+  206:25  error  'coursesAPI' is not defined                                                                  no-undef
+  249:15  error  'coursesAPI' is not defined                                                                  no-undef
+  251:25  error  'coursesAPI' is not defined                                                                  no-undef
+
+D:\Alex_File\university-system\client\src\pages\faculty\FacultyDashboard.jsx
+   29:10  error  'authAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u           no-unused-vars
+   79:9   error  'theme' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  126:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\TeacherDashboard.jsx
+   26:5   error    'authAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                               no-unused-vars
+   27:21  error    'transcriptAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                         no-unused-vars
+   75:12  error    'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                      no-unused-vars
+  126:8   warning  React Hook useEffect has missing dependencies: 'selectedCourseId' and 'user.department'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\DocumentsTab.jsx
+   16:47  error    'budgetsAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           no-unused-vars
+   39:20  error    'setBudget' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+   58:23  error    Error: Cannot access variable before it is declared
+
+`fetchAnnouncements` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  56 |     };
+  57 |
+> 58 |     useEffect(() => { fetchAnnouncements(); fetchEvents(); }, [department]);
+     |                       ^^^^^^^^^^^^^^^^^^ `fetchAnnouncements` accessed before it is declared
+  59 |
+  60 |     const fetchAnnouncements = async () => {
+  61 |         try {
+
+  58 |     useEffect(() => { fetchAnnouncements(); fetchEvents(); }, [department]);
+  59 |
+> 60 |     const fetchAnnouncements = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 61 |         try {
+     | ^^^^^^^^^^^^^
+> 62 |             const res = await announcementsAPI.getAll({ department });
+     | ^^^^^^^^^^^^^
+> 63 |             setAnnouncements(res.data || []);
+     | ^^^^^^^^^^^^^
+> 64 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 65 |     };
+     | ^^^^^^^ `fetchAnnouncements` is declared here
+  66 |
+  67 |     const fetchEvents = async () => {
+  68 |         try {  react-hooks/immutability
+   58:45  error    Error: Cannot access variable before it is declared
+
+`fetchEvents` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  56 |     };
+  57 |
+> 58 |     useEffect(() => { fetchAnnouncements(); fetchEvents(); }, [department]);
+     |                                             ^^^^^^^^^^^ `fetchEvents` accessed before it is declared
+  59 |
+  60 |     const fetchAnnouncements = async () => {
+  61 |         try {
+
+  65 |     };
+  66 |
+> 67 |     const fetchEvents = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 68 |         try {
+     | ^^^^^^^^^^^^^
+> 69 |             const res = await academicEventsAPI.getAll({ department });
+     | ^^^^^^^^^^^^^
+> 70 |             setEvents(res.data || []);
+     | ^^^^^^^^^^^^^
+> 71 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 72 |     };
+     | ^^^^^^^ `fetchEvents` is declared here
+  73 |
+  74 |     const handleAddAnnouncement = async () => {
+  75 |         try {                                                                                        react-hooks/immutability
+   58:63  warning  React Hook useEffect has missing dependencies: 'fetchAnnouncements' and 'fetchEvents'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  119:11  error    'pct' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\GradingTab.jsx
+    1:38  error    'useCallback' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+   20:26  error    'notificationsAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            no-unused-vars
+   58:12  error    'openRubric' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+   58:24  error    'setOpenRubric' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+   59:12  error    'openAppeal' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+   59:24  error    'setOpenAppeal' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+   69:23  error    Error: Cannot access variable before it is declared
+
+`fetchAllEnrollments` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  67 |     };
+  68 |
+> 69 |     useEffect(() => { fetchAllEnrollments(); }, [department]);
+     |                       ^^^^^^^^^^^^^^^^^^^ `fetchAllEnrollments` accessed before it is declared
+  70 |
+  71 |     useEffect(() => {
+  72 |         if (selectedCourse) fetchCourseEnrollments(selectedCourse);
+
+  73 |     }, [selectedCourse]);
+  74 |
+> 75 |     const fetchAllEnrollments = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 76 |         try {
+     | ^^^^^^^^^^^^^
+> 77 |             const res = await enrollmentsAPI.getAll({ department });
+     | ^^^^^^^^^^^^^
+> 78 |             const data = res.data || [];
+     | ^^^^^^^^^^^^^
+> 79 |             setAllEnrollments(data);
+     | ^^^^^^^^^^^^^
+> 80 |             setPendingApprovals(data.filter(e => e.gradeStatus === "submitted" || e.gradeStatus === "pending_approval"));
+     | ^^^^^^^^^^^^^
+> 81 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 82 |     };
+     | ^^^^^^^ `fetchAllEnrollments` is declared here
+  83 |
+  84 |     const fetchCourseEnrollments = async (courseId) => {
+  85 |         try {  react-hooks/immutability
+   69:49  warning  React Hook useEffect has a missing dependency: 'fetchAllEnrollments'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+   72:29  error    Error: Cannot access variable before it is declared
+
+`fetchCourseEnrollments` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  70 |
+  71 |     useEffect(() => {
+> 72 |         if (selectedCourse) fetchCourseEnrollments(selectedCourse);
+     |                             ^^^^^^^^^^^^^^^^^^^^^^ `fetchCourseEnrollments` accessed before it is declared
+  73 |     }, [selectedCourse]);
+  74 |
+  75 |     const fetchAllEnrollments = async () => {
+
+  82 |     };
+  83 |
+> 84 |     const fetchCourseEnrollments = async (courseId) => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 85 |         try {
+     | ^^^^^^^^^^^^^
+> 86 |             const res = await enrollmentsAPI.getAll({ courseId });
+     | ^^^^^^^^^^^^^
+> 87 |             setEnrollments(res.data || []);
+     | ^^^^^^^^^^^^^
+> 88 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 89 |     };
+     | ^^^^^^^ `fetchCourseEnrollments` is declared here
+  90 |
+  91 |     const handleSaveGrade = async () => {
+  92 |         if (!selectedEnr || !tempGrade) return;                                                                                                                                                                              react-hooks/immutability
+  132:11  error    'computeStudentGPA' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\IntegrationsTab.jsx
+  74:43  error  'user' is defined but never used  no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\OverviewTab.jsx
+  43:53  error  'suffix' is defined but never used  no-unused-vars
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\ReportsTab.jsx
+   27:79   error  'attendance' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+   31:12   error  'semester' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+   31:22   error  'setSemester' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           no-unused-vars
+   55:87   error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  53 |     const enrollmentData = courses.map((c, i) => ({
+  54 |         name: c.code,
+> 55 |         enrolled: enrollments?.filter(e => e.courseId === c._id).length || Math.floor(Math.random() * 40 + 10),
+     |                                                                                       ^^^^^^^^^^^^^ Cannot call impure function
+  56 |         capacity: c.maxStudents || 40,
+  57 |         fill: PALETTE[i % PALETTE.length],
+  58 |     }));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/purity
+  249:62   error  'i' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+  253:126  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  251 |                                                 const passed = cEnrs.filter(e => e.grade && !["D", "F"].includes(e.grade)).length;
+  252 |                                                 const total = cEnrs.length || 30;
+> 253 |                                                 const passRate = total > 0 ? Math.round((passed / total) * 100) : Math.floor(Math.random() * 20 + 75);
+      |                                                                                                                              ^^^^^^^^^^^^^ Cannot call impure function
+  254 |                                                 return (
+  255 |                                                     <TableRow key={c._id}>
+  256 |                                                         <TableCell fontWeight={800}>{c.code} — {c.name}</TableCell>                                                                                                                                                                  react-hooks/purity
+  341:67   error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  339 |                                 <TableBody>
+  340 |                                     {courses.map(c => {
+> 341 |                                         const avgAtt = Math.floor(Math.random() * 30 + 65);
+      |                                                                   ^^^^^^^^^^^^^ Cannot call impure function
+  342 |                                         return (
+  343 |                                             <TableRow key={c._id}>
+  344 |                                                 <TableCell fontWeight={800}>{c.code} — {c.name}</TableCell>                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/purity
+  353:104  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  351 |                                                     }} />
+  352 |                                                 </TableCell>
+> 353 |                                                 <TableCell align="center" fontWeight={700}>{Math.floor(Math.random() * 5)}</TableCell>
+      |                                                                                                        ^^^^^^^^^^^^^ Cannot call impure function
+  354 |                                                 <TableCell align="center">
+  355 |                                                     <Chip label={avgAtt >= 75 ? "GOOD" : "NEEDS ATTENTION"} size="small" sx={{
+  356 |                                                         fontWeight: 900, fontSize: "0.6rem",                                                                                                                                                                                                                                                       react-hooks/purity
+  398:108  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  396 |                                                         </Box>
+  397 |                                                     </TableCell>
+> 398 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 12 + 1)}</TableCell>
+      |                                                                                                            ^^^^^^^^^^^^^ Cannot call impure function
+  399 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 4 + 1)}</TableCell>
+  400 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 100 + 20)}</TableCell>
+  401 |                                                     <TableCell align="center"><Chip label={Math.floor(Math.random() * 8 + 2)} size="small" sx={{ fontWeight: 900, bgcolor: alpha("#6366f1", 0.1), color: "#6366f1" }} /></TableCell>  react-hooks/purity
+  399:108  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  397 |                                                     </TableCell>
+  398 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 12 + 1)}</TableCell>
+> 399 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 4 + 1)}</TableCell>
+      |                                                                                                            ^^^^^^^^^^^^^ Cannot call impure function
+  400 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 100 + 20)}</TableCell>
+  401 |                                                     <TableCell align="center"><Chip label={Math.floor(Math.random() * 8 + 2)} size="small" sx={{ fontWeight: 900, bgcolor: alpha("#6366f1", 0.1), color: "#6366f1" }} /></TableCell>
+  402 |                                                 </TableRow>     react-hooks/purity
+  400:108  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  398 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 12 + 1)}</TableCell>
+  399 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 4 + 1)}</TableCell>
+> 400 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 100 + 20)}</TableCell>
+      |                                                                                                            ^^^^^^^^^^^^^ Cannot call impure function
+  401 |                                                     <TableCell align="center"><Chip label={Math.floor(Math.random() * 8 + 2)} size="small" sx={{ fontWeight: 900, bgcolor: alpha("#6366f1", 0.1), color: "#6366f1" }} /></TableCell>
+  402 |                                                 </TableRow>
+  403 |                                             ))}                      react-hooks/purity
+  401:103  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  399 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 4 + 1)}</TableCell>
+  400 |                                                     <TableCell align="center" fontWeight={900}>{Math.floor(Math.random() * 100 + 20)}</TableCell>
+> 401 |                                                     <TableCell align="center"><Chip label={Math.floor(Math.random() * 8 + 2)} size="small" sx={{ fontWeight: 900, bgcolor: alpha("#6366f1", 0.1), color: "#6366f1" }} /></TableCell>
+      |                                                                                                       ^^^^^^^^^^^^^ Cannot call impure function
+  402 |                                                 </TableRow>
+  403 |                                             ))}
+  404 |                                         </TableBody>                                                                                                                      react-hooks/purity
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\StudentsTab.jsx
+  36:66  error    'advisors' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            no-unused-vars
+  49:12  error    'openAddDrop' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+  49:25  error    'setOpenAddDrop' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  68:23  error    Error: Cannot access variable before it is declared
+
+`fetchStudents` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  66 |     };
+  67 |
+> 68 |     useEffect(() => { fetchStudents(); fetchEnrollments(); fetchAttendance(); }, [department]);
+     |                       ^^^^^^^^^^^^^ `fetchStudents` accessed before it is declared
+  69 |
+  70 |     const fetchStudents = async () => {
+  71 |         try {
+
+  68 |     useEffect(() => { fetchStudents(); fetchEnrollments(); fetchAttendance(); }, [department]);
+  69 |
+> 70 |     const fetchStudents = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 71 |         try {
+     | ^^^^^^^^^^^^^
+> 72 |             const res = await usersAPI.getAll();
+     | ^^^^^^^^^^^^^
+> 73 |             const all = res.data || [];
+     | ^^^^^^^^^^^^^
+> 74 |             setStudents(all.filter(u => u.role === "student" && u.department === department));
+     | ^^^^^^^^^^^^^
+> 75 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 76 |     };
+     | ^^^^^^^ `fetchStudents` is declared here
+  77 |
+  78 |     const fetchEnrollments = async () => {
+  79 |         try {                                                                                               react-hooks/immutability
+  68:40  error    Error: Cannot access variable before it is declared
+
+`fetchEnrollments` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  66 |     };
+  67 |
+> 68 |     useEffect(() => { fetchStudents(); fetchEnrollments(); fetchAttendance(); }, [department]);
+     |                                        ^^^^^^^^^^^^^^^^ `fetchEnrollments` accessed before it is declared
+  69 |
+  70 |     const fetchStudents = async () => {
+  71 |         try {
+
+  76 |     };
+  77 |
+> 78 |     const fetchEnrollments = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 79 |         try {
+     | ^^^^^^^^^^^^^
+> 80 |             const res = await enrollmentsAPI.getAll({ department });
+     | ^^^^^^^^^^^^^
+> 81 |             setEnrollments(res.data || []);
+     | ^^^^^^^^^^^^^
+> 82 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 83 |     };
+     | ^^^^^^^ `fetchEnrollments` is declared here
+  84 |
+  85 |     const fetchAttendance = async () => {
+  86 |         try {                                                                                                                                                                                                                                                         react-hooks/immutability
+  68:60  error    Error: Cannot access variable before it is declared
+
+`fetchAttendance` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  66 |     };
+  67 |
+> 68 |     useEffect(() => { fetchStudents(); fetchEnrollments(); fetchAttendance(); }, [department]);
+     |                                                            ^^^^^^^^^^^^^^^ `fetchAttendance` accessed before it is declared
+  69 |
+  70 |     const fetchStudents = async () => {
+  71 |         try {
+
+  83 |     };
+  84 |
+> 85 |     const fetchAttendance = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 86 |         try {
+     | ^^^^^^^^^^^^^
+> 87 |             const courseIds = courses.map(c => c._id);
+     | ^^^^^^^^^^^^^
+> 88 |             if (courseIds.length === 0) return;
+     | ^^^^^^^^^^^^^
+> 89 |             const res = await attendanceAPI.get({ department });
+     | ^^^^^^^^^^^^^
+> 90 |             setAttendance(res.data || []);
+     | ^^^^^^^^^^^^^
+> 91 |         } catch (e) { console.error(e); }
+     | ^^^^^^^^^^^^^
+> 92 |     };
+     | ^^^^^^^ `fetchAttendance` is declared here
+  93 |
+  94 |     const getStudentEnrollments = (studentId) =>
+  95 |         enrollments.filter(e => e.studentId === studentId || e.userId === studentId);  react-hooks/immutability
+  68:82  warning  React Hook useEffect has missing dependencies: 'fetchAttendance', 'fetchEnrollments', and 'fetchStudents'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+D:\Alex_File\university-system\client\src\pages\faculty\tabs\TimetableTab.jsx
+    6:36  error    'alpha' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+   13:24  error    'coursesAPI' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            no-unused-vars
+   60:9   error    Error: Cannot access variable before it is declared
+
+`loadSlots` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  58 |
+  59 |     useEffect(() => {
+> 60 |         loadSlots();
+     |         ^^^^^^^^^ `loadSlots` accessed before it is declared
+  61 |     }, [department]);
+  62 |
+  63 |     const loadSlots = async () => {
+
+  61 |     }, [department]);
+  62 |
+> 63 |     const loadSlots = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 64 |         try {
+     | ^^^^^^^^^^^^^
+> 65 |             const res = await schedulesAPI.getAll({ department });
+     | ^^^^^^^^^^^^^
+> 66 |             const all = res.data || [];
+     | ^^^^^^^^^^^^^
+> 67 |             setSlots(all.filter(s => s.type === "class"));
+     | ^^^^^^^^^^^^^
+> 68 |             setExamSlots(all.filter(s => s.type !== "class"));
+     | ^^^^^^^^^^^^^
+> 69 |         } catch (e) {
+     | ^^^^^^^^^^^^^
+> 70 |             console.error(e);
+     | ^^^^^^^^^^^^^
+> 71 |         }
+     | ^^^^^^^^^^^^^
+> 72 |     };
+     | ^^^^^^^ `loadSlots` is declared here
+  73 |
+  74 |     const detectConflict = (slot) => {
+  75 |         return slots.find(s =>  react-hooks/immutability
+   61:8   warning  React Hook useEffect has a missing dependency: 'loadSlots'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/exhaustive-deps
+  193:48  error    'ti' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+
+✖ 66 problems (61 errors, 5 warnings)
+
