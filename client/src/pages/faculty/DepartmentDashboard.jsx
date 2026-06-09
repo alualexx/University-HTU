@@ -27,7 +27,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
 import { db } from "../../services/Firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, writeBatch, deleteDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, deleteDoc } from "firebase/firestore";
+// eslint-disable-next-line no-unused-vars
 import useCountUp from "../../hooks/useCountUp";
 import TimetableTab from "./tabs/TimetableTab";
 import StudentsTab from "./tabs/StudentsTab";
@@ -35,7 +36,7 @@ import GradingTab from "./tabs/GradingTab";
 import DocumentsTab from "./tabs/DocumentsTab";
 import ReportsTab from "./tabs/ReportsTab";
 import IntegrationsTab from "./tabs/IntegrationsTab";
-import { usersAPI, enrollmentsAPI } from "../../services/api";
+import { usersAPI, enrollmentsAPI, coursesAPI } from "../../services/api";
 
 const gradients = {
   primary: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
@@ -57,8 +58,10 @@ const DepartmentDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [applications, setApplications] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [loadingApps, setLoadingApps] = useState(true);
   const [appSubTab, setAppSubTab] = useState(0); // 0: Pending, 1: History
 

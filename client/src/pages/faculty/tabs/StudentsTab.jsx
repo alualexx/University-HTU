@@ -65,6 +65,7 @@ export default function StudentsTab({ courses, department, user, advisors }) {
         borderRadius: 16,
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { fetchStudents(); fetchEnrollments(); fetchAttendance(); }, [department]);
 
     const fetchStudents = async () => {

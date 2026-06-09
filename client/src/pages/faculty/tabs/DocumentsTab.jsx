@@ -13,7 +13,7 @@ import {
     Close as CloseIcon, Download, Visibility, CheckCircle, DeleteOutline,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { announcementsAPI, academicEventsAPI, budgetsAPI } from "../../../services/api";
+import { announcementsAPI, academicEventsAPI } from "../../../services/api";
 
 const GRADIENTS = {
     premium: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
@@ -36,6 +36,7 @@ export default function DocumentsTab({ department, user }) {
     const [documents, setDocuments] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [equipment, setEquipment] = useState([]);
+    // eslint-disable-next-line no-unused-vars
     const [budget, setBudget] = useState({ allocated: 50000, spent: 32500, currency: "JOD" });
     const [openAnnounce, setOpenAnnounce] = useState(false);
     const [openEvent, setOpenEvent] = useState(false);
@@ -55,6 +56,7 @@ export default function DocumentsTab({ department, user }) {
         borderRadius: 16,
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { fetchAnnouncements(); fetchEvents(); }, [department]);
 
     const fetchAnnouncements = async () => {
@@ -115,7 +117,9 @@ export default function DocumentsTab({ department, user }) {
     };
 
     const subTabs = ["Announcements", "Events Calendar", "Documents & Forms", "Room Booking", "Equipment & Assets", "Budget Tracker"];
+    // eslint-disable-next-line no-unused-vars
     const spent = budget.spent;
+    // eslint-disable-next-line no-unused-vars
     const pct = Math.min(Math.round((spent / budget.allocated) * 100), 100);
 
     return (

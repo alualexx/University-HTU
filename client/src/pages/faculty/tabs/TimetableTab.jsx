@@ -10,7 +10,7 @@ import {
     Warning as WarningIcon, AccessTime, Event, School,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
-import { schedulesAPI, coursesAPI } from "../../../services/api";
+import { schedulesAPI } from "../../../services/api";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
 const TIME_SLOTS = [
@@ -56,6 +56,7 @@ export default function TimetableTab({ courses, department, user }) {
         borderRadius: 16,
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         loadSlots();
     }, [department]);

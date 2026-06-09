@@ -1,0 +1,13 @@
+export { default as OverviewTab } from './OverviewTab';
+export { default as ProfileTab } from './ProfileTab';
+export { default as DepartmentManagementTab } from './DepartmentManagementTab';
+export { default as AcademicOversightTab } from './AcademicOversightTab';
+export { default as FacultyStaffTab } from './FacultyStaffTab';
+export { default as StudentOversightTab } from './StudentOversightTab';
+export { default as FinancialManagementTab } from './FinancialManagementTab';
+export { default as ResearchInnovationTab } from './ResearchInnovationTab';
+export { default as PartnershipsTab } from './PartnershipsTab';
+export { default as EventsCalendarTab } from './EventsCalendarTab';
+export { default as PolicyGovernanceTab } from './PolicyGovernanceTab';
+export { default as ReportsAnalyticsTab } from './ReportsAnalyticsTab';
+export { default as NotificationsTab } from './NotificationsTab';

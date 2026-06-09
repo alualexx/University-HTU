@@ -1151,7 +1151,7 @@ const RegistrarDashboard = () => {
           alignItems: 'center',
           mb: 4,
           p: 3,
-          borderRadius: 4,
+          borderRadius: 3,
           bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(99,102,241,0.05)',
           border: '1px solid rgba(255,255,255,0.05)'
         }}>
@@ -1464,7 +1464,7 @@ const RegistrarDashboard = () => {
                 <Box>
                   <Grid container spacing={4}>
                     <Grid item xs={12} md={7}>
-                      <Card sx={{ ...glassStyle, borderRadius: 6, p: 4 }}>
+                      <Card sx={{ ...glassStyle, borderRadius: 3, p: 4 }}>
                         <Typography variant="h6" fontWeight={1000} gutterBottom>Live Enrollment Protocol</Typography>
                         <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'block', mb: 3 }}>CURRENTLY REGISTERED MODULES</Typography>
 
@@ -1670,7 +1670,7 @@ const RegistrarDashboard = () => {
 
           {/* Intelligence Row */}
           <Grid item xs={12} md={7}>
-            <Card sx={{ ...glassStyle, borderRadius: 6, height: '100%' }}>
+            <Card sx={{ ...glassStyle, borderRadius: 3, height: '100%' }}>
               <CardContent sx={{ p: 4 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                   <Box>
@@ -1696,7 +1696,7 @@ const RegistrarDashboard = () => {
           </Grid>
 
           <Grid item xs={12} md={5}>
-            <Card sx={{ ...glassStyle, borderRadius: 6, height: '100%' }}>
+            <Card sx={{ ...glassStyle, borderRadius: 3, height: '100%' }}>
               <CardContent sx={{ p: 4 }}>
                 <Typography variant="h6" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', mb: 0.5, color: isDark ? '#fff' : '#1e293b' }}>Daily Intake Pulse</Typography>
                 <Typography variant="caption" color="primary.main" fontWeight={900} sx={{ letterSpacing: 1, mb: 4, display: 'block' }}>APPLICATION SUBMISSION VELOCITY</Typography>
@@ -1733,7 +1733,7 @@ const RegistrarDashboard = () => {
           <Grid item xs={12}>
             <Card sx={{
               ...glassStyle,
-              borderRadius: 6,
+              borderRadius: 3,
               background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.4) 0%, rgba(30, 41, 59, 0.4) 100%)',
               border: `1px solid ${globalMaintenance ? alpha('#f59e0b', 0.2) : 'rgba(255,255,255,0.05)'}`,
               overflow: 'hidden'
@@ -1756,7 +1756,7 @@ const RegistrarDashboard = () => {
                     </Box>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Box sx={{ p: 2, borderRadius: 4, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', justifyContent: 'space-around' }}>
+                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`, display: 'flex', justifyContent: 'space-around' }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={1000} display="block">THREAT INDEX</Typography>
                         <Typography variant="body1" fontWeight={1000} color={vulnerabilityReport?.score > 80 ? 'success.main' : 'warning.main'}>
@@ -1796,7 +1796,7 @@ const RegistrarDashboard = () => {
 
           {/* Matrix Matrix (Keeping existing Bar Chart for density) */}
           <Grid item xs={12} md={12}>
-            <Card sx={{ ...glassStyle, borderRadius: 6 }}>
+            <Card sx={{ ...glassStyle, borderRadius: 3 }}>
               <CardContent sx={{ p: 4 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                   <Box>

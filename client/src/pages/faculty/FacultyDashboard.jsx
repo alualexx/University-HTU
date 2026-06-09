@@ -26,7 +26,7 @@ import {
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
 import { useColorMode } from "../../context/ThemeContext";
-import { authAPI, coursesAPI, usersAPI, departmentsAPI, announcementsAPI, researchAPI } from "../../services/api";
+import { coursesAPI, usersAPI, departmentsAPI, announcementsAPI, researchAPI } from "../../services/api";
 
 /* ── Design Tokens ────────────────────────────────────────────────── */
 const THEME_G = {
@@ -56,7 +56,7 @@ const GlassCard = ({ children, sx = {}, hover = true }) => {
   const isDark = theme.palette.mode === "dark";
   return (
     <Card sx={{
-      borderRadius: 6,
+      borderRadius: 3,
       background: isDark ? "rgba(15, 23, 42, 0.4)" : "rgba(255, 255, 255, 0.6)",
       backdropFilter: "blur(20px) saturate(180%)",
       border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(255, 255, 255, 0.3)",
@@ -123,6 +123,7 @@ export default function FacultyDashboard() {
   // Framework States
   const [activeTab, setActiveTab] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(true);
 
   // Persistence States (MongoDB)
@@ -581,7 +582,7 @@ export default function FacultyDashboard() {
       </Box>
 
       {/* Deploy Module Dialog */}
-      <Dialog open={addCourseOpen} onClose={() => setAddCourseOpen(false)} PaperProps={{ sx: { background: isDark ? "rgba(15, 23, 42, 0.95)" : "white", backdropFilter: "blur(40px)", borderRadius: 8, p: 2, maxWidth: 500, width: "100%" } }}>
+      <Dialog open={addCourseOpen} onClose={() => setAddCourseOpen(false)} PaperProps={{ sx: { background: isDark ? "rgba(15, 23, 42, 0.95)" : "white", backdropFilter: "blur(40px)", borderRadius: 3, p: 2, maxWidth: 500, width: "100%" } }}>
         <DialogTitle sx={{ fontWeight: 1000, fontSize: "1.8rem", textAlign: "center" }}>Deploy New Module</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>

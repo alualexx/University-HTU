@@ -9,7 +9,7 @@ function StatCard({ stat, isDark }) {
         <Card sx={{
             background: isDark ? "rgba(255,255,255,0.04)" : "#fff",
             border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-            borderRadius: 4, overflow: "hidden", position: 'relative', transition: "all 0.3s",
+            borderRadius: 3, overflow: "hidden", position: 'relative', transition: "all 0.3s",
             "&:hover": { transform: "translateY(-6px)", boxShadow: isDark ? "0 16px 32px rgba(0,0,0,0.4)" : "0 16px 32px rgba(0,0,0,0.07)" }
         }}>
             <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: stat.gradient }} />
@@ -44,7 +44,7 @@ export default function DashboardTab({
     return (
         <Box>
             {/* Global Vitals Panel */}
-            <Box sx={{ mb: 4, p: 2, borderRadius: 4, background: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.1) : 'rgba(255,255,255,0.03)', border: '1px solid', borderColor: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.3) : 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
+            <Box sx={{ mb: 4, p: 2, borderRadius: 3, background: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.1) : 'rgba(255,255,255,0.03)', border: '1px solid', borderColor: systemConfig.globalMaintenance ? alpha('#f59e0b', 0.3) : 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: systemConfig.globalMaintenance ? '#f59e0b' : '#10b981', boxShadow: `0 0 10px ${systemConfig.globalMaintenance ? '#f59e0b' : '#10b981'}` }} />
                     <Box>
@@ -70,7 +70,7 @@ export default function DashboardTab({
 
             <Grid container spacing={3}>
                 <Grid item xs={12} md={8}>
-                    <Card sx={{ ...cardSx, borderRadius: 4, p: 4 }}>
+                    <Card sx={{ ...cardSx, borderRadius: 3, p: 4 }}>
                         <Typography variant="h5" fontWeight={900} sx={{ mb: 1 }}>Welcome back, {user?.name}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.8 }}>
                             Your profile is synced. Use <strong>Semester Registration</strong> to enroll, or check <strong>Timetable & Exams</strong> for your schedule.
@@ -82,7 +82,7 @@ export default function DashboardTab({
                     </Card>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                    <Card sx={{ ...cardSx, borderRadius: 4, p: 4, height: '100%' }}>
+                    <Card sx={{ ...cardSx, borderRadius: 3, p: 4, height: '100%' }}>
                         <Typography variant="h6" fontWeight={900} sx={{ mb: 2 }}>Financial Summary</Typography>
                         {tuitionPayments.filter(p => p.status === 'approved').length > 0 ? (
                             <Box sx={{ bgcolor: alpha('#10b981', 0.08), p: 2.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}><CheckCircleOutline sx={{ color: '#10b981', fontSize: 26 }} /><Box><Typography variant="subtitle2" fontWeight={900} color="success.main">Cleared</Typography><Typography variant="caption" color="text.secondary">No balance</Typography></Box></Box>

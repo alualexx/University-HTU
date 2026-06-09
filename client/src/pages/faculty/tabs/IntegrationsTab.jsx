@@ -71,7 +71,7 @@ const RBAC = [
     },
 ];
 
-export default function IntegrationsTab({ user }) {
+export default function IntegrationsTab() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const [notifications, setNotifications] = useState(

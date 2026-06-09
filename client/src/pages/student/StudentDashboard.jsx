@@ -14,7 +14,7 @@ import {
   AccountBalanceWallet, Receipt, CheckCircleOutline,
   Close, Download, ShoppingCart, EventNote, Remove, Menu as MenuIcon,
   Person, AppRegistration, Assessment, AssignmentTurnedIn, AttachMoney,
-  Support, MiscellaneousServices
+  Support, MiscellaneousServices, Logout
 } from "@mui/icons-material";
 import {
   DashboardTab, ProfileTab, RegistrationTab, AcademicRecordsTab, AttendanceTab,
@@ -84,7 +84,7 @@ function StatCard({ stat, mode }) {
   const d = stat.isGpa ? (a / 100).toFixed(2) : a;
   const isDark = mode === 'dark';
   return (
-    <Card sx={{ background: isDark ? "rgba(255,255,255,0.04)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 4, overflow: "hidden", position: 'relative', transition: "all 0.3s", "&:hover": { transform: "translateY(-6px)", boxShadow: isDark ? "0 16px 32px rgba(0,0,0,0.4)" : "0 16px 32px rgba(0,0,0,0.07)" } }}>
+    <Card sx={{ background: isDark ? "rgba(255,255,255,0.04)" : "#fff", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", borderRadius: 3, overflow: "hidden", position: 'relative', transition: "all 0.3s", "&:hover": { transform: "translateY(-6px)", boxShadow: isDark ? "0 16px 32px rgba(0,0,0,0.4)" : "0 16px 32px rgba(0,0,0,0.07)" } }}>
       <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: stat.gradient }} />
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
@@ -378,20 +378,28 @@ export default function StudentDashboard() {
 
   const tH = { fontWeight: 900, color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 2, borderBottom: `2px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` };
   const tC = { borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`, py: 2 };
-  const cardSx = { background: isDark ? "rgba(15,23,42,0.6)" : "#fff", backdropFilter: "blur(20px)", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.03)" };
+  const cardSx = { background: isDark ? "rgba(15,23,42,0.6)" : "#fff", backdropFilter: "blur(20px)", border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)", boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.03)", borderRadius: 3 };
 
   const sidebarContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', background: isDark ? 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' : 'linear-gradient(180deg, #0369a1 0%, #0284c7 100%)' }}>
       <Box sx={{ p: 3, pt: 4, textAlign: 'center' }}>
-        <Avatar src={user?.profileImage} sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: 'white', color: '#0284c7', fontWeight: 900, fontSize: '1.8rem', border: '3px solid rgba(255,255,255,0.25)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+        <Box sx={{
+          width: 72, height: 72, mx: 'auto', mb: 1.5,
+          bgcolor: 'white', color: '#0284c7',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 900, fontSize: '1.8rem',
+          borderRadius: 2.5,
+          border: '3px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+        }}>
           {(user?.name || "S")[0].toUpperCase()}
-        </Avatar>
+        </Box>
         <Typography variant="subtitle1" fontWeight={900} color="white" sx={{ lineHeight: 1.2 }}>{user?.name || "Student"}</Typography>
         <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={700}>{user?.studentId || user?.email}</Typography>
-        <Chip label={CURRENT_SEMESTER} size="small" sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.65rem' }} />
+        <Chip label={CURRENT_SEMESTER} size="small" sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '0.65rem', borderRadius: 1.5 }} />
       </Box>
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
-      <List sx={{ px: 1.5, py: 2, flex: 1 }}>
+      <List sx={{ px: 1.5, py: 1, flex: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2 } }}>
         {NAV_ITEMS.map((item, i) => (
           <ListItemButton
             key={i}
@@ -414,13 +422,14 @@ export default function StudentDashboard() {
           </ListItemButton>
         ))}
       </List>
-      <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+      <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(0,0,0,0.05)' }}>
+        <Button fullWidth onClick={toggleColorMode} startIcon={mode === "dark" ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1.2, px: 2, mb: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
           {mode === "dark" ? "Light Mode" : "Dark Mode"}
         </Button>
-        <Button fullWidth onClick={logout} sx={{ color: 'rgba(255,200,200,0.8)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, mt: 0.5, '&:hover': { bgcolor: 'rgba(255,0,0,0.1)', color: '#fca5a5' } }}>
-          Sign Out
-        </Button>
+        <ListItemButton onClick={logout} sx={{ borderRadius: 2.5, py: 1.2, px: 2, color: '#fca5a5', '&:hover': { bgcolor: 'rgba(239,68,68,0.15)', color: '#ef4444' } }}>
+          <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}><Logout fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Sign Out" primaryTypographyProps={{ fontWeight: 900, fontSize: '0.88rem' }} />
+        </ListItemButton>
       </Box>
     </Box>
   );
@@ -499,7 +508,7 @@ export default function StudentDashboard() {
       </Box>
 
       {/* NOTIFICATIONS */}
-      <Dialog open={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+      <Dialog open={notifDrawerOpen} onClose={() => setNotifDrawerOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Box><Typography variant="h6" fontWeight={900}>Notifications</Typography><Typography variant="caption" color="text.secondary">{notifications.length} total</Typography></Box><IconButton onClick={() => setNotifDrawerOpen(false)}><Close /></IconButton></DialogTitle>
         <DialogContent sx={{ px: 3, py: 1 }}>
           {notifications.length === 0 ? <Box sx={{ textAlign: 'center', py: 4 }}><Notifications sx={{ fontSize: 40, color: 'text.secondary', opacity: 0.2, mb: 1 }} /><Typography color="text.secondary" fontWeight={800}>No notifications.</Typography></Box> : (
@@ -509,7 +518,7 @@ export default function StudentDashboard() {
       </Dialog>
 
       {/* PAYMENT */}
-      <Dialog open={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+      <Dialog open={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ p: 3 }}><Typography variant="h6" fontWeight={900}>Semester Checkout</Typography><Typography variant="caption" color="text.secondary">Single payment for all courses</Typography></DialogTitle>
         <DialogContent sx={{ px: 3, py: 2 }}>
           <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.15), p: 2.5, borderRadius: 3, mb: 3 }}>

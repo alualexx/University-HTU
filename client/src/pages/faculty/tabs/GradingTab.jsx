@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box, Grid, Card, CardContent, Typography, Button, Chip, Stack, Avatar,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
@@ -17,7 +17,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
     ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { enrollmentsAPI, notificationsAPI } from "../../../services/api";
+import { enrollmentsAPI } from "../../../services/api";
 
 const GRADIENTS = {
     premium: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
@@ -55,7 +55,9 @@ export default function GradingTab({ courses, user, department }) {
     const [openGradeModal, setOpenGradeModal] = useState(false);
     const [selectedEnr, setSelectedEnr] = useState(null);
     const [tempGrade, setTempGrade] = useState("");
+    // eslint-disable-next-line no-unused-vars
     const [openRubric, setOpenRubric] = useState(false);
+    // eslint-disable-next-line no-unused-vars
     const [openAppeal, setOpenAppeal] = useState(false);
     const [pendingApprovals, setPendingApprovals] = useState([]);
 
@@ -66,8 +68,10 @@ export default function GradingTab({ courses, user, department }) {
         borderRadius: 16,
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { fetchAllEnrollments(); }, [department]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (selectedCourse) fetchCourseEnrollments(selectedCourse);
     }, [selectedCourse]);
@@ -129,6 +133,7 @@ export default function GradingTab({ courses, user, department }) {
     })).filter(d => d.count > 0);
 
     // GPA computation
+    // eslint-disable-next-line no-unused-vars
     const computeStudentGPA = (studentId) => {
         const studentEnrs = allEnrollments.filter(e => e.studentId === studentId && e.grade && GPA_MAP[e.grade] !== null);
         if (studentEnrs.length === 0) return null;

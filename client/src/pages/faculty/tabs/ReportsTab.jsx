@@ -28,6 +28,7 @@ export default function ReportsTab({ courses, faculty, students, enrollments, at
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const [activeSubTab, setActiveSubTab] = useState(0);
+    // eslint-disable-next-line no-unused-vars
     const [semester, setSemester] = useState("all");
 
     const glass = {
