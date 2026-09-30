@@ -91,12 +91,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`================================================================`);
-  console.log(` Ethiopia Holy Trinity Theology University (HTTU)`);
-  console.log(` Enterprise Management System - API Gateway running on port ${PORT}`);
-  console.log(` Academic, SIS, LMS, HR, and Library Subsystems ACTIVE`);
-  console.log(`================================================================`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`================================================================`);
+    console.log(` Ethiopia Holy Trinity Theology University (HTTU)`);
+    console.log(` Enterprise Management System - API Gateway running on port ${PORT}`);
+    console.log(` Academic, SIS, LMS, HR, and Library Subsystems ACTIVE`);
+    console.log(`================================================================`);
+  });
+}
 
 module.exports = app;
