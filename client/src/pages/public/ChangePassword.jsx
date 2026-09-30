@@ -3,8 +3,7 @@ import { Box, Card, Typography, TextField, Button, CircularProgress, Alert, Inpu
 import { Lock, Visibility, VisibilityOff, CheckCircle } from "@mui/icons-material";
 import { useAuth, ROLE_DASHBOARD_ROUTES } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../services/Firebase";
+import { usersAPI } from "../../services/api";
 
 const ChangePassword = () => {
     const { user, changeUserPassword, api } = useAuth();
@@ -63,29 +62,15 @@ const ChangePassword = () => {
 
         if (result.success) {
             try {
-                // Update application status to awaiting_payment
-                const appsRes = await api.get(`/applications/track/${user.email}`);
-                if (appsRes.data && appsRes.data._id) {
-                    await api.put(`/applications/${appsRes.data._id}/status`, {
-                        status: "awaiting_payment",
-                        reviewNotes: "Password changed successfully. Awaiting enrollment payment."
-                    });
+                if (user.role === 'student' && user.admissionStatus === 'pending_password_change') {
+                    await usersAPI.patch(user._id || user.id, { admissionStatus: 'pending_tuition' });
+                    // Provide a local state override on `user` object in localStorage if necessary
+                    const storedUser = JSON.parse(localStorage.getItem('user'));
+                    storedUser.admissionStatus = 'pending_tuition';
+                    localStorage.setItem('user', JSON.stringify(storedUser));
                 }
             } catch (err) {
-                console.error("Failed to update application status:", err);
-                // Fallback to Firestore just in case (some flows might still use it)
-                try {
-                    const q = query(collection(db, "applications"), where("email", "==", user.email));
-                    const querySnapshot = await getDocs(q);
-                    if (!querySnapshot.empty) {
-                        const appDoc = querySnapshot.docs[0];
-                        await updateDoc(doc(db, "applications", appDoc.id), {
-                            status: "awaiting_payment"
-                        });
-                    }
-                } catch (e) {
-                    console.error("Firestore fallback failed:", e);
-                }
+                console.error("Failed to update admission status to pending_tuition", err);
             }
 
             setSuccess(true);

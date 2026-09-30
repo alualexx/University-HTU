@@ -1,208 +1,417 @@
 import React, { useState } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Stack, Button, IconButton, Divider, Checkbox, Tooltip, List, ListItem, ListItemText, alpha, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Chip } from '@mui/material';
-import { ShoppingCart, Book, Remove, Download, Receipt, EventNote, SettingsBackupRestore } from '@mui/icons-material';
-import { enrollmentsAPI } from '../../../services/api';
+import {
+  Box, Typography, Card, CardContent, Grid, Stack, Button,
+  TextField, MenuItem, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Chip, LinearProgress, Alert, Paper, Divider
+} from '@mui/material';
+import {
+  CheckCircle, Warning, Lock, AccessTime, School,
+  ArrowForward, DeleteOutline
+} from '@mui/icons-material';
+import { HTTU_COLORS } from '../../../theme';
 
-const tH = { fontWeight: 900, color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 2 };
-const tC = { py: 2 };
+export default function RegistrationTab({ user, setActiveTab }) {
+  const [selectedCourses, setSelectedCourses] = useState([
+    { id: "c1", code: "NT 305", title: "Pauline Epistles", section: "Sec 01", schedule: "MW 8:00", credits: 3 },
+    { id: "c2", code: "TH 201", title: "Systematic Theology I", section: "Sec 01", schedule: "TTh 10:00", credits: 4 },
+    { id: "c3", code: "BI 210", title: "Biblical Interpretation", section: "Sec 02", schedule: "MW 13:00", credits: 3 },
+    { id: "c4", code: "PT 220", title: "Pastoral Care", section: "Sec 01", schedule: "TTh 15:00", credits: 3 },
+    { id: "c5", code: "CH 301", title: "Church History", section: "Sec 01", schedule: "F 9:00", credits: 2 },
+  ]);
 
-export default function RegistrationTab({
-    user, systemConfig, isMyWindow, safeUserYear, safeTargetYear, safeTargetSemester,
-    filteredAvailableCourses, alreadyEnrolledIds, cart, cartCredits, cartTotal, toggleCart,
-    setPaymentModalOpen, generateSemesterSlipPDF, generateReceiptPDF, myActiveCourses, tuitionPayments,
-    isDark, cardSx, theme, gradients, TUITION_PER_CREDIT, academicEvents
-}) {
-    tH.borderBottom = `2px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`;
-    tC.borderBottom = `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`;
+  const [departmentFilter, setDepartmentFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
-    const [isDropping, setIsDropping] = useState(false);
+  const availableSections = [
+    {
+      id: "sec-1",
+      code: "TH 305",
+      title: "Church History I",
+      dept: "Department of Theology",
+      section: "Sec 01",
+      instructor: "Dr. Hanna Bekele",
+      schedule: "MW 9:00–10:30",
+      location: "Room 201, Main Building",
+      seatsTaken: 22,
+      maxSeats: 30,
+      waitlist: 0,
+      credits: 3,
+      status: "open",
+    },
+    {
+      id: "sec-2",
+      code: "BI 320",
+      title: "Hebrew Exegesis",
+      dept: "Department of Biblical Studies",
+      section: "Sec 01",
+      instructor: "Fr. Dawit Gebre",
+      schedule: "TTh 11:00–12:30",
+      location: "Room 108, Theology Hall",
+      seatsTaken: 26,
+      maxSeats: 30,
+      waitlist: 2,
+      credits: 3,
+      status: "open",
+    },
+    {
+      id: "sec-3",
+      code: "PT 310",
+      title: "Homiletics I",
+      dept: "Department of Ministry",
+      section: "Sec 02",
+      instructor: "Dr. Bethlehem Tesema",
+      schedule: "F 13:00–16:00",
+      location: "Chapel Annex",
+      seatsTaken: 12,
+      maxSeats: 30,
+      waitlist: 0,
+      credits: 2,
+      status: "blocked",
+      blockReason: "Prerequisites not met: PT 210 required",
+    },
+    {
+      id: "sec-4",
+      code: "GEZ 101",
+      title: "Introduction to Geez",
+      dept: "Department of Liturgical Studies",
+      section: "Sec 01",
+      instructor: "Memhir Selamawit Haile",
+      schedule: "MW 14:00–15:30",
+      location: "Room 004, Manuscript Lab",
+      seatsTaken: 29,
+      maxSeats: 30,
+      waitlist: 5,
+      credits: 2,
+      status: "waitlist",
+    },
+    {
+      id: "sec-5",
+      code: "CH 320",
+      title: "History of the Ethiopian Church",
+      dept: "Department of Church History",
+      section: "Sec 01",
+      instructor: "Dr. Abraham Mekonnen",
+      schedule: "TTh 8:00–9:30",
+      location: "Room 210, Main Building",
+      seatsTaken: 18,
+      maxSeats: 30,
+      waitlist: 0,
+      credits: 3,
+      status: "open",
+    },
+  ];
 
-    const handleDrop = async (courseId) => {
-        if (!confirm("Are you sure you want to drop this course?")) return;
-        setIsDropping(true);
-        try {
-            await enrollmentsAPI.drop(courseId, user.id);
-            alert("Course dropped. Please refresh the portal.");
-        } catch (e) {
-            alert("Error dropping course.");
-        }
-        setIsDropping(false);
-    };
+  const totalCredits = selectedCourses.reduce((sum, c) => sum + c.credits, 0);
 
-    const registrationEvents = academicEvents?.filter(e => e.type === 'registration' || e.title?.toLowerCase().includes('registration')) || [{ title: 'Late Registration Deadline', date: new Date(Date.now() + 14 * 86400000) }];
+  const handleDrop = (id) => {
+    setSelectedCourses(selectedCourses.filter(c => c.id !== id));
+  };
 
-    return (
-        <Box>
-            <Grid container spacing={4}>
-                <Grid item xs={12}>
-                    <Card sx={{
-                        ...cardSx, p: 3, borderRadius: 4, mb: 1,
-                        background: isMyWindow
-                            ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)'
-                            : 'linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                        border: `1px solid ${isMyWindow ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2)}`
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{
-                                    width: 12, height: 12, borderRadius: '50%',
-                                    bgcolor: isMyWindow ? '#10b981' : '#ef4444',
-                                    boxShadow: `0 0 10px ${isMyWindow ? '#10b981' : '#ef4444'}`
-                                }} />
-                                <Box>
-                                    <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1 }}>REGISTRATION INTELLIGENCE</Typography>
-                                    <Typography variant="h6" fontWeight={1000}>
-                                        {systemConfig.registrationLock
-                                            ? "Registration is Currently Closed"
-                                            : !isMyWindow
-                                                ? `Window Open for Year ${safeTargetYear} Cohort`
-                                                : `Welcome! Window Open for Year ${safeUserYear} - Semester ${safeTargetSemester}`}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            {isMyWindow && (
-                                <Chip
-                                    label={`ACTIVE: Y${safeUserYear} S${safeTargetSemester}`}
-                                    color="success"
-                                    sx={{ fontWeight: 900, borderRadius: 2 }}
-                                />
-                            )}
-                        </Box>
-                    </Card>
-                </Grid>
+  const handleRegister = (sec) => {
+    if (selectedCourses.some(c => c.code === sec.code)) {
+      alert("You already selected this course!");
+      return;
+    }
+    if (totalCredits + sec.credits > 21) {
+      alert("Credit limit reached: max 21 credits permitted!");
+      return;
+    }
+    setSelectedCourses([
+      ...selectedCourses,
+      {
+        id: sec.id,
+        code: sec.code,
+        title: sec.title,
+        section: sec.section,
+        schedule: sec.schedule.split("–")[0],
+        credits: sec.credits,
+      }
+    ]);
+  };
 
-                <Grid item xs={12} md={8}>
-                    <Card sx={{ ...cardSx, borderRadius: 4 }}>
-                        {(!isMyWindow || systemConfig.registrationLock) ? (
-                            <Box sx={{ p: 8, textAlign: 'center' }}>
-                                <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                                <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>Registration Locked</Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
-                                    {systemConfig.registrationLock
-                                        ? "The registrar has paused all enrollment activities. Please check the news feed for updates."
-                                        : `Your academic cohort (Year ${safeUserYear}) is not scheduled for this registration window. Currently serving Year ${safeTargetYear}.`}
-                                </Typography>
-                            </Box>
-                        ) : filteredAvailableCourses.length === 0 ? (
-                            <Box sx={{ p: 8, textAlign: 'center' }}>
-                                <Book sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                                <Typography variant="h5" fontWeight={1000} color="text.secondary" gutterBottom>No Modules Found</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    There are no courses currently prepared for Year {safeUserYear} Semester {safeTargetSemester}.
-                                </Typography>
-                            </Box>
-                        ) : (
-                            <TableContainer><Table>
-                                <TableHead><TableRow>{["", "Course", "Code", "Credits", "Prereqs", "Tuition", "Instructor", "Status"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                                <TableBody>{filteredAvailableCourses.map((c, i) => {
-                                    const enrolled = alreadyEnrolledIds.includes(c.id);
-                                    const inCart = cart.find(x => x.id === c.id);
-                                    const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
-                                    const isFull = (c.enrolledCount || 0) >= (c.capacity || 30);
-                                    return (<TableRow key={i} sx={{ bgcolor: inCart ? alpha(theme.palette.primary.main, 0.04) : 'transparent', opacity: isFull && !enrolled ? 0.7 : 1 }} hover>
-                                        <TableCell sx={tC} padding="checkbox">{!enrolled && !isFull && <Checkbox checked={!!inCart} onChange={() => toggleCart(c)} color="primary" />}</TableCell>
-                                        <TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell>
-                                        <TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code}</Typography></TableCell>
-                                        <TableCell sx={tC}>{c.credits || 3}</TableCell>
-                                        <TableCell sx={tC}>
-                                            {c.prerequisites?.length > 0 ? c.prerequisites.map((p, pi) => <Chip key={pi} label={p.courseCode || p} size="small" sx={{ fontSize: '0.65rem', mr: 0.5 }} />) : <Typography variant="caption" color="text.secondary">None</Typography>}
-                                        </TableCell>
-                                        <TableCell sx={tC}><Typography variant="body2" fontWeight={800} color="success.main">${fee.toLocaleString()}</Typography></TableCell>
-                                        <TableCell sx={tC}><Typography variant="body2" color="text.secondary">{c.instructor || "TBA"}</Typography></TableCell>
-                                        <TableCell sx={tC}>{enrolled ? <Chip label="Registered" size="small" color="success" sx={{ fontWeight: 900 }} /> : isFull ? <Button size="small" variant="outlined" color="warning" sx={{ textTransform: 'none', fontWeight: 800 }}>Waitlist</Button> : inCart ? <Chip label="In Cart" size="small" color="primary" sx={{ fontWeight: 900 }} /> : <Chip label="Available" size="small" variant="outlined" sx={{ fontWeight: 800 }} />}</TableCell>
-                                    </TableRow>);
-                                })}</TableBody>
-                            </Table></TableContainer>
-                        )}
-                    </Card>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ ...cardSx, borderRadius: 4, p: 3.5, mb: 3 }}>
-                        <Typography variant="h6" fontWeight={900} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><ShoppingCart fontSize="small" /> Cart ({cart.length})</Typography>
-                        {cart.length === 0 ? <Typography variant="body2" color="text.secondary">Select courses to add to cart.</Typography> : (
-                            <Stack spacing={1.5}>
-                                {cart.map((c, i) => {
-                                    const fee = Number(c.tuitionFee) || (Number(c.credits) || 3) * TUITION_PER_CREDIT;
-                                    return (
-                                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2 }}>
-                                            <Box>
-                                                <Typography variant="subtitle2" fontWeight={900}>{c.name}</Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {c.credits || 3} Cr · ${fee.toLocaleString()}
-                                                </Typography>
-                                            </Box>
-                                            <IconButton size="small" onClick={() => toggleCart(c)} color="error">
-                                                <Remove fontSize="small" />
-                                            </IconButton>
-                                        </Box>
-                                    );
-                                })}
-                                <Divider />
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="subtitle2" fontWeight={900}>Total</Typography><Typography variant="subtitle2" fontWeight={900} color="primary.main">{cartCredits} Cr · ${cartTotal.toLocaleString()}</Typography></Box>
-                                <Button
-                                    fullWidth variant="contained"
-                                    onClick={() => setPaymentModalOpen(true)}
-                                    disabled={systemConfig.registrationLock || systemConfig.globalMaintenance}
-                                    sx={{
-                                        borderRadius: 3, fontWeight: 900, py: 1.2, textTransform: 'none',
-                                        background: (systemConfig.registrationLock || systemConfig.globalMaintenance) ? 'rgba(0,0,0,0.1)' : gradients[0]
-                                    }}
-                                >
-                                    {systemConfig.globalMaintenance ? "Locked for Maintenance" : systemConfig.registrationLock ? "Registration Window Closed" : "Proceed to Checkout"}
-                                </Button>
-                            </Stack>
-                        )}
-                    </Card>
+  return (
+    <Box>
+      {/* ── Breadcrumb & Title ── */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="caption" fontWeight={700} color="text.secondary">
+          Academic / Course Registration
+        </Typography>
+        <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy} sx={{ fontFamily: "'Outfit', sans-serif", mt: 0.5 }}>
+          Course Registration
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Browse open sections for the Spring Semester 2025 and build your schedule.
+        </Typography>
+      </Box>
 
-                    <Card sx={{ ...cardSx, borderRadius: 4 }}>
-                        <CardContent sx={{ p: 3.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                <EventNote color="primary" />
-                                <Typography variant="h6" fontWeight={900}>Deadlines</Typography>
-                            </Box>
-                            <Stack spacing={2}>
-                                {registrationEvents.map((e, i) => (
-                                    <Box key={i} sx={{ p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)' }}>
-                                        <Typography variant="subtitle2" fontWeight={900}>{e.title}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{e.date?.toDate ? e.date.toDate().toLocaleDateString() : new Date(e.date).toLocaleDateString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                        </CardContent>
-                    </Card>
-                </Grid>
+      {/* ── Top Schedule Banner ── */}
+      <Card sx={{ bgcolor: HTTU_COLORS.navy, color: "white", p: 3, borderRadius: 3, mb: 4 }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }} display="block">
+                  Spring Semester 2025
+                </Typography>
+                <Typography variant="body2" fontWeight={800} color={HTTU_COLORS.gold}>
+                  Registration window
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                  Jan 6 – Jan 17, 2025<br />Opens 08:00 · closes 23:59
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }} display="block">
+                  Add / drop deadline
+                </Typography>
+                <Typography variant="body2" fontWeight={800} color="white">
+                  Feb 14, 2025
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                  100% refund window
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }} display="block">
+                  Withdrawal deadline
+                </Typography>
+                <Typography variant="body2" fontWeight={800} color="white">
+                  Apr 18, 2025
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                  Grade of 'W' assigned
+                </Typography>
+              </Grid>
             </Grid>
+          </Grid>
+          <Grid item xs={12} md={4} sx={{ textAlign: { xs: "left", md: "right" } }}>
+            <Typography variant="h5" fontWeight={900} color={HTTU_COLORS.gold}>
+              {totalCredits} <Typography component="span" variant="body1" sx={{ color: "white" }}>/ 21 credits selected</Typography>
+            </Typography>
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", display: "block", mb: 1 }}>
+              Minimum 12 credits per semester
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={(totalCredits / 21) * 100}
+              sx={{
+                height: 6,
+                borderRadius: 3,
+                bgcolor: "rgba(255,255,255,0.1)",
+                "& .MuiLinearProgress-bar": { bgcolor: HTTU_COLORS.gold },
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Card>
 
-            {/* Registration History / Valid Enrollments */}
-            {myActiveCourses.length > 0 && (
-                <Grid container spacing={4} sx={{ mt: 0 }}>
-                    <Grid item xs={12} md={8}>
-                        <Card sx={{ ...cardSx, borderRadius: 4 }}>
-                            <CardContent sx={{ p: 4 }}>
-                                <Typography variant="h6" fontWeight={900} sx={{ mb: 3 }}>Current Semester Enrollments & History</Typography>
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableHead><TableRow>{["Course", "Code", "Credits", "Status", "Action"].map(h => <TableCell key={h} sx={tH}>{h}</TableCell>)}</TableRow></TableHead>
-                                        <TableBody>
-                                            {myActiveCourses.map((c, i) => (
-                                                <TableRow key={i} hover>
-                                                    <TableCell sx={tC}><Typography variant="body2" fontWeight={900}>{c.name}</Typography></TableCell>
-                                                    <TableCell sx={tC}><Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={800}>{c.code}</Typography></TableCell>
-                                                    <TableCell sx={tC}>{c.credits || 3}</TableCell>
-                                                    <TableCell sx={tC}><Chip label="Enrolled" size="small" color="success" sx={{ fontWeight: 900 }} /></TableCell>
-                                                    <TableCell sx={tC}>
-                                                        <Button size="small" color="error" variant="outlined" onClick={() => handleDrop(c.id)} disabled={isDropping} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800 }}>Drop</Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
-            )}
-        </Box>
-    );
+      {/* ── Main Two-Column Layout ── */}
+      <Grid container spacing={3}>
+        {/* Left Column: Open Sections */}
+        <Grid item xs={12} md={8}>
+          <Card sx={{ p: 3, borderRadius: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>
+              <Typography variant="h6" fontWeight={900} color={HTTU_COLORS.navy}>
+                Open Sections
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                <TextField
+                  select
+                  size="small"
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  sx={{ width: 140 }}
+                >
+                  <MenuItem value="All">Department: All</MenuItem>
+                  <MenuItem value="Theology">Theology</MenuItem>
+                  <MenuItem value="Biblical">Biblical Studies</MenuItem>
+                  <MenuItem value="Church History">Church History</MenuItem>
+                </TextField>
+                <TextField
+                  placeholder="Filter courses..."
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ width: 160 }}
+                />
+              </Stack>
+            </Box>
+
+            <TableContainer>
+              <Table size="small">
+                <TableHead sx={{ bgcolor: "#F8FAFC" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>COURSE</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>SECTION / INSTRUCTOR</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>SCHEDULE</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>SEATS</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>CREDITS</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "0.75rem", color: "text.secondary" }}>ACTION</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {availableSections.map((sec) => (
+                    <TableRow key={sec.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={800} color={HTTU_COLORS.navy}>
+                          {sec.code} — {sec.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {sec.dept}
+                        </Typography>
+                        {sec.blockReason && (
+                          <Typography variant="caption" color="error.main" fontWeight={700} display="block">
+                            ⚠ {sec.blockReason}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={700}>
+                          {sec.section}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {sec.instructor}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.navy} display="block">
+                          {sec.schedule}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {sec.location}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={700}>
+                          {sec.seatsTaken}/{sec.maxSeats}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          waitlist {sec.waitlist}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={800}>
+                          {sec.credits}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {sec.status === "blocked" ? (
+                          <Button size="small" disabled variant="outlined" sx={{ borderRadius: 1.5, fontSize: "0.75rem" }}>
+                            Blocked
+                          </Button>
+                        ) : sec.status === "waitlist" ? (
+                          <Button size="small" variant="outlined" sx={{ borderRadius: 1.5, fontSize: "0.75rem", borderColor: HTTU_COLORS.gold, color: "#92400E" }}>
+                            Join Waitlist
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => handleRegister(sec)}
+                            sx={{ bgcolor: HTTU_COLORS.teal, borderRadius: 1.5, fontSize: "0.75rem", "&:hover": { bgcolor: HTTU_COLORS.tealDark } }}
+                          >
+                            Register
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+        </Grid>
+
+        {/* Right Column: My Selections */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ p: 3, borderRadius: 3, mb: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5 }}>
+              <Typography variant="h6" fontWeight={900} color={HTTU_COLORS.navy}>
+                My Selections
+              </Typography>
+              <Chip label={`${totalCredits} credits`} size="small" sx={{ bgcolor: "#F0FDFA", color: HTTU_COLORS.teal, fontWeight: 800 }} />
+            </Box>
+
+            <Stack spacing={2} sx={{ mb: 3 }}>
+              {selectedCourses.map((c) => (
+                <Box key={c.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1.5, borderBottom: "1px solid #F1F5F9" }}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={800} color={HTTU_COLORS.navy}>
+                      {c.code} — {c.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {c.section} · {c.schedule} · {c.credits} cr
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => handleDrop(c.id)}
+                    sx={{ minWidth: 40, fontSize: "0.75rem", fontWeight: 700 }}
+                  >
+                    Drop
+                  </Button>
+                </Box>
+              ))}
+            </Stack>
+
+            <Box sx={{ p: 2, bgcolor: "#F8FAFC", borderRadius: 2, mb: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">Total credits</Typography>
+                <Typography variant="body2" fontWeight={800} color={HTTU_COLORS.navy}>{totalCredits} / 21</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2" color="text.secondary">Estimated tuition</Typography>
+                <Typography variant="body2" fontWeight={900} color={HTTU_COLORS.navy}>ETB 15,000.00</Typography>
+              </Box>
+            </Box>
+
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{
+                bgcolor: HTTU_COLORS.gold,
+                color: "#0E2033",
+                fontWeight: 900,
+                py: 1.3,
+                borderRadius: 2,
+                fontSize: "0.95rem",
+                "&:hover": { bgcolor: HTTU_COLORS.goldLight },
+              }}
+            >
+              Submit Registration
+            </Button>
+
+            {/* Financial Hold Notice */}
+            <Alert severity="warning" sx={{ mt: 3, borderRadius: 2, fontSize: "0.8rem" }}>
+              <Typography variant="caption" fontWeight={800} display="block">
+                Financial hold on your account
+              </Typography>
+              An outstanding balance of ETB 4,850.00 must be settled before registration is finalized.{" "}
+              <Typography
+                component="span"
+                variant="caption"
+                fontWeight={800}
+                sx={{ textDecoration: "underline", cursor: "pointer", color: "#92400E" }}
+                onClick={() => setActiveTab && setActiveTab(6)}
+              >
+                Pay now
+              </Typography>
+            </Alert>
+          </Card>
+
+          {/* Registration Rules Card */}
+          <Card sx={{ p: 2.5, borderRadius: 3, bgcolor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+            <Typography variant="caption" fontWeight={900} color={HTTU_COLORS.navy} display="block" sx={{ mb: 1, textTransform: "uppercase" }}>
+              Registration Rules
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.6 }}>
+              • 12–21 credits per semester · prerequisites enforced<br />
+              • Sections close at full capacity · drops after Feb 14 require advisor approval
+            </Typography>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
 }

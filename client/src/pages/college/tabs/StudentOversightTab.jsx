@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Resp
 
 const GRADIENTS = { premium: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" };
 
-export default function StudentOversightTab({ studentsCount }) {
+export default function StudentOversightTab({ studentsCount, students: studentList, departments }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const [subTab, setSubTab] = useState(0);
@@ -22,28 +22,10 @@ export default function StudentOversightTab({ studentsCount }) {
         borderRadius: 3,
     };
 
-    const gpaData = [
-        { sem: "S1 24", cs: 3.1, eng: 2.9, bus: 3.2 },
-        { sem: "S2 24", cs: 3.2, eng: 3.0, bus: 3.3 },
-        { sem: "S1 25", cs: 3.25, eng: 3.1, bus: 3.35 },
-        { sem: "S2 25", cs: 3.4, eng: 3.15, bus: 3.4 },
-    ];
-
-    const disciplinaryCases = [
-        { id: "DC-001", student: "Anonymous", type: "Academic Dishonesty", dept: "Engineering", status: "under_review", date: "2026-06-01" },
-        { id: "DC-002", student: "Anonymous", type: "Code of Conduct Violation", dept: "Computer Science", status: "resolved", date: "2026-05-15" },
-    ];
-
-    const appeals = [
-        { id: "AP-105", student: "Sarah Ahmed", type: "Grade Appeal", dept: "Business", status: "pending" },
-        { id: "AP-106", student: "Omar Tariq", type: "Dismissal Appeal", dept: "Sciences", status: "pending" },
-    ];
-
-    const studentOrgs = [
-        { name: "Computer Science Society", members: 120, status: "Active" },
-        { name: "Engineering Student Council", members: 85, status: "Active" },
-        { name: "Business Leaders Club", members: 150, status: "Active" },
-    ];
+    const gpaData = [];
+    const disciplinaryCases = [];
+    const appeals = [];
+    const studentOrgs = [];
 
     return (
         <Box>
@@ -84,10 +66,10 @@ export default function StudentOversightTab({ studentsCount }) {
                                 <Typography variant="h6" fontWeight={900} gutterBottom>Key Metrics</Typography>
                                 <Stack spacing={2} sx={{ mt: 2 }}>
                                     {[
-                                        { label: "Total Enrollments", value: studentsCount || 1250 },
-                                        { label: "Avg College GPA", value: "3.24" },
-                                        { label: "Graduation Rate", value: "88%" },
-                                        { label: "Retention Rate", value: "92%" },
+                                        { label: "Total Enrollments", value: studentsCount || (studentList?.length || 0) },
+                                        { label: "Avg College GPA", value: "—" },
+                                        { label: "Graduation Rate", value: "—" },
+                                        { label: "Retention Rate", value: "—" },
                                     ].map((m, i) => (
                                         <Box key={i} sx={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${alpha("#94a3b8", 0.1)}`, pb: 1 }}>
                                             <Typography variant="body2" color="text.secondary" fontWeight={700}>{m.label}</Typography>

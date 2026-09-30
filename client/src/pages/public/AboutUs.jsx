@@ -1,155 +1,187 @@
 import React from "react";
 import {
     Box, Container, Typography, Grid, Card, Avatar, Stack, Chip,
-    Divider, alpha, useTheme,
+    Divider, alpha, useTheme
 } from "@mui/material";
 import {
-    School, EmojiEvents, Groups, Science, Lightbulb,
-    VerifiedUser, Language, WorkOutline, AccessibilityNew,
+    School, EmojiEvents, Groups, AutoStories, Church,
+    VerifiedUser, Language, AccountBalance, MenuBook
 } from "@mui/icons-material";
+import { HTTU_COLORS } from "../../theme";
+
+const STATS = [
+    { value: "1,700+", label: "Years of Christian Heritage", icon: <Church />, color: "#D9A621" },
+    { value: "3,248", label: "Active Seminarians & Scholars", icon: <Groups />, color: "#12808C" },
+    { value: "84", label: "Ordained Faculty & Scholars", icon: <School />, color: "#D9A621" },
+    { value: "7", label: "Theological Departments", icon: <AutoStories />, color: "#12808C" },
+];
 
 const VALUES = [
-    { icon: <Lightbulb />, title: "Innovation", desc: "We push the boundaries of knowledge through research, creativity and technological advancement." },
-    { icon: <VerifiedUser />, title: "Integrity", desc: "Honesty and transparency are the foundations of every academic and administrative decision we make." },
-    { icon: <AccessibilityNew />, title: "Inclusivity", desc: "We welcome students from all backgrounds and believe diversity is one of our greatest strengths." },
-    { icon: <Language />, title: "Global Impact", desc: "Our graduates go on to lead institutions, companies, and communities around the world." },
+    { 
+        icon: <VerifiedUser />, 
+        title: "Orthodox Dogma & Sacred Tradition", 
+        desc: "Faithfully transmitting the Apostolic faith, Nicene Creed, and patristic heritage of the Ethiopian Orthodox Tewahedo Church.", 
+        color: "#D9A621" 
+    },
+    { 
+        icon: <MenuBook />, 
+        title: "Patristic Exegesis & Ge'ez Texts", 
+        desc: "Rigorous scholarly study, linguistic preservation, and translation of ancient parchment manuscripts and Ethiopian Church Fathers.", 
+        color: "#12808C" 
+    },
+    { 
+        icon: <Church />, 
+        title: "Pastoral & Monastic Formation", 
+        desc: "Cultivating consecrated priests, deacons, spiritual directors, and theologians to shepherd parishes worldwide.", 
+        color: "#D9A621" 
+    },
+    { 
+        icon: <Language />, 
+        title: "St. Yared Hymnology & Liturgical Arts", 
+        desc: "Safeguarding ancient liturgical music (Diggua, Tsome Diggua, Zimare), iconography, and ecclesiastical rites.", 
+        color: "#12808C" 
+    },
 ];
 
 const TEAM = [
-    { name: "Prof. Ahmad Al-Hassan", role: "University President", color: "#1976d2" },
-    { name: "Dr. Sarah Mitchell", role: "VP of Academic Affairs", color: "#7c3aed" },
-    { name: "Dr. Omar Khalil", role: "Dean of Engineering", color: "#2e7d32" },
-    { name: "Dr. Layla Nasser", role: "Dean of Sciences", color: "#e65100" },
-    { name: "Prof. James Carter", role: "Dean of Business", color: "#6a1b9a" },
-    { name: "Dr. Amira Yousef", role: "Director of Admissions", color: "#c62828" },
-];
-
-const STATS = [
-    { value: "25+", label: "Years of Excellence", icon: <EmojiEvents /> },
-    { value: "12K+", label: "Active Students", icon: <Groups /> },
-    { value: "200+", label: "Expert Faculty", icon: <School /> },
-    { value: "50+", label: "Academic Programs", icon: <Science /> },
+    { name: "Archbishop Merkorios Tilahun", title: "ብፁዕ አቡነ መርቆሬዎስ ጥላሁን", role: "University President", color: "#D9A621" },
+    { name: "Rev. Dr. Abeba Zerihun", title: "መልአከ ብርሃን ዶ/ር አበበ ዘሪሁን", role: "Dean of Academic Affairs", color: "#12808C" },
+    { name: "Dr. Sofia Assefa", title: "ዶ/ር ሶፊያ አሰፋ", role: "Head of Systematic Theology", color: "#D9A621" },
+    { name: "Dr. Alemeyahu Worku", title: "ዶ/ር ዓለማየሁ ወርቁ", role: "Head of Biblical Studies & Ge'ez", color: "#12808C" },
+    { name: "Tsehay Girma", title: "ፀሐይ ግርማ", role: "Chief Librarian & Archivist", color: "#D9A621" },
+    { name: "Meskerem Abebe", title: "መስከረም አበበ", role: "University Registrar", color: "#12808C" },
 ];
 
 export default function AboutUs() {
-    const theme = useTheme();
-    const isDark = theme.palette.mode === "dark";
-
     return (
-        <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
-            {/* ── Hero ── */}
+        <Box sx={{ bgcolor: "#09131F", minHeight: "100vh", color: "white", overflow: "hidden" }}>
+            {/* Hero */}
             <Box sx={{
-                background: isDark
-                    ? "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-                    : "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
-                pt: { xs: 10, md: 14 }, pb: { xs: 8, md: 12 },
-                position: "relative", overflow: "hidden",
+                position: "relative",
+                pt: { xs: 14, md: 20 }, pb: { xs: 10, md: 14 },
+                zIndex: 1, borderBottom: "1px solid rgba(255,255,255,0.06)",
+                background: "radial-gradient(circle at 50% 20%, #132742 0%, #09131F 80%)"
             }}>
-                <Box sx={{ position: "absolute", top: -100, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", filter: "blur(60px)" }} />
-                <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1, textAlign: "center" }}>
-                    <Chip label="About Alex University" sx={{ mb: 3, bgcolor: "rgba(255,255,255,0.1)", color: "white", fontWeight: 800, border: "1px solid rgba(255,255,255,0.2)" }} />
-                    <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em", mb: 2, fontSize: { xs: "2.2rem", md: "3.5rem" } }}>
-                        Building the <Box component="span" sx={{ color: "#60a5fa" }}>Leaders</Box> of Tomorrow
+                <Container maxWidth="lg" sx={{ textAlign: "center" }}>
+                    <Chip 
+                        icon={<Church sx={{ color: "#D9A621 !important", fontSize: 18 }} />} 
+                        label="Ethiopia Holy Trinity Theology University · ቅድስት ሥላሴ ዩኒቨርሲቲ" 
+                        sx={{ mb: 4, bgcolor: "rgba(217,166,33,0.12)", color: "#D9A621", fontWeight: 800, border: "1px solid rgba(217,166,33,0.3)", letterSpacing: 0.5 }} 
+                    />
+                    <Typography variant="h1" fontWeight={1000} sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em", mb: 3, fontSize: { xs: "2.5rem", md: "4.5rem" }, lineHeight: 1.15 }}>
+                        Guardians of the <br />
+                        <Box component="span" sx={{ color: "#D9A621" }}>Apostolic Faith</Box> & Holy Tradition
                     </Typography>
-                    <Typography variant="h6" color="rgba(255,255,255,0.65)" sx={{ maxWidth: 600, mx: "auto", fontWeight: 500, lineHeight: 1.8 }}>
-                        High Technology University has been at the forefront of academic excellence for over 25 years, shaping future innovators and leaders across every discipline.
+                    <Typography variant="h6" color="rgba(255,255,255,0.7)" sx={{ maxWidth: 780, mx: "auto", fontWeight: 400, lineHeight: 1.8, fontSize: { xs: "1rem", md: "1.2rem" } }}>
+                        Chartered by the Holy Synod of the Ethiopian Orthodox Tewahedo Church, Holy Trinity Theology University (HTTU) stands as the premier theological higher education institution in the Horn of Africa, cultivating scholars, clergy, and spiritual servant leaders.
                     </Typography>
                 </Container>
             </Box>
 
-            {/* ── Stats ── */}
-            <Box sx={{ bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc", py: 8 }}>
+            {/* Core Purpose / Story */}
+            <Box sx={{ py: 12, position: "relative" }}>
+                <Container maxWidth="lg">
+                    <Grid container spacing={8} alignItems="center">
+                        <Grid item xs={12} lg={6}>
+                            <Card sx={{
+                                background: "rgba(14, 32, 51, 0.6)", backdropFilter: "blur(20px)",
+                                border: "1px solid rgba(217,166,33,0.2)", borderRadius: 6, p: { xs: 4, md: 6 },
+                                boxShadow: "0 25px 50px rgba(0,0,0,0.5)"
+                            }}>
+                                <Typography variant="caption" fontWeight={900} color="#D9A621" sx={{ letterSpacing: 2, display: "block", mb: 1.5, textTransform: "uppercase" }}>
+                                    Historical Legacy & Sacred Mandate
+                                </Typography>
+                                <Typography variant="h4" fontWeight={900} sx={{ fontFamily: "Outfit", mb: 3, color: "#fff" }}>
+                                    Faithful to Scripture, Rooted in <Box component="span" color="#D9A621">Patristic Wisdom</Box>
+                                </Typography>
+                                <Typography variant="body1" color="rgba(255,255,255,0.75)" sx={{ lineHeight: 1.9, fontSize: "1.05rem", mb: 4 }}>
+                                    Founded to advance Orthodox theological inquiry, preserve sacred Ge'ez hymnody and liturgy, and nurture clergy for over 50 million faithful, HTTU bridges millennia-old traditional ecclesiastical learning with rigorous 21st-century accredited higher education.
+                                </Typography>
+                                <Box sx={{ p: 3.5, borderRadius: 3, background: "rgba(217, 166, 33, 0.08)", border: "1px solid rgba(217, 166, 33, 0.25)" }}>
+                                    <Typography variant="subtitle2" fontWeight={900} color="#D9A621" gutterBottom sx={{ letterSpacing: 1 }}>
+                                        INSTITUTIONAL VISION
+                                    </Typography>
+                                    <Typography variant="body2" color="rgba(255,255,255,0.85)" sx={{ lineHeight: 1.8 }}>
+                                        To be the foremost global center of Oriental Orthodox theology, Biblical exegesis, Ethiopian paleography, and liturgical excellence, preparing ministers who illuminate Church and society with divine truth.
+                                    </Typography>
+                                </Box>
+                            </Card>
+                        </Grid>
+
+                        <Grid item xs={12} lg={6}>
+                            <Typography variant="h4" fontWeight={900} sx={{ fontFamily: "Outfit", mb: 4, color: "#fff" }}>
+                                The Four Pillars of Formation
+                            </Typography>
+                            <Grid container spacing={2.5}>
+                                {VALUES.map((v, i) => (
+                                    <Grid item xs={12} sm={6} key={i}>
+                                        <Card sx={{
+                                            background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)",
+                                            borderRadius: 4, p: 3, height: "100%", transition: "all 0.3s ease",
+                                            "&:hover": { transform: "translateY(-5px)", borderColor: v.color, bgcolor: "rgba(255,255,255,0.04)" }
+                                        }}>
+                                            <Box sx={{ width: 44, height: 44, borderRadius: 2, background: alpha(v.color, 0.15), color: v.color, display: "flex", alignItems: "center", justifyContent: "center", mb: 2 }}>
+                                                {v.icon}
+                                            </Box>
+                                            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 1, fontFamily: "Outfit", color: "#fff" }}>{v.title}</Typography>
+                                            <Typography variant="body2" color="rgba(255,255,255,0.65)" sx={{ lineHeight: 1.7, fontSize: "0.88rem" }}>{v.desc}</Typography>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* Stats Row */}
+            <Box sx={{ py: 8, background: "#060D17", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <Container maxWidth="lg">
                     <Grid container spacing={3}>
                         {STATS.map((s, i) => (
                             <Grid item xs={6} md={3} key={i}>
-                                <Card elevation={0} sx={{
-                                    p: 4, textAlign: "center", borderRadius: 5, height: "100%",
-                                    border: "1px solid", borderColor: "divider",
-                                    bgcolor: "background.paper",
-                                    transition: "all 0.3s ease",
-                                    "&:hover": { transform: "translateY(-4px)", boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }
-                                }}>
-                                    <Box sx={{ color: "primary.main", mb: 2 }}>{React.cloneElement(s.icon, { sx: { fontSize: 36 } })}</Box>
-                                    <Typography variant="h3" fontWeight={1000} sx={{ fontFamily: "Outfit, sans-serif", mb: 0.5 }}>{s.value}</Typography>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</Typography>
-                                </Card>
+                                <Box sx={{ textAlign: "center", p: 2 }}>
+                                    <Box sx={{ color: s.color, mb: 1.5 }}>
+                                        {React.cloneElement(s.icon, { sx: { fontSize: 40 } })}
+                                    </Box>
+                                    <Typography variant="h3" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit", mb: 0.5 }}>{s.value}</Typography>
+                                    <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</Typography>
+                                </Box>
                             </Grid>
                         ))}
                     </Grid>
                 </Container>
             </Box>
 
-            {/* ── Mission & Vision ── */}
-            <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-                <Grid container spacing={8} alignItems="center">
-                    <Grid item xs={12} md={6}>
-                        <Chip label="Our Purpose" sx={{ mb: 2, bgcolor: alpha("#1976d2", 0.1), color: "primary.main", fontWeight: 800 }} />
-                        <Typography variant="h3" fontWeight={1000} gutterBottom sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em" }}>
-                            A Mission Driven by <Box component="span" sx={{ color: "primary.main" }}>Knowledge</Box>
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.9, mb: 4, fontSize: "1.1rem" }}>
-                            At High Technology University, we believe that education is the most powerful tool for transforming the world. Our mission is to provide an exceptional academic environment that fosters intellectual curiosity, professional excellence, and personal growth.
-                        </Typography>
-                        <Box sx={{ p: 4, borderRadius: 4, bgcolor: alpha("#1976d2", 0.05), border: "1px solid", borderColor: alpha("#1976d2", 0.15) }}>
-                            <Typography variant="subtitle1" fontWeight={900} color="primary" gutterBottom>Our Vision</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                                To be recognized as a global leader in higher education, known for producing graduates who are ethical, innovative, and equipped to navigate the complexities of a rapidly changing world.
-                            </Typography>
-                        </Box>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Grid container spacing={3}>
-                            {VALUES.map((v, i) => (
-                                <Grid item xs={12} sm={6} key={i}>
-                                    <Card elevation={0} sx={{
-                                        p: 3, borderRadius: 4, height: "100%",
-                                        border: "1px solid", borderColor: "divider",
-                                        bgcolor: isDark ? "rgba(255,255,255,0.02)" : "background.paper",
-                                        transition: "all 0.3s ease",
-                                        "&:hover": { borderColor: "primary.main", boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }
-                                    }}>
-                                        <Box sx={{ color: "primary.main", mb: 1.5 }}>{React.cloneElement(v.icon, { sx: { fontSize: 28 } })}</Box>
-                                        <Typography variant="subtitle1" fontWeight={900} gutterBottom>{v.title}</Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>{v.desc}</Typography>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Grid>
-                </Grid>
-            </Container>
-
-            <Divider />
-
-            {/* ── Leadership Team ── */}
-            <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#f8fafc" }}>
+            {/* Academic Leadership */}
+            <Box sx={{ py: 12, position: "relative" }}>
                 <Container maxWidth="lg">
                     <Box textAlign="center" mb={8}>
-                        <Chip label="Leadership" sx={{ mb: 2, bgcolor: alpha("#6a1b9a", 0.1), color: "#6a1b9a", fontWeight: 800 }} />
-                        <Typography variant="h3" fontWeight={1000} sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em" }}>
-                            Our Academic <Box component="span" sx={{ color: "primary.main" }}>Leadership</Box>
+                        <Chip label="Academic Administration & Faculty Chairs" sx={{ mb: 2, bgcolor: "rgba(217,166,33,0.12)", color: "#D9A621", fontWeight: 800, border: "1px solid rgba(217,166,33,0.3)" }} />
+                        <Typography variant="h3" fontWeight={900} sx={{ fontFamily: "Outfit, sans-serif" }}>
+                            University <Box component="span" sx={{ color: "#D9A621" }}>Leadership</Box>
                         </Typography>
                     </Box>
-                    <Grid container spacing={4} justifyContent="center">
+                    <Grid container spacing={3} justifyContent="center">
                         {TEAM.map((member, i) => (
                             <Grid item xs={12} sm={6} md={4} key={i}>
-                                <Card elevation={0} sx={{
-                                    p: 4, borderRadius: 5, textAlign: "center",
-                                    border: "1px solid", borderColor: "divider",
-                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "background.paper",
-                                    transition: "all 0.3s ease",
-                                    "&:hover": { transform: "translateY(-6px)", borderColor: member.color, boxShadow: `0 16px 32px ${alpha(member.color, 0.12)}` }
+                                <Card sx={{
+                                    p: 4, borderRadius: 4, textAlign: "center",
+                                    border: "1px solid rgba(255,255,255,0.08)", background: "rgba(14, 32, 51, 0.4)",
+                                    backdropFilter: "blur(10px)", transition: "all 0.3s ease",
+                                    "&:hover": { transform: "translateY(-6px)", borderColor: member.color }
                                 }}>
                                     <Avatar sx={{
                                         width: 72, height: 72, mx: "auto", mb: 2,
-                                        bgcolor: alpha(member.color, 0.12), color: member.color,
-                                        fontSize: "1.6rem", fontWeight: 900, border: `3px solid ${alpha(member.color, 0.2)}`
+                                        bgcolor: alpha(member.color, 0.15),
+                                        color: member.color, fontSize: "1.4rem", fontWeight: 900,
+                                        border: `2px solid ${member.color}`
                                     }}>
-                                        {member.name.split(" ").pop()[0]}
+                                        ✝
                                     </Avatar>
-                                    <Typography variant="subtitle1" fontWeight={900} gutterBottom>{member.name}</Typography>
-                                    <Chip label={member.role} size="small" sx={{ bgcolor: alpha(member.color, 0.1), color: member.color, fontWeight: 700, fontSize: "0.72rem" }} />
+                                    <Typography variant="subtitle1" fontWeight={900} sx={{ fontFamily: "Outfit", mb: 0.2, color: "#fff" }}>{member.name}</Typography>
+                                    <Typography variant="caption" sx={{ color: "#D9A621", fontWeight: 700, display: "block", mb: 0.5 }}>{member.title}</Typography>
+                                    <Typography variant="caption" fontWeight={700} color="rgba(255,255,255,0.5)">{member.role}</Typography>
                                 </Card>
                             </Grid>
                         ))}

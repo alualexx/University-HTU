@@ -1,1660 +1,737 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Container, Grid, Card, CardContent, Typography, Box, Button,
-  Avatar, Chip, Divider, IconButton, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, LinearProgress, useTheme,
-  List, ListItem, ListItemIcon, ListItemText,
-  Tooltip, Stack, Badge, Tabs, Tab, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, MenuItem, Drawer, useMediaQuery
+  Box,
+  Container,
+  Grid,
+  Card,
+  Typography,
+  Button,
+  Chip,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Avatar,
+  IconButton,
+  List,
+  ListItem,
+  Tooltip,
+  LinearProgress,
+  Alert,
 } from "@mui/material";
 import {
-  Business, People, School, Assignment, TrendingUp, Assessment,
-  AccountCircle, Notifications, LightMode, DarkMode, Logout,
-  Dashboard, Star, Groups, BarChart as BarChartIcon, Settings,
-  CheckCircle, Cancel, Visibility, Description as FileIcon, Search,
-  School as SchoolIcon, Assignment as AssignmentIcon, Grade, CalendarToday,
-  Phone, Close as CloseIcon, Email, ArrowForward, ChevronLeft, ChevronRight,
-  Menu as MenuIcon, Add as AddIcon, Send as SendIcon, LibraryBooks,
-  SupportAgent, Computer, Delete, MenuBook, Edit as EditIcon, LockReset,
-  TableChart, IntegrationInstructions, FolderOpen, BarChart as ReportIcon,
-  EventNote, PersonSearch
+  Dashboard as DashboardIcon,
+  People,
+  MenuBook,
+  Schedule,
+  TrendingUp,
+  AssignmentTurnedIn,
+  School,
+  Settings,
+  Logout,
+  Menu as MenuIcon,
+  ChevronLeft,
+  Church,
+  Download,
+  CheckCircle,
+  WarningAmber,
+  Add,
+  EventNote,
 } from "@mui/icons-material";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  ResponsiveContainer, Cell, PieChart, Pie, Legend
-} from 'recharts';
 import { useAuth } from "../../context/AuthContext";
-import { useColorMode } from "../../context/ThemeContext";
-import { db } from "../../services/Firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, deleteDoc } from "firebase/firestore";
-// eslint-disable-next-line no-unused-vars
-import useCountUp from "../../hooks/useCountUp";
-import TimetableTab from "./tabs/TimetableTab";
-import StudentsTab from "./tabs/StudentsTab";
-import GradingTab from "./tabs/GradingTab";
-import DocumentsTab from "./tabs/DocumentsTab";
-import ReportsTab from "./tabs/ReportsTab";
-import IntegrationsTab from "./tabs/IntegrationsTab";
-import { usersAPI, enrollmentsAPI, coursesAPI } from "../../services/api";
 
-const gradients = {
-  primary: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
-  secondary: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
-  success: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-  warning: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-  premium: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+const HTTU_COLORS = {
+  navy: "#0E2033",
+  gold: "#D9A621",
+  teal: "#12808C",
+  canvas: "#F4F6F8",
+  border: "#E2E8F0",
+  success: "#10B981",
+  danger: "#EF4444",
+  warning: "#F59E0B",
+  textPrimary: "#1A202C",
+  textSecondary: "#4A5568",
 };
 
-// Real-time metrics will be computed from courses/faculty/applications state
+const DEPT_NAV = [
+  { label: "Dashboard", icon: <DashboardIcon />, tab: 0 },
+  { label: "Department Staff", icon: <People />, tab: 1 },
+  { label: "Courses & Sections", icon: <MenuBook />, tab: 2 },
+  { label: "Timetable & Rooms", icon: <Schedule />, tab: 3 },
+  { label: "Performance", icon: <TrendingUp />, tab: 4 },
+  { label: "Advising & Students", icon: <School />, tab: 5 },
+  { label: "Approvals", icon: <AssignmentTurnedIn />, tab: 6 },
+  { label: "Quality & Accreditation", icon: <CheckCircle />, tab: 7 },
+  { label: "Settings", icon: <Settings />, tab: 8 },
+];
 
-
-
-const DepartmentDashboard = () => {
-  const { user, logout, sendPasswordReset } = useAuth();
-  const navigate = useNavigate();
-  const { mode, toggleColorMode } = useColorMode();
-  const theme = useTheme();
-  const [activeTab, setActiveTab] = useState(0);
+export default function DepartmentDashboard() {
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [applications, setApplications] = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [loadingApps, setLoadingApps] = useState(true);
-  const [appSubTab, setAppSubTab] = useState(0); // 0: Pending, 1: History
+  const [activeTab, setActiveTab] = useState(0);
+  const [actionAlert, setActionAlert] = useState("");
 
-  const [openDetailsModal, setOpenDetailsModal] = useState(false);
-  const [selectedApp, setSelectedApp] = useState(null);
+  const facultyLoad = [
+    {
+      name: "Dr. Sofia Assefa",
+      courses: "BI 210 · BI 340 · NT exegesis seminar",
+      rank: "Associate Prof.",
+      credits: 18,
+      sections: 3,
+      advisees: 12,
+      eval: "4.6 / 5",
+      status: "Overloaded",
+      statusColor: "danger",
+    },
+    {
+      name: "Dr. Testage Melaku",
+      courses: "NT 305 · NT 402 · Greek I",
+      rank: "Assistant Prof.",
+      credits: 15,
+      sections: 3,
+      advisees: 10,
+      eval: "4.4 / 5",
+      status: "Balanced",
+      statusColor: "success",
+    },
+    {
+      name: "Fr. Dawit Gebre",
+      courses: "CH 301 · OT 210",
+      rank: "Lecturer",
+      credits: 14,
+      sections: 2,
+      advisees: 8,
+      eval: "4.7 / 5",
+      status: "Balanced",
+      statusColor: "success",
+    },
+    {
+      name: "Dr. Bethlehem Tesema",
+      courses: "PT 220 · PT 310 · BI 120",
+      rank: "Assistant Prof.",
+      credits: 16,
+      sections: 3,
+      advisees: 9,
+      eval: "4.2 / 5",
+      status: "Overloaded",
+      statusColor: "danger",
+    },
+    {
+      name: "W/ro Hanna Girma",
+      courses: "Hebrew I · OT survey (part-time)",
+      rank: "Lecturer",
+      credits: 9,
+      sections: 2,
+      advisees: "—",
+      eval: "4.0 / 5",
+      status: "Underloaded",
+      statusColor: "warning",
+    },
+    {
+      name: "Dr. Yonas Tesfaye",
+      courses: "On sabbatical — returns Jun 2025",
+      rank: "Professor",
+      credits: 0,
+      sections: 0,
+      advisees: "—",
+      eval: "—",
+      status: "Sabbatical",
+      statusColor: "neutral",
+    },
+  ];
 
-  // Curriculum & Faculty States
-  const [courses, setCourses] = useState([]);
-  const [faculty, setFaculty] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [allEnrollments, setAllEnrollments] = useState([]);
-  const [openAddCourse, setOpenAddCourse] = useState(false);
-  const [newCourse, setNewCourse] = useState({ code: "", name: "", credits: 3, year: 1, semester: 1, instructorId: "", instructorName: "", modules: [] });
-  const [openEditCourse, setOpenEditCourse] = useState(false);
-  const [editingCourse, setEditingCourse] = useState(null);
-  const [courseYearFilter, setCourseYearFilter] = useState("all");
-  const [isSubmittingSemester, setIsSubmittingSemester] = useState(false);
+  const deptApprovals = [
+    { id: 1, title: "Annual leave — Fr. Dawit Gebre", detail: "Mar 17–21 · 5 days · cover arranged", type: "leave" },
+    { id: 2, title: "Grade change — BI 210 Sec 01", detail: "2 students · submitted after finalization", type: "grade" },
+    { id: 3, title: "Grade change — OT 210 Sec 03", detail: "Arithmetic correction · B- → B", type: "grade" },
+    { id: 4, title: "Sick leave — W/ro Hanna Girma", detail: "Mar 6–7 · medical note attached", type: "leave" },
+    { id: 5, title: "Advising overload — Dr. Testage Melaku", detail: "Requests 2 advisees reassigned", type: "advising" },
+  ];
 
-  const [openAssignModal, setOpenAssignModal] = useState(false);
-  const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const sectionStatus = [
+    { code: "BI 210 Sec 01", enrolled: 48, cap: 50, color: HTTU_COLORS.danger },
+    { code: "BI 210 Sec 02", enrolled: 41, cap: 50, color: HTTU_COLORS.danger },
+    { code: "NT 305 Sec 01", enrolled: 45, cap: 45, color: HTTU_COLORS.danger },
+    { code: "OT 210 Sec 01", enrolled: 37, cap: 50, color: HTTU_COLORS.teal },
+    { code: "Greek I Sec 01", enrolled: 18, cap: 31, color: HTTU_COLORS.teal },
+    { code: "Hebrew I Sec 01", enrolled: 11, cap: 28, color: "#B48316" },
+  ];
 
-  const [gradingCourseId, setGradingCourseId] = useState("");
-  const [gradingEnrollments, setGradingEnrollments] = useState([]);
-  const [openGradeModal, setOpenGradeModal] = useState(false);
-  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
-  const [tempGrade, setTempGrade] = useState("");
+  const atRiskStudents = [
+    { name: "Hanna Mengistu · HTTU22041", detail: "GPA 1.86 · failed BI 210 twice · 3 absences", tag: "Intervention", color: "danger", initials: "HM" },
+    { name: "Thomas Belete · HTTU23117", detail: "GPA 2.14 · on academic warning · finance hold", tag: "Warning", color: "warning", initials: "TB" },
+    { name: "Sara Getachew · HTTU24002", detail: "Registered for 11 credits — below 12 minimum", tag: "Load check", color: "warning", initials: "SG" },
+    { name: "Meron Tadesse · HTTU21088", detail: "GPA 3.78 · thesis topic approved · on track", tag: "On track", color: "success", initials: "MT" },
+  ];
 
-  // Advising & Resources States
-  const [advisors, setAdvisors] = useState([]);
-  const [openAddAdvisor, setOpenAddAdvisor] = useState(false);
-  const [newAdvisor, setNewAdvisor] = useState({ name: "", role: "", nextAvailable: "" });
-
-  const [resources, setResources] = useState([]);
-  const [openAddResource, setOpenAddResource] = useState(false);
-  const [newResource, setNewResource] = useState({ name: "", type: "Facility" });
-  const [userIp, setUserIp] = useState("unknown");
-
-  const isDark = theme.palette.mode === 'dark';
-
-  const glassStyle = {
-    background: isDark ? "rgba(15, 23, 42, 0.6)" : "rgba(255, 255, 255, 0.8)",
-    backdropFilter: "blur(20px) saturate(180%)",
-    border: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(255, 255, 255, 0.5)",
-    boxShadow: isDark ? "0 8px 32px 0 rgba(0, 0, 0, 0.37)" : "0 8px 32px 0 rgba(31, 38, 135, 0.07)",
-  };
-
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const q = query(collection(db, "applications"), where("intendedMajor", "==", user?.department || ""));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setApplications(apps);
-      setLoadingApps(false);
-    });
-
-    // Fetch Courses from MongoDB
-    const fetchCourses = async () => {
-      try {
-        const res = await coursesAPI.getAll({ department: user?.department || "" });
-        setCourses(res.data);
-      } catch (err) { console.error("Fetch courses error:", err); }
-    };
-    fetchCourses();
-    const courseInterval = setInterval(fetchCourses, 10000);
-
-    // Fetch Students
-    const fetchStudents = async () => {
-      try {
-        const res = await usersAPI.getAll();
-        const all = res.data || [];
-        setStudents(all.filter(u => u.role === "student" && u.department === (user?.department || "")));
-      } catch (err) { console.error("Fetch students error:", err); }
-    };
-    fetchStudents();
-
-    // Fetch All Enrollments
-    const fetchAllEnrollments = async () => {
-      try {
-        const res = await enrollmentsAPI.getAll({ department: user?.department || "" });
-        setAllEnrollments(res.data || []);
-      } catch (err) { console.error("Fetch enrollments error:", err); }
-    };
-    fetchAllEnrollments();
-
-    // Listen to Faculty
-    const qFaculty = query(collection(db, "users"), where("role", "==", "faculty"), where("department", "==", user?.department || ""));
-    const unsubFaculty = onSnapshot(qFaculty, (snapshot) => {
-      setFaculty(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    // Listen to enrollments for grading
-    let unsubEnroll = () => { };
-    if (gradingCourseId) {
-      const qEnroll = query(collection(db, "enrollments"), where("courseId", "==", gradingCourseId));
-      unsubEnroll = onSnapshot(qEnroll, (snapshot) => {
-        setGradingEnrollments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      });
-    }
-
-    // Listen to Advisors
-    const qAdvisors = query(collection(db, "department_advisors"), where("department", "==", user?.department || ""));
-    const unsubAdvisors = onSnapshot(qAdvisors, (snapshot) => {
-      setAdvisors(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    // Listen to Resources
-    const qResources = query(collection(db, "department_resources"), where("department", "==", user?.department || ""));
-    const unsubResources = onSnapshot(qResources, (snapshot) => {
-      setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    // Fetch User IP for auditing
-    fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(data => setUserIp(data.ip))
-      .catch(err => {
-        console.warn("IP fetch failed:", err);
-        setUserIp("unknown");
-      });
-
-    return () => {
-      unsubscribe();
-      clearInterval(courseInterval);
-      unsubFaculty();
-      unsubEnroll();
-      unsubAdvisors();
-      unsubResources();
-    };
-  }, [user?.uid, user?.department, gradingCourseId]);
-
-  const handleAddCourse = async () => {
-    try {
-      if (!newCourse.code || !newCourse.name) return;
-      await coursesAPI.create({
-        ...newCourse,
-        credits: Number(newCourse.credits) || 3,
-        department: user.department,
-        status: "pending_registrar_approval"
-      });
-      setOpenAddCourse(false);
-      setNewCourse({ code: "", name: "", credits: 3, year: 1, semester: 1, instructorId: "", instructorName: "", modules: [] });
-
-      // Local refresh
-      const res = await coursesAPI.getAll({ department: user.department });
-      setCourses(res.data);
-    } catch (err) {
-      console.error("Add course error:", err);
-    }
-  };
-
-  const handleDeleteCourse = async (courseId) => {
-    if (window.confirm("Are you sure you want to delete this course?")) {
-      try {
-        await deleteDoc(doc(db, "courses", courseId));
-      } catch (err) {
-        console.error("Delete course error:", err);
-      }
-    }
-  };
-
-  const handleUpdateCourse = async () => {
-    try {
-      if (!editingCourse || !editingCourse.id || !editingCourse.code || !editingCourse.name || !editingCourse.year || !editingCourse.semester) return;
-      const selectedInstructor = faculty.find(f => f.id === editingCourse.instructorId);
-      await updateDoc(doc(db, "courses", editingCourse.id), {
-        code: editingCourse.code.toUpperCase(),
-        name: editingCourse.name,
-        credits: Number(editingCourse.credits) || 3,
-        year: Number(editingCourse.year),
-        semester: Number(editingCourse.semester),
-        instructorName: selectedInstructor?.name || "",
-        instructorId: selectedInstructor?.id || "",
-        updatedAt: serverTimestamp(),
-      });
-      setOpenEditCourse(false);
-      setEditingCourse(null);
-    } catch (err) {
-      console.error("Update course error:", err);
-    }
-  };
-
-  const handleSubmitSemester = async () => {
-    setIsSubmittingSemester(true);
-    try {
-      const draftCourses = courses.filter(c => c.status === "draft");
-      for (const course of draftCourses) {
-        await coursesAPI.update(course._id, { status: "pending_registrar_approval" });
-      }
-      const res = await coursesAPI.getAll({ department: user.department });
-      setCourses(res.data);
-    } catch (err) {
-      console.error("Submit semester error:", err);
-    } finally {
-      setIsSubmittingSemester(false);
-    }
-  };
-
-  const handleAddAdvisor = async () => {
-    try {
-      if (!newAdvisor.name || !newAdvisor.role) return;
-      await addDoc(collection(db, "department_advisors"), {
-        ...newAdvisor,
-        students: 0,
-        avatarColor: Object.values(gradients)[Math.floor(Math.random() * 5)],
-        department: user.department,
-        createdAt: serverTimestamp(),
-        createdBy: user.uid
-      });
-      setOpenAddAdvisor(false);
-      setNewAdvisor({ name: "", role: "", nextAvailable: "" });
-    } catch (err) {
-      console.error("Add advisor error:", err);
-    }
-  };
-
-  const handleAddResource = async () => {
-    try {
-      if (!newResource.name) return;
-      await addDoc(collection(db, "department_resources"), {
-        ...newResource,
-        status: "Available",
-        utilization: 0,
-        department: user.department,
-        createdAt: serverTimestamp(),
-        createdBy: user.uid
-      });
-      setOpenAddResource(false);
-      setNewResource({ name: "", type: "Facility" });
-    } catch (err) {
-      console.error("Add resource error:", err);
-    }
-  };
-
-  const handleAssignCourse = async (courseId) => {
-    if (!selectedFaculty) return;
-    try {
-      await updateDoc(doc(db, "courses", courseId), {
-        instructorId: selectedFaculty.id,
-        instructorName: selectedFaculty.name
-      });
-      // Optional: Update local state if needed, but onSnapshot handles it
-    } catch (err) {
-      console.error("Assign error:", err);
-    }
-  };
-
-  const handleUpdateGrade = async (grade) => {
-    if (!selectedEnrollment) return;
-    try {
-      await updateDoc(doc(db, "enrollments", selectedEnrollment.id), {
-        grade: grade,
-        gradedAt: serverTimestamp(),
-        gradedBy: user.uid
-      });
-      setOpenGradeModal(false);
-      setTempGrade("");
-    } catch (err) {
-      console.error("Grade update error:", err);
-    }
-  };
-
-  const handleApproveDept = async (appId) => {
-    try {
-      await updateDoc(doc(db, "applications", appId), {
-        status: "approved_by_dept",
-        deptApprovedAt: serverTimestamp(),
-        deptHeadId: user.uid
-      });
-    } catch (err) {
-      console.error("Approve error:", err);
-    }
-  };
-
-  const handleRejectDept = async (appId) => {
-    try {
-      await updateDoc(doc(db, "applications", appId), {
-        status: "rejected_by_dept",
-        deptRejectedAt: serverTimestamp(),
-        deptHeadId: user.uid
-      });
-    } catch (err) {
-      console.error("Reject error:", err);
-    }
-  };
-
-  const handleDirectPasswordReset = async (email, name) => {
-    if (!window.confirm(`Are you sure you want to trigger a password reset for ${name} (${email})?`)) return;
-
-    try {
-      await sendPasswordReset(email);
-      // Audit log
-      await addDoc(collection(db, "audit_logs"), {
-        action: "Manual Password Reset (Dept Head)",
-        targetUser: email,
-        processedBy: user?.email || "Dept Head",
-        timestamp: serverTimestamp(),
-        ip: userIp || "unknown"
-      });
-      alert(`Password reset email sent to ${email}`);
-    } catch (err) {
-      console.error("Error sending direct password reset:", err);
-      alert("Failed to send password reset email.");
-    }
-  };
-
-  const handleLogout = async () => { await logout(); navigate("/"); };
-
-  const handleOpenDetails = (app) => {
-    setSelectedApp(app);
-    setOpenDetailsModal(true);
-  };
-
-  const handleCloseDetails = () => {
-    setOpenDetailsModal(false);
-    setSelectedApp(null);
-  };
-
-  const pendingApps = applications.filter(app => app.status === "pending_dept_review");
-  const historyApps = applications.filter(app => ["approved_by_dept", "rejected_by_dept"].includes(app.status));
-
-  const Sidebar = () => (
-    <Box sx={{
-      width: sidebarOpen ? 280 : 80,
-      height: '100vh',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      background: isDark ? 'linear-gradient(180deg, #0f172a 0%, #020617 100%)' : 'linear-gradient(180deg, #2563eb 0%, #7c3aed 100%)',
-      color: 'white',
-      zIndex: 1200,
-      transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: '4px 0 24px rgba(0,0,0,0.3)',
-      overflow: 'hidden'
-    }}>
-      {/* Sidebar Header */}
-      <Box sx={{ p: 3, mb: 2, display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center' }}>
-        {sidebarOpen && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: 'white', color: '#1e293b', fontWeight: 1000, width: 40, height: 40, fontSize: '1.2rem' }}>
-              {user?.department?.[0] || 'D'}
-            </Avatar>
-            <Box>
-              <Typography variant="subtitle2" fontWeight={1000} sx={{ letterSpacing: 0.5, lineHeight: 1.2 }}>
-                {user?.department || 'UNIVERSITY'}
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.6, fontSize: '0.65rem', fontWeight: 800 }}>DECISION ENGINE</Typography>
-            </Box>
-          </Box>
-        )}
-        <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
-          {sidebarOpen ? <ChevronLeft /> : <MenuIcon />}
-        </IconButton>
-      </Box>
-
-      {/* Nav Items */}
-      <List sx={{ px: 2, flexGrow: 1 }}>
-        {[
-          { label: "Dashboard", icon: <Dashboard />, index: 0 },
-          { label: "Admissions", icon: <AssignmentIcon />, index: 1, badge: pendingApps.length },
-          { label: "Faculty", icon: <Groups />, index: 2 },
-          { label: "Curriculum", icon: <School />, index: 3 },
-          { label: "Advising", icon: <SupportAgent />, index: 5 },
-          { label: "Resources", icon: <Computer />, index: 6 },
-          { label: "Analytics", icon: <Assessment />, index: 4 },
-          { label: "Settings", icon: <Settings />, index: 7 },
-        ].map((item) => (
-          <ListItem key={item.index} disablePadding sx={{ mb: 1 }}>
-            <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
-              <Button
-                fullWidth
-                onClick={() => { setActiveTab(item.index); setMobileOpen(false); }}
-                startIcon={item.icon}
-                sx={{
-                  justifyContent: sidebarOpen ? "flex-start" : "center",
-                  px: sidebarOpen ? 2 : 0,
-                  py: 1.5,
-                  borderRadius: 3,
-                  minWidth: 0,
-                  color: activeTab === item.index ? "#fff" : "rgba(255,255,255,0.6)",
-                  bgcolor: activeTab === item.index ? "rgba(255,255,255,0.12)" : "transparent",
-                  "& .MuiButton-startIcon": {
-                    marginRight: sidebarOpen ? 1.5 : 0,
-                    marginLeft: sidebarOpen ? 0 : 0,
-                    color: activeTab === item.index ? "#fff" : "rgba(255,255,255,0.6)"
-                  },
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.08)" },
-                  transition: '0.2s'
-                }}
-              >
-                {sidebarOpen && (
-                  <Box sx={{ flexGrow: 1, textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <Typography variant="body2" fontWeight={activeTab === item.index ? 800 : 600}>{item.label}</Typography>
-                    {item.badge > 0 && (
-                      <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 900 }} />
-                    )}
-                  </Box>
-                )}
-              </Button>
-            </Tooltip>
-          </ListItem>
-        ))}
-      </List>
-
-      {/* Sidebar Footer */}
-      <Box sx={{ p: 2 }}>
-        <Divider sx={{ mb: 2, opacity: 0.1, bgcolor: 'white' }} />
-        <Button
-          fullWidth
-          onClick={toggleColorMode}
-          startIcon={mode === "dark" ? <LightMode /> : <DarkMode />}
-          sx={{
-            justifyContent: sidebarOpen ? "flex-start" : "center",
-            color: "rgba(255,255,255,0.7)",
-            py: 1.5,
-            borderRadius: 3,
-            "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0 }
-          }}
-        >
-          {sidebarOpen && <Typography variant="body2" fontWeight={600}>{mode === "dark" ? "Light Mode" : "Dark Mode"}</Typography>}
-        </Button>
-        <Button
-          fullWidth
-          onClick={handleLogout}
-          startIcon={<Logout />}
-          sx={{
-            justifyContent: sidebarOpen ? "flex-start" : "center",
-            color: "white",
-            bgcolor: "rgba(239, 68, 68, 0.15)",
-            mt: 1,
-            py: 1.5,
-            borderRadius: 3,
-            fontWeight: 800,
-            "& .MuiButton-startIcon": { marginRight: sidebarOpen ? 1.5 : 0 },
-            "&:hover": { bgcolor: "rgba(239, 68, 68, 0.3)" }
-          }}
-        >
-          {sidebarOpen && <Typography variant="body2" fontWeight={800}>Logout</Typography>}
-        </Button>
-      </Box>
-    </Box>
-  );
+  const accreditationItems = [
+    { crit: "Program learning outcomes mapped to courses", evid: "Curriculum matrix v3.2 uploaded", owner: "Dr. Testage Melaku", status: "Complete", color: "success" },
+    { crit: "Course evaluation results (2 cycles)", evid: "Spring + Fall 2024 · 94% response", owner: "Dept. Head", status: "Complete", color: "success" },
+    { crit: "Staff qualification profile", evid: "11 of 14 records verified in HR", owner: "Hanna Bekele (HR)", status: "In progress", color: "warning" },
+    { crit: "Library holdings per core course", evid: "Greek/Hebrew titles below threshold", owner: "Librarian", status: "Gap", color: "danger" },
+    { crit: "Assessment moderation samples", evid: "10% of scripts per course required", owner: "Course coordinators", status: "Not started", color: "neutral" },
+  ];
 
   return (
-    <Box sx={{ display: 'flex', bgcolor: isDark ? "#0f172a" : "#f8fafc", minHeight: "100vh" }}>
-      {/* Desktop Sidebar */}
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Sidebar />
-      </Box>
-
-      {/* Mobile Drawer */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        ModalProps={{ keepMounted: true }}
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: HTTU_COLORS.canvas }}>
+      {/* ── HTTU Master Navy Sidebar ── */}
+      <Box
         sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { width: sidebarOpen ? 280 : 80, boxSizing: 'border-box' }
+          width: sidebarOpen ? 260 : 78,
+          height: "100vh",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bgcolor: HTTU_COLORS.navy,
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          transition: "width 0.3s ease",
+          zIndex: 1200,
+          boxShadow: "4px 0 20px rgba(0,0,0,0.15)",
         }}
       >
-        <Sidebar />
-      </Drawer>
-
-      <Box component="main" sx={{
-        flexGrow: 1,
-        ml: { xs: 0, md: `${sidebarOpen ? 280 : 80}px` },
-        transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        p: 0,
-        minWidth: 0,
-        color: isDark ? 'white' : 'text.primary'
-      }}>
-        {/* Dynamic Header / Context Bar */}
-        <Box sx={{
-          background: isDark ? "linear-gradient(135deg, #0f172a 0%, #020617 100%)" : "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-          pt: 6, pb: 12, position: "relative", overflow: "hidden",
-          borderBottom: '1px solid rgba(255,255,255,0.05)'
-        }}>
-          {/* Animated Background Elements */}
-          <Box sx={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-
-          <Container maxWidth="xl">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', gap: { xs: 1, md: 3 }, alignItems: 'center' }}>
-                <IconButton
-                  onClick={() => setMobileOpen(true)}
-                  sx={{ display: { xs: 'flex', md: 'none' }, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}
-                >
-                  <MenuIcon />
-                </IconButton>
-
-                <Avatar sx={{
-                  width: 64, height: 64,
-                  bgcolor: 'white', color: '#1e293b',
-                  fontWeight: 1000, fontSize: '1.5rem',
-                  border: '3px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-                }}>
-                  {user?.name?.[0] || 'D'}
-                </Avatar>
-                <Box>
-                  <Typography variant="h4" fontWeight={1000} color="white" sx={{ letterSpacing: -1, fontFamily: 'Outfit, sans-serif' }}>
-                    Welcome, {user?.name?.split(' ')[0] || "Officer"}
-                  </Typography>
-                  <Typography variant="subtitle2" color="rgba(255,255,255,0.6)" fontWeight={700}>
-                    {user?.department || "Academic"} Department Control Panel
-                  </Typography>
-                </Box>
+        <Box
+          sx={{
+            p: 2.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: sidebarOpen ? "space-between" : "center",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {sidebarOpen && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "10px",
+                  border: `2px solid ${HTTU_COLORS.gold}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "rgba(217, 166, 33, 0.12)",
+                }}
+              >
+                <Church sx={{ color: HTTU_COLORS.gold, fontSize: 22 }} />
               </Box>
-              <Box sx={{ textAlign: 'right', display: { xs: 'none', md: 'block' } }}>
-                <Typography variant="h6" color="white" fontWeight={900}>
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: HTTU_COLORS.gold, letterSpacing: 0.5, display: "block", lineHeight: 1.1 }}>
+                  HOLY TRINITY
                 </Typography>
-                <Typography variant="caption" color="rgba(255,255,255,0.5)" fontWeight={800}>
-                  {new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: "0.68rem" }}>
+                  DEPARTMENT HEAD
                 </Typography>
               </Box>
             </Box>
-          </Container>
+          )}
+          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ color: "rgba(255,255,255,0.7)" }}>
+            {sidebarOpen ? <ChevronLeft /> : <MenuIcon />}
+          </IconButton>
         </Box>
 
-        <Container maxWidth="xl" sx={{ mt: -6, position: "relative", zIndex: 10, pb: 10 }}>
-          {activeTab === 0 && (
-            <Grid container spacing={3}>
-              {[
-                { label: "Active Cohort", value: students.length > 0 ? students.length : "1,240", icon: <People />, color: gradients.primary },
-                { label: "Pending Reviews", value: pendingApps.length, icon: <Assignment />, color: gradients.secondary },
-                { label: "Faculty Count", value: faculty.length, icon: <School />, color: gradients.success },
-                { label: "Enrollment Yield", value: "84%", icon: <TrendingUp />, color: gradients.warning },
-              ].map((stat, i) => (
-                <Grid item xs={12} sm={6} md={3} key={i}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4, height: '100%' }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Avatar sx={{ background: stat.color, width: 48, height: 48, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>
-                          {stat.icon}
-                        </Avatar>
-                        <Chip label={stat.label === "Enrollment Yield" ? "STABLE" : "SYNCED"} size="small" sx={{ bgcolor: alpha('#10b981', 0.1), color: '#10b981', fontWeight: 900, fontSize: '0.7rem' }} />
-                      </Box>
-                      <Typography variant="h4" fontWeight={1000} sx={{ mb: 0.5, letterSpacing: -1 }}>
-                        {stat.value}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" fontWeight={700}>
-                        {stat.label}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-
-
-              <Grid item xs={12} md={8}>
-                <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                  <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h6" fontWeight={900} gutterBottom>Department Growth Archetype</Typography>
-                    <Box sx={{ height: 350, mt: 4 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={courses.length > 0 ? [
-                          { name: 'Courses', val: courses.length },
-                          { name: 'Faculty', val: faculty.length },
-                          { name: 'Apps', val: applications.length },
-                          { name: 'Resources', val: resources.length }
-                        ] : [
-                          { name: 'CS', val: 450 },
-                          { name: 'Eng', val: 300 },
-                          { name: 'Bus', val: 250 },
-                          { name: 'Arts', val: 150 },
-                        ]}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={alpha('#94a3b8', 0.1)} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
-                          <RechartsTooltip cursor={{ fill: alpha('#94a3b8', 0.05) }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                          <Bar dataKey="val" radius={[6, 6, 0, 0]} barSize={40}>
-                            {[gradients.primary, gradients.secondary, gradients.success, gradients.warning].map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </Box>
-
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Card sx={{ ...glassStyle, borderRadius: 4, height: '100%' }}>
-                  <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h6" fontWeight={900} gutterBottom>Capacity Distribution</Typography>
-                    <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={[
-                              { name: 'Undergrad', value: 400 },
-                              { name: 'Postgrad', value: 300 },
-                              { name: 'Research', value: 200 },
-                            ]}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={90}
-                            paddingAngle={5}
-                            dataKey="value"
-                          >
-                            <Cell fill="#6366f1" />
-                            <Cell fill="#a855f7" />
-                            <Cell fill="#ec4899" />
-                          </Pie>
-                          <Legend verticalAlign="bottom" height={36} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </Box>
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={800} gutterBottom>Utilization Metrics</Typography>
-                      <Stack spacing={2.5}>
-                        {['Lecture Halls', 'Lab Resources', 'Library Slots'].map((item, i) => (
-                          <Box key={i}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" fontWeight={700}>{item}</Typography>
-                              <Typography variant="caption" fontWeight={900}>85%</Typography>
-                            </Box>
-                            <LinearProgress variant="determinate" value={85} sx={{ height: 6, borderRadius: 3, bgcolor: alpha('#6366f1', 0.1), '& .MuiLinearProgress-bar': { borderRadius: 3, background: gradients.premium } }} />
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          )}
-
-          {activeTab === 1 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Admission Pipeline</Typography>
-                <Tabs
-                  value={appSubTab}
-                  onChange={(e, v) => setAppSubTab(v)}
-                  sx={{
-                    bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-                    p: 0.5, borderRadius: 3,
-                    '& .MuiTabs-indicator': { display: 'none' },
-                    '& .MuiTab-root': {
-                      borderRadius: 2.5, minHeight: 40, px: 3, fontWeight: 800, textTransform: 'none', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
-                      '&.Mui-selected': { bgcolor: isDark ? 'white' : '#1e293b', color: isDark ? '#1e293b' : 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
-                    }
-                  }}
-                >
-                  <Tab label={`Pending (${pendingApps.length})`} />
-                  <Tab label={`History (${historyApps.length})`} />
-                </Tabs>
-              </Box>
-
-              <Grid container spacing={3}>
-                {(appSubTab === 0 ? pendingApps : historyApps).map((app) => (
-                  <Grid item xs={12} md={6} key={app.id}>
-                    <Card sx={{
-                      ...glassStyle, borderRadius: 4, transition: '0.3s',
-                      '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0,0,0,0.1)' }
-                    }}>
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                          <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Avatar sx={{ bgcolor: gradients.secondary, fontWeight: 900 }}>{app.fullName?.[0]}</Avatar>
-                            <Box>
-                              <Typography variant="subtitle1" fontWeight={900}>{app.fullName}</Typography>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700}>{app.email}</Typography>
-                            </Box>
-                          </Box>
-                          <Chip
-                            label={app.status?.replace(/_/g, ' ').toUpperCase()}
-                            size="small"
-                            sx={{
-                              fontWeight: 900,
-                              fontSize: '0.65rem',
-                              bgcolor: app.status === 'pending_dept_review' ? alpha('#f59e0b', 0.1) : app.status === 'approved_by_dept' ? alpha('#10b981', 0.1) : alpha('#ef4444', 0.1),
-                              color: app.status === 'pending_dept_review' ? '#f59e0b' : app.status === 'approved_by_dept' ? '#10b981' : '#ef4444'
-                            }}
-                          />
-                        </Box>
-
-                        <Divider sx={{ my: 2, opacity: 0.5 }} />
-
-                        <Grid container spacing={2} sx={{ mb: 3 }}>
-                          <Grid item xs={6}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>Applied Major</Typography>
-                            <Typography variant="body2" fontWeight={800}>{app.intendedMajor}</Typography>
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700}>Previous Score</Typography>
-                            <Typography variant="body2" fontWeight={800}>{app.highSchoolGPA || "N/A"}</Typography>
-                          </Grid>
-                        </Grid>
-
-                        <Stack direction="row" spacing={2}>
-                          <Button
-                            fullWidth variant="outlined" startIcon={<Visibility />} onClick={() => handleOpenDetails(app)}
-                            sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: 'none', borderColor: alpha(isDark ? '#fff' : '#1e293b', 0.2) }}
-                          >
-                            Review
-                          </Button>
-                          {app.status === 'pending_dept_review' && (
-                            <>
-                              <Button
-                                fullWidth variant="contained" color="success" onClick={() => handleApproveDept(app.id)}
-                                sx={{ borderRadius: 2.5, fontWeight: 900, textTransform: 'none', background: gradients.success }}
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                fullWidth variant="contained" color="error" onClick={() => handleRejectDept(app.id)}
-                                sx={{ borderRadius: 2.5, fontWeight: 900, textTransform: 'none', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
-                              >
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-                {(appSubTab === 0 ? pendingApps : historyApps).length === 0 && (
-                  <Grid item xs={12}>
-                    <Box sx={{ textAlign: 'center', py: 10, ...glassStyle, borderRadius: 4 }}>
-                      <AssignmentIcon sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" fontWeight={800}>No applications found in this queue</Typography>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          )}
-
-          {activeTab === 3 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                  <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Curriculum Lifecycle</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800}>MANAGE SEMESTER COURSES</Typography>
-                </Box>
-                <Stack direction="row" spacing={2}>
+        <List sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: "auto" }}>
+          {DEPT_NAV.map((item) => {
+            const isSelected = activeTab === item.tab;
+            return (
+              <ListItem key={item.label} disablePadding sx={{ mb: 0.5 }}>
+                <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
                   <Button
-                    variant="outlined"
-                    startIcon={<SendIcon />}
-                    onClick={handleSubmitSemester}
-                    disabled={isSubmittingSemester || !courses.some(c => c.status === 'draft')}
-                    sx={{ borderRadius: 2.5, fontWeight: 800, textTransform: 'none' }}
-                  >
-                    {isSubmittingSemester ? "Submitting..." : "Submit Semester for Approval"}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setOpenAddCourse(true)}
-                    sx={{ borderRadius: 2.5, fontWeight: 900, textTransform: 'none', background: gradients.premium }}
-                  >
-                    Create New Course
-                  </Button>
-                </Stack>
-              </Box>
-
-              {/* Year Filter Tabs */}
-              <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {["all", 1, 2, 3, 4].map(y => (
-                  <Chip
-                    key={y}
-                    label={y === "all" ? "All Years" : `Year ${y}`}
-                    onClick={() => setCourseYearFilter(y)}
+                    fullWidth
+                    onClick={() => setActiveTab(item.tab)}
+                    startIcon={<Box sx={{ color: isSelected ? HTTU_COLORS.navy : "rgba(255,255,255,0.7)", display: "flex" }}>{item.icon}</Box>}
                     sx={{
-                      fontWeight: 900, cursor: 'pointer',
-                      bgcolor: courseYearFilter === y ? gradients.premium : 'transparent',
-                      color: courseYearFilter === y ? 'white' : 'text.primary',
-                      border: '1px solid', borderColor: 'divider'
+                      justifyContent: sidebarOpen ? "flex-start" : "center",
+                      px: sidebarOpen ? 2 : 0,
+                      py: 1.2,
+                      borderRadius: 2.5,
+                      textTransform: "none",
+                      fontWeight: isSelected ? 800 : 500,
+                      fontSize: "0.85rem",
+                      bgcolor: isSelected ? HTTU_COLORS.gold : "transparent",
+                      color: isSelected ? HTTU_COLORS.navy : "rgba(255,255,255,0.8)",
+                      "&:hover": {
+                        bgcolor: isSelected ? HTTU_COLORS.gold : "rgba(255,255,255,0.06)",
+                      },
                     }}
-                  />
-                ))}
-              </Box>
-
-              {/* Grouped by Year → Semester */}
-              {[1, 2, 3, 4].filter(y => courseYearFilter === "all" || courseYearFilter === y).map(year => {
-                const yearCourses = courses.filter(c => c.year === year);
-                if (yearCourses.length === 0 && courseYearFilter === "all") return null;
-                return (
-                  <Box key={year} sx={{ mb: 5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                      <Box sx={{ width: 36, height: 36, borderRadius: 2, background: gradients.premium, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Typography color="white" fontWeight={900} fontSize="0.85rem">{year}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="h6" fontWeight={1000}>Year {year}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={800}>{yearCourses.length} COURSES</Typography>
-                      </Box>
-                    </Box>
-                    {[1, 2].map(sem => {
-                      const semCourses = yearCourses.filter(c => c.semester === sem);
-                      return (
-                        <Box key={sem} sx={{ mb: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, px: 1 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', background: sem === 1 ? gradients.primary : gradients.secondary }} />
-                            <Typography variant="subtitle2" fontWeight={900} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1.5 }}>
-                              Semester {sem}
-                            </Typography>
-                            <Chip label={`${semCourses.length} course${semCourses.length !== 1 ? 's' : ''}`} size="small" sx={{ fontWeight: 800, fontSize: '0.6rem', height: 20 }} />
-                          </Box>
-                          {semCourses.length === 0 ? (
-                            <Box sx={{ p: 3, border: '1px dashed', borderColor: 'divider', borderRadius: 3, textAlign: 'center' }}>
-                              <Typography variant="caption" color="text.secondary" fontWeight={700}>No courses for Semester {sem} yet</Typography>
-                            </Box>
-                          ) : (
-                            <TableContainer sx={{ ...glassStyle, borderRadius: 4, overflow: 'hidden' }}>
-                              <Table size="small">
-                                <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-                                  <TableRow>
-                                    <TableCell sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>CODE</TableCell>
-                                    <TableCell sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>COURSE NAME</TableCell>
-                                    <TableCell sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>CREDITS</TableCell>
-                                    <TableCell sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>INSTRUCTOR</TableCell>
-                                    <TableCell sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>STATUS</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>ACTIONS</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {semCourses.map(course => (
-                                    <TableRow key={course.id} sx={{ '&:hover': { bgcolor: alpha('#fff', 0.02) } }}>
-                                      <TableCell sx={{ fontWeight: 1000 }}>{course.code}</TableCell>
-                                      <TableCell sx={{ fontWeight: 800 }}>{course.name}</TableCell>
-                                      <TableCell sx={{ fontWeight: 800 }}>{course.credits}</TableCell>
-                                      <TableCell sx={{ fontWeight: 700, color: course.instructorName ? 'primary.main' : 'text.secondary' }}>
-                                        {course.instructorName || "Unassigned"}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Chip
-                                          label={(course.status || 'draft').toUpperCase()}
-                                          size="small"
-                                          sx={{
-                                            fontWeight: 900,
-                                            fontSize: '0.6rem',
-                                            height: 20,
-                                            bgcolor: course.status === 'active' ? alpha('#10b981', 0.1) : course.status === 'pending_registrar_approval' ? alpha('#f59e0b', 0.1) : alpha('#94a3b8', 0.1),
-                                            color: course.status === 'active' ? '#10b981' : course.status === 'pending_registrar_approval' ? '#f59e0b' : '#94a3b8'
-                                          }}
-                                        />
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        <IconButton size="small" onClick={() => { setEditingCourse(course); setOpenEditCourse(true); }} color="primary" sx={{ mr: 1 }}>
-                                          <EditIcon sx={{ fontSize: 18 }} />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => handleDeleteCourse(course.id)} color="error" disabled={course.status === 'active'}>
-                                          <Delete sx={{ fontSize: 18 }} />
-                                        </IconButton>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                );
-              })}
-              {courses.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 10, ...glassStyle, borderRadius: 4, mt: 2 }}>
-                  <LibraryBooks sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary" fontWeight={800}>No courses registered for this department</Typography>
-                  <Button sx={{ mt: 2 }} onClick={() => setOpenAddCourse(true)}>Initialize First Course</Button>
-                </Box>
-              )}
-
-              {/* Add Course Dialog */}
-              <Dialog open={openAddCourse} onClose={() => setOpenAddCourse(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-                <DialogTitle fontWeight={1000}>Draft New Course</DialogTitle>
-                <DialogContent>
-                  <Stack spacing={3} sx={{ mt: 1 }}>
-                    <TextField
-                      fullWidth label="Course Code" placeholder="e.g. CS101"
-                      value={newCourse.code} onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value.toUpperCase() })}
-                    />
-                    <TextField
-                      fullWidth label="Course Name" placeholder="e.g. Intro to Databases"
-                      value={newCourse.name} onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                    />
-                    <TextField
-                      fullWidth label="Credit Hours" type="number" inputProps={{ min: 1, max: 6 }}
-                      value={newCourse.credits} onChange={(e) => setNewCourse({ ...newCourse, credits: Number(e.target.value) })}
-                    />
-                    <TextField
-                      select fullWidth label="Academic Year"
-                      value={newCourse.year} onChange={(e) => setNewCourse({ ...newCourse, year: Number(e.target.value) })}
-                    >
-                      {[1, 2, 3, 4].map(y => <MenuItem key={y} value={y}>Year {y}</MenuItem>)}
-                    </TextField>
-                    <TextField
-                      select fullWidth label="Semester"
-                      value={newCourse.semester} onChange={(e) => setNewCourse({ ...newCourse, semester: Number(e.target.value) })}
-                    >
-                      <MenuItem value={1}>Semester 1</MenuItem>
-                      <MenuItem value={2}>Semester 2</MenuItem>
-                    </TextField>
-                    <TextField
-                      select fullWidth label="Assign Instructor (Optional)"
-                      value={newCourse.instructorId} onChange={(e) => setNewCourse({ ...newCourse, instructorId: e.target.value })}
-                    >
-                      <MenuItem value="">-- Not Assigned --</MenuItem>
-                      {faculty.map(f => <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>)}
-                    </TextField>
-                  </Stack>
-                </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                  <Button onClick={() => setOpenAddCourse(false)} sx={{ fontWeight: 800 }}>Cancel</Button>
-                  <Button onClick={handleAddCourse} variant="contained" sx={{ borderRadius: 2, fontWeight: 900, background: gradients.premium }}>
-                    Draft Course
-                  </Button>
-                </DialogActions>
-              </Dialog>
-
-              {/* Edit Course Dialog */}
-              <Dialog open={openEditCourse} onClose={() => { setOpenEditCourse(false); setEditingCourse(null); }} maxWidth="sm" fullWidth PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-                <DialogTitle fontWeight={1000}>Edit Course</DialogTitle>
-                <DialogContent>
-                  {editingCourse && (
-                    <Stack spacing={3} sx={{ mt: 1 }}>
-                      <TextField
-                        fullWidth label="Course Code" placeholder="e.g. CS101"
-                        value={editingCourse.code} onChange={(e) => setEditingCourse({ ...editingCourse, code: e.target.value.toUpperCase() })}
-                      />
-                      <TextField
-                        fullWidth label="Course Name" placeholder="e.g. Intro to Databases"
-                        value={editingCourse.name} onChange={(e) => setEditingCourse({ ...editingCourse, name: e.target.value })}
-                      />
-                      <TextField
-                        fullWidth label="Credit Hours" type="number" inputProps={{ min: 1, max: 6 }}
-                        value={editingCourse.credits} onChange={(e) => setEditingCourse({ ...editingCourse, credits: Number(e.target.value) })}
-                      />
-                      <TextField
-                        select fullWidth label="Academic Year"
-                        value={editingCourse.year} onChange={(e) => setEditingCourse({ ...editingCourse, year: Number(e.target.value) })}
-                      >
-                        {[1, 2, 3, 4].map(y => <MenuItem key={y} value={y}>Year {y}</MenuItem>)}
-                      </TextField>
-                      <TextField
-                        select fullWidth label="Semester"
-                        value={editingCourse.semester} onChange={(e) => setEditingCourse({ ...editingCourse, semester: Number(e.target.value) })}
-                      >
-                        <MenuItem value={1}>Semester 1</MenuItem>
-                        <MenuItem value={2}>Semester 2</MenuItem>
-                      </TextField>
-                      <TextField
-                        select fullWidth label="Assign Instructor (Optional)"
-                        value={editingCourse.instructorId || ""} onChange={(e) => setEditingCourse({ ...editingCourse, instructorId: e.target.value })}
-                      >
-                        <MenuItem value="">-- Not Assigned --</MenuItem>
-                        {faculty.map(f => <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>)}
-                      </TextField>
-                    </Stack>
-                  )}
-                </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                  <Button onClick={() => { setOpenEditCourse(false); setEditingCourse(null); }} sx={{ fontWeight: 800 }}>Cancel</Button>
-                  <Button onClick={handleUpdateCourse} variant="contained" sx={{ borderRadius: 2, fontWeight: 900, background: gradients.premium }}>
-                    Update Course
-                  </Button>
-                </DialogActions>
-              </Dialog>
-            </Box>
-          )}
-
-          {activeTab === 2 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                  <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -0.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Groups sx={{ color: '#6366f1', fontSize: 32 }} /> Faculty Roster
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1 }}>
-                    DEPARTMENTAL STAFF & COURSE ASSIGNMENTS
-                  </Typography>
-                </Box>
-
-                {/* Search Bar (Visual Polish) */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', bgcolor: alpha('#fff', isDark ? 0.05 : 0.6), p: 0.5, pr: 2, borderRadius: 10, ...glassStyle }}>
-                  <IconButton size="small"><Search /></IconButton>
-                  <Typography variant="body2" color="text.secondary" fontWeight={700}>Search faculty...</Typography>
-                </Box>
-              </Box>
-
-              {faculty.length === 0 ? (
-                <Card sx={{ ...glassStyle, borderRadius: 4, textAlign: 'center', py: 10, borderStyle: 'dashed', borderWidth: 2, borderColor: alpha('#6366f1', 0.2) }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                    <Avatar sx={{ width: 80, height: 80, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }}>
-                      <Groups sx={{ fontSize: 40 }} />
-                    </Avatar>
-                  </Box>
-                  <Typography variant="h5" fontWeight={1000} gutterBottom>No Faculty Found</Typography>
-                  <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ maxWidth: 400, mx: 'auto', mb: 4 }}>
-                    Your department currently has no assigned faculty members in the system. Faculty accounts are typically provisioned by the Administrator.
-                  </Typography>
-                  <Button variant="outlined" sx={{ borderRadius: 3, fontWeight: 800, textTransform: 'none', borderColor: '#6366f1', color: '#6366f1' }}>
-                    Request Provisioning
-                  </Button>
-                </Card>
-              ) : (
-                <Grid container spacing={4}>
-                  {faculty.map((member) => (
-                    <Grid item xs={12} sm={6} md={4} key={member.id}>
-                      <Card sx={{
-                        ...glassStyle,
-                        borderRadius: 4,
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        '&:hover': { transform: 'translateY(-8px)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }
-                      }}>
-                        <CardContent sx={{ p: 4 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                              <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={<CheckCircle sx={{ color: '#10b981', fontSize: 16 }} />}>
-                                <Avatar sx={{ width: 64, height: 64, background: gradients.secondary, fontWeight: 900, boxShadow: '0 8px 16px rgba(59,130,246,0.3)' }}>
-                                  {member.name?.[0]}
-                                </Avatar>
-                              </Badge>
-                              <Box>
-                                <Typography variant="h6" fontWeight={900} sx={{ lineHeight: 1.2 }}>{member.name}</Typography>
-                                <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                                  <Email sx={{ fontSize: 12 }} /> {member.email}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </Box>
-
-                          <Divider sx={{ my: 2.5, opacity: 0.1 }} />
-
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                            <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                              Active Assignments
-                            </Typography>
-                            <Chip size="small" label={`${courses.filter(c => c.instructorId === member.id).length} Courses`} sx={{ fontWeight: 900, fontSize: '0.65rem' }} />
-                          </Box>
-
-                          <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} sx={{ minHeight: 40 }}>
-                            {courses.filter(c => c.instructorId === member.id).map(c => (
-                              <Chip key={c.id} label={c.code} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1', border: '1px solid', borderColor: alpha('#6366f1', 0.2) }} />
-                            ))}
-                            {courses.filter(c => c.instructorId === member.id).length === 0 && (
-                              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>Pending assignments</Typography>
-                            )}
-                          </Stack>
-
-                          <Stack direction="row" spacing={1} sx={{ mt: 4 }}>
-                            <Button
-                              fullWidth variant="contained" sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none', background: gradients.primary, boxShadow: '0 8px 16px rgba(99,102,241,0.25)' }}
-                              startIcon={<AddIcon />}
-                              onClick={() => { setSelectedFaculty(member); setOpenAssignModal(true); }}
-                            >
-                              Assign
-                            </Button>
-                            <Tooltip title="Reset Credentials">
-                              <IconButton
-                                onClick={() => handleDirectPasswordReset(member.email, member.name)}
-                                sx={{
-                                  borderRadius: 3,
-                                  bgcolor: alpha(theme.palette.error.main, 0.1),
-                                  color: 'error.main',
-                                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
-                                }}
-                              >
-                                <LockReset />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-
-              {/* Assign Course Modal */}
-              <Dialog open={openAssignModal} onClose={() => setOpenAssignModal(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-                <DialogTitle fontWeight={1000}>Assign Course to {selectedFaculty?.name}</DialogTitle>
-                <DialogContent>
-                  <Typography variant="body2" sx={{ mb: 3 }}>Select a course to link with this instructor. Only department courses are shown.</Typography>
-                  <Grid container spacing={2}>
-                    {courses.map(course => (
-                      <Grid item xs={12} key={course.id}>
-                        <Button
-                          fullWidth variant="outlined"
-                          sx={{
-                            justifyContent: 'flex-start', p: 2, borderRadius: 3, textAlign: 'left',
-                            borderColor: course.instructorId === selectedFaculty?.id ? alpha('#10b981', 0.5) : 'divider'
-                          }}
-                          onClick={() => handleAssignCourse(course.id)}
-                        >
-                          <Box>
-                            <Typography variant="subtitle2" fontWeight={900}>{course.code}: {course.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">Current: {course.instructorName || "Unassigned"}</Typography>
-                          </Box>
-                        </Button>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                  <Button onClick={() => setOpenAssignModal(false)} sx={{ fontWeight: 800 }}>Close</Button>
-                </DialogActions>
-              </Dialog>
-            </Box>
-          )}
-
-          {activeTab === 4 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                  <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Academic Records & Analytics</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800}>EVALUATE PERFORMANCE & SUBMIT GRADES</Typography>
-                </Box>
-                <TextField
-                  select
-                  label="Filter by Course"
-                  value={gradingCourseId}
-                  onChange={(e) => setGradingCourseId(e.target.value)}
-                  sx={{ minWidth: 200, "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
-                >
-                  {courses.filter(c => c.status === 'active').map((course) => (
-                    <MenuItem key={course.id} value={course.id}>{course.code}</MenuItem>
-                  ))}
-                </TextField>
-              </Box>
-
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography variant="h6" fontWeight={900} gutterBottom>Student Gradebook</Typography>
-                      {gradingCourseId ? (
-                        <TableContainer>
-                          <Table>
-                            <TableHead>
-                              <TableRow>
-                                <TableCell sx={{ fontWeight: 900 }}>Student</TableCell>
-                                <TableCell sx={{ fontWeight: 900 }}>ID</TableCell>
-                                <TableCell sx={{ fontWeight: 900 }}>Current Grade</TableCell>
-                                <TableCell sx={{ fontWeight: 900 }} align="right">Actions</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {gradingEnrollments.map((enr) => (
-                                <TableRow key={enr.id}>
-                                  <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                      <Avatar sx={{ width: 32, height: 32, fontSize: '0.8rem' }}>{enr.studentName?.[0]}</Avatar>
-                                      <Typography variant="body2" fontWeight={700}>{enr.studentName}</Typography>
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell><Typography variant="caption" fontWeight={700}>{enr.studentId?.slice(-5)}</Typography></TableCell>
-                                  <TableCell>
-                                    <Chip
-                                      label={enr.grade || "N/A"}
-                                      size="small"
-                                      sx={{
-                                        fontWeight: 900,
-                                        bgcolor: enr.grade ? alpha('#10b981', 0.1) : 'rgba(255,255,255,0.05)',
-                                        color: enr.grade ? '#10b981' : 'text.secondary'
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Button
-                                      size="small" variant="text" sx={{ fontWeight: 900 }}
-                                      onClick={() => { setSelectedEnrollment(enr); setOpenGradeModal(true); }}
-                                    >
-                                      Edit Grade
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      ) : (
-                        <Box sx={{ py: 10, textAlign: 'center' }}>
-                          <Typography color="text.secondary" fontWeight={700}>Please select a course to view students</Typography>
-                        </Box>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ ...glassStyle, borderRadius: 4, background: gradients.premium, color: 'white' }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography variant="h6" fontWeight={1000} gutterBottom>Class Insight</Typography>
-                      <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Typography variant="h2" fontWeight={1000} sx={{ letterSpacing: -2 }}>
-                          {gradingEnrollments.length > 0 ? (gradingEnrollments.filter(e => e.grade).length / gradingEnrollments.length * 100).toFixed(0) : 0}%
-                        </Typography>
-                        <Typography variant="caption" fontWeight={900} sx={{ opacity: 0.8, letterSpacing: 1 }}>GRADING COMPLETION</Typography>
-                      </Box>
-                      <Box sx={{ mt: 5 }}>
-                        <Stack spacing={2.5}>
-                          {[
-                            { label: 'Total Enrolled', value: gradingEnrollments.length },
-                            { label: 'Top Performer', value: gradingEnrollments.find(e => e.grade === 'A')?.studentName || 'None' },
-                            { label: 'Class Average', value: 'B+' }
-                          ].map((item, i) => (
-                            <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>
-                              <Typography variant="body2" fontWeight={700} sx={{ opacity: 0.7 }}>{item.label}</Typography>
-                              <Typography variant="body2" fontWeight={900}>{item.value}</Typography>
-                            </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-
-              {/* Grade Submission Modal */}
-              <Dialog open={openGradeModal} onClose={() => setOpenGradeModal(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-                <DialogTitle fontWeight={1000}>Submit Grade: {selectedEnrollment?.studentName}</DialogTitle>
-                <DialogContent>
-                  <Stack spacing={3} sx={{ mt: 1 }}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Final Grade"
-                      value={tempGrade}
-                      onChange={(e) => setTempGrade(e.target.value)}
-                    >
-                      {['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'F'].map(g => (
-                        <MenuItem key={g} value={g}>{g}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-                </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                  <Button onClick={() => setOpenGradeModal(false)} sx={{ fontWeight: 800 }}>Cancel</Button>
-                  <Button
-                    onClick={() => handleUpdateGrade(tempGrade)}
-                    variant="contained"
-                    sx={{ borderRadius: 2, fontWeight: 900, background: gradients.premium }}
                   >
-                    Confirm Submission
+                    {sidebarOpen && item.label}
                   </Button>
-                </DialogActions>
-              </Dialog>
+                </Tooltip>
+              </ListItem>
+            );
+          })}
+        </List>
+
+        <Box
+          sx={{
+            p: 2,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: sidebarOpen ? "space-between" : "center",
+          }}
+        >
+          {sidebarOpen ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: HTTU_COLORS.gold, color: HTTU_COLORS.navy, fontWeight: 800, fontSize: "0.85rem" }}>
+                SA
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700} noWrap sx={{ color: "white", fontSize: "0.82rem" }}>
+                  Dr. Sofia Assefa
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", fontSize: "0.7rem", display: "block" }}>
+                  Head · Biblical Studies
+                </Typography>
+              </Box>
             </Box>
+          ) : (
+            <Avatar sx={{ width: 34, height: 34, bgcolor: HTTU_COLORS.gold, color: HTTU_COLORS.navy, fontWeight: 800 }}>
+              SA
+            </Avatar>
+          )}
+          {sidebarOpen && (
+            <IconButton onClick={logout} size="small" sx={{ color: "rgba(255,255,255,0.6)" }}>
+              <Logout fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+
+      {/* ── Main Content Area ── */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          ml: `${sidebarOpen ? 260 : 78}px`,
+          p: { xs: 2.5, md: 4 },
+          transition: "margin-left 0.3s ease",
+          minHeight: "100vh",
+        }}
+      >
+        <Container maxWidth="xl" disableGutters>
+          {/* Header Strip */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Departments / Biblical Studies</Typography>
+              <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy} sx={{ fontFamily: "'Outfit', sans-serif" }}>
+                Department of Biblical Studies
+              </Typography>
+              <Typography variant="body2" color={HTTU_COLORS.textSecondary} sx={{ mt: 0.5 }}>
+                Staffing, section capacity, teaching quality and advising · Wed Mar 5, 2025
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+              <Chip label="Week 7 of 15 · Spring 2025" size="small" sx={{ bgcolor: "rgba(18, 128, 140, 0.12)", color: HTTU_COLORS.teal, fontWeight: 700 }} />
+              <Button variant="outlined" startIcon={<EventNote />} sx={{ borderColor: HTTU_COLORS.border, color: HTTU_COLORS.navy, textTransform: "none", fontWeight: 700 }}>
+                Timetable
+              </Button>
+              <Button variant="outlined" sx={{ borderColor: HTTU_COLORS.border, color: HTTU_COLORS.navy, textTransform: "none", fontWeight: 700 }}>
+                Department report
+              </Button>
+              <Button variant="contained" startIcon={<Add />} sx={{ bgcolor: HTTU_COLORS.gold, color: HTTU_COLORS.navy, fontWeight: 800, textTransform: "none", "&:hover": { bgcolor: "#c4951d" } }}>
+                New section request
+              </Button>
+            </Box>
+          </Box>
+
+          {actionAlert && (
+            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setActionAlert("")}>
+              {actionAlert}
+            </Alert>
           )}
 
-          {/* Advising Tab */}
-          {activeTab === 5 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                  <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Academic Advising</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800}>STUDENT SUPPORT & GUIDANCE</Typography>
+          {/* 4 Stat HUD Cards */}
+          <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <Box sx={{ p: 1, borderRadius: 2, bgcolor: "rgba(18, 128, 140, 0.1)", color: HTTU_COLORS.teal }}>
+                    <School sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.textSecondary}>DEPARTMENT STUDENTS</Typography>
                 </Box>
-                <Button onClick={() => setOpenAddAdvisor(true)} variant="contained" startIcon={<SupportAgent />} sx={{ borderRadius: 2.5, fontWeight: 900, background: gradients.premium }}>
-                  Add Advisor
-                </Button>
-              </Box>
-              <Grid container spacing={3}>
-                {advisors.map((advisor, i) => (
-                  <Grid item xs={12} md={4} key={i}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                        <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 2, background: advisor.avatarColor, fontWeight: 900, fontSize: '1.5rem', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>
-                          {advisor.name[4]}
-                        </Avatar>
-                        <Typography variant="h6" fontWeight={900}>{advisor.name}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={700} gutterBottom>{advisor.role}</Typography>
-                        <Divider sx={{ my: 2, opacity: 0.1 }} />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>Assigned Students</Typography>
-                          <Chip label={advisor.students} size="small" sx={{ fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} />
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>Next Available</Typography>
-                          <Typography variant="caption" fontWeight={900}>{advisor.nextAvailable}</Typography>
-                        </Box>
-                        <Button fullWidth variant="outlined" sx={{ mt: 3, borderRadius: 2.5, fontWeight: 800, textTransform: 'none' }}>
-                          View Waitlist
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-                {advisors.length === 0 && (
-                  <Grid item xs={12}>
-                    <Box sx={{ textAlign: 'center', py: 10, ...glassStyle, borderRadius: 4 }}>
-                      <SupportAgent sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" fontWeight={800}>No advisors assigned yet</Typography>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          )}
+                <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy}>318</Typography>
+                <Typography variant="caption" color={HTTU_COLORS.textSecondary} sx={{ display: "block", mt: 0.5 }}>
+                  214 major · 104 service-course
+                </Typography>
+                <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.success} sx={{ display: "block", mt: 0.5 }}>
+                  ↑ +12 vs Fall 2024
+                </Typography>
+              </Card>
+            </Grid>
 
-          {/* Resources Tab */}
-          {activeTab === 6 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                  <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5 }}>Department Resources</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={800}>FACILITIES & EQUIPMENT MANAGEMENT</Typography>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <Box sx={{ p: 1, borderRadius: 2, bgcolor: "rgba(217, 166, 33, 0.15)", color: "#B48316" }}>
+                    <People sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.textSecondary}>TEACHING STAFF</Typography>
                 </Box>
-                <Button onClick={() => setOpenAddResource(true)} variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 2.5, fontWeight: 900, background: gradients.success }}>
-                  Add Resource
-                </Button>
-              </Box>
-              <Grid container spacing={3}>
-                {resources.map((resource, i) => (
-                  <Grid item xs={12} sm={6} md={3} key={i}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4, height: '100%' }}>
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Avatar sx={{ background: resource.status === 'Available' ? gradients.primary : resource.status === 'In Use' ? gradients.warning : gradients.secondary, color: 'white' }}>
-                            {resource.type === 'Facility' ? <Business /> : resource.type === 'Equipment' ? <Computer /> : <Assessment />}
-                          </Avatar>
+                <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy}>14</Typography>
+                <Typography variant="caption" color={HTTU_COLORS.textSecondary} sx={{ display: "block", mt: 0.5 }}>
+                  9 full-time · 5 part-time · 1 on sabbatical
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  — 2 vacant posts advertised
+                </Typography>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <Box sx={{ p: 1, borderRadius: 2, bgcolor: "rgba(16, 185, 129, 0.1)", color: HTTU_COLORS.success }}>
+                    <TrendingUp sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.textSecondary}>SECTION FILL RATE</Typography>
+                </Box>
+                <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy}>87%</Typography>
+                <Typography variant="caption" color={HTTU_COLORS.textSecondary} sx={{ display: "block", mt: 0.5 }}>
+                  22 sections · 1,246 seats of 1,432
+                </Typography>
+                <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.success} sx={{ display: "block", mt: 0.5 }}>
+                  ↑ +3.1 pts since week 4
+                </Typography>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <Box sx={{ p: 1, borderRadius: 2, bgcolor: "rgba(239, 68, 68, 0.1)", color: HTTU_COLORS.danger }}>
+                    <WarningAmber sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.textSecondary}>ITEMS NEEDING ACTION</Typography>
+                </Box>
+                <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy}>7</Typography>
+                <Typography variant="caption" color={HTTU_COLORS.textSecondary} sx={{ display: "block", mt: 0.5 }}>
+                  3 leave · 2 grade changes · 2 advising
+                </Typography>
+                <Typography variant="caption" fontWeight={700} color={HTTU_COLORS.danger} sx={{ display: "block", mt: 0.5 }}>
+                  ↑ Oldest pending 6 days
+                </Typography>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Main 2-Column Section */}
+          <Grid container spacing={3}>
+            {/* Left Column (Teaching Load, Section Status & Course Grade Averages, Quality Checklist) */}
+            <Grid item xs={12} lg={8}>
+              {/* Faculty Teaching Load Table */}
+              <Card sx={{ borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}`, mb: 3 }}>
+                <Box sx={{ p: 2, bgcolor: "#F8FAFC", borderBottom: `1px solid ${HTTU_COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="subtitle1" fontWeight={800} color={HTTU_COLORS.navy}>
+                    Faculty Teaching Load
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1.5 }}>
+                    <Typography variant="caption" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: HTTU_COLORS.danger }} /> Overloaded &gt;15
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: HTTU_COLORS.success }} /> Balanced 12–15
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: HTTU_COLORS.warning }} /> Underloaded &lt;12
+                    </Typography>
+                  </Box>
+                </Box>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: "#F8FAFC" }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.72rem" }}>STAFF MEMBER</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.72rem" }}>RANK</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>CREDIT HRS</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>SECTIONS</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>ADVISEES</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>AVG COURSE EVAL</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>LOAD STATUS</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {facultyLoad.map((fac, idx) => (
+                      <TableRow key={idx} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={700} color={HTTU_COLORS.navy}>{fac.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{fac.courses}</Typography>
+                        </TableCell>
+                        <TableCell sx={{ fontSize: "0.8rem" }}>{fac.rank}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 800 }}>{fac.credits}</TableCell>
+                        <TableCell align="center">{fac.sections}</TableCell>
+                        <TableCell align="center">{fac.advisees}</TableCell>
+                        <TableCell align="center" sx={{ fontSize: "0.82rem" }}>{fac.eval}</TableCell>
+                        <TableCell align="right">
                           <Chip
-                            label={resource.status}
+                            label={fac.status}
                             size="small"
                             sx={{
-                              fontWeight: 900, fontSize: '0.65rem',
-                              bgcolor: resource.status === 'Available' ? alpha('#10b981', 0.1) : resource.status === 'In Use' ? alpha('#f59e0b', 0.1) : alpha('#ef4444', 0.1),
-                              color: resource.status === 'Available' ? '#10b981' : resource.status === 'In Use' ? '#f59e0b' : '#ef4444'
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              bgcolor:
+                                fac.statusColor === "danger"
+                                  ? "rgba(239, 68, 68, 0.12)"
+                                  : fac.statusColor === "success"
+                                  ? "rgba(16, 185, 129, 0.12)"
+                                  : fac.statusColor === "warning"
+                                  ? "rgba(245, 158, 11, 0.15)"
+                                  : "#F1F5F9",
+                              color:
+                                fac.statusColor === "danger"
+                                  ? HTTU_COLORS.danger
+                                  : fac.statusColor === "success"
+                                  ? HTTU_COLORS.success
+                                  : fac.statusColor === "warning"
+                                  ? "#B48316"
+                                  : "#64748B",
                             }}
                           />
-                        </Box>
-                        <Typography variant="subtitle1" fontWeight={900}>{resource.name}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700} gutterBottom>{resource.type}</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Box sx={{ p: 1.5, bgcolor: "#FAFAFA", borderTop: `1px solid ${HTTU_COLORS.border}` }}>
+                  <Typography variant="caption" color={HTTU_COLORS.teal} sx={{ fontWeight: 700, cursor: "pointer" }}>
+                    Open load-balancing worksheet →
+                  </Typography>
+                </Box>
+              </Card>
 
-                        <Box sx={{ mt: 3 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="caption" fontWeight={700}>Utilization</Typography>
-                            <Typography variant="caption" fontWeight={900}>{resource.utilization}%</Typography>
+              {/* Section Status & Course Grade Averages Grid */}
+              <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}`, height: "100%" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                      <Typography variant="subtitle2" fontWeight={800} color={HTTU_COLORS.navy}>
+                        Section Status
+                      </Typography>
+                      <Chip label="Spring 2025 ▾" size="small" sx={{ fontSize: "0.68rem" }} />
+                    </Box>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      {sectionStatus.map((sec, idx) => (
+                        <Box key={idx}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.4 }}>
+                            <Typography variant="caption" fontWeight={600}>{sec.code}</Typography>
+                            <Typography variant="caption" fontWeight={800}>{sec.enrolled}/{sec.cap}</Typography>
                           </Box>
                           <LinearProgress
                             variant="determinate"
-                            value={resource.utilization}
-                            sx={{
-                              height: 6, borderRadius: 3, bgcolor: alpha('#94a3b8', 0.2),
-                              '& .MuiLinearProgress-bar': { borderRadius: 3, background: resource.utilization > 80 ? gradients.warning : gradients.primary }
-                            }}
+                            value={(sec.enrolled / sec.cap) * 100}
+                            sx={{ height: 6, borderRadius: 3, bgcolor: "#EDF2F7", "& .MuiLinearProgress-bar": { bgcolor: sec.color } }}
                           />
                         </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-                {resources.length === 0 && (
-                  <Grid item xs={12}>
-                    <Box sx={{ textAlign: 'center', py: 10, ...glassStyle, borderRadius: 4 }}>
-                      <Computer sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.2, mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" fontWeight={800}>No resources tracked yet</Typography>
+                      ))}
                     </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          )}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2, fontStyle: "italic" }}>
+                      NT 305 is full with a 9-student waitlist — recommend opening Sec 02
+                    </Typography>
+                  </Card>
+                </Grid>
 
-          {/* Add Advisor Dialog */}
-          <Dialog open={openAddAdvisor} onClose={() => setOpenAddAdvisor(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-            <DialogTitle fontWeight={1000}>Add Academic Advisor</DialogTitle>
-            <DialogContent>
-              <Stack spacing={3} sx={{ mt: 1 }}>
-                <TextField
-                  fullWidth label="Advisor Name" placeholder="e.g. Dr. Sarah Jenkins"
-                  value={newAdvisor.name} onChange={(e) => setNewAdvisor({ ...newAdvisor, name: e.target.value })}
-                />
-                <TextField
-                  fullWidth label="Role/Title" placeholder="e.g. Senior Advisor"
-                  value={newAdvisor.role} onChange={(e) => setNewAdvisor({ ...newAdvisor, role: e.target.value })}
-                />
-                <TextField
-                  fullWidth label="Next Available (Optional)" placeholder="e.g. Tomorrow 10:00 AM"
-                  value={newAdvisor.nextAvailable} onChange={(e) => setNewAdvisor({ ...newAdvisor, nextAvailable: e.target.value })}
-                />
-              </Stack>
-            </DialogContent>
-            <DialogActions sx={{ p: 3 }}>
-              <Button onClick={() => setOpenAddAdvisor(false)} sx={{ fontWeight: 800 }}>Cancel</Button>
-              <Button onClick={handleAddAdvisor} variant="contained" sx={{ borderRadius: 2, fontWeight: 900, background: gradients.premium }}>
-                Add Advisor
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Add Resource Dialog */}
-          <Dialog open={openAddResource} onClose={() => setOpenAddResource(false)} PaperProps={{ sx: { ...glassStyle, borderRadius: 4 } }}>
-            <DialogTitle fontWeight={1000}>Add Department Resource</DialogTitle>
-            <DialogContent>
-              <Stack spacing={3} sx={{ mt: 1 }}>
-                <TextField
-                  fullWidth label="Resource Name" placeholder="e.g. Advanced AI Lab"
-                  value={newResource.name} onChange={(e) => setNewResource({ ...newResource, name: e.target.value })}
-                />
-                <TextField
-                  select
-                  fullWidth
-                  label="Resource Type"
-                  value={newResource.type}
-                  onChange={(e) => setNewResource({ ...newResource, type: e.target.value })}
-                >
-                  {['Facility', 'Equipment', 'Infrastructure'].map(t => (
-                    <MenuItem key={t} value={t}>{t}</MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-            </DialogContent>
-            <DialogActions sx={{ p: 3 }}>
-              <Button onClick={() => setOpenAddResource(false)} sx={{ fontWeight: 800 }}>Cancel</Button>
-              <Button onClick={handleAddResource} variant="contained" sx={{ borderRadius: 2, fontWeight: 900, background: gradients.success }}>
-                Add Resource
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Timetable Tab */}
-          {activeTab === 8 && (
-            <TimetableTab
-              courses={courses}
-              department={user?.department || ""}
-              user={user}
-            />
-          )}
-
-          {/* Students Tab */}
-          {activeTab === 9 && (
-            <StudentsTab
-              courses={courses}
-              department={user?.department || ""}
-              user={user}
-              advisors={advisors}
-            />
-          )}
-
-          {/* Grading Tab (new comprehensive) */}
-          {activeTab === 10 && (
-            <GradingTab
-              courses={courses}
-              user={user}
-              department={user?.department || ""}
-            />
-          )}
-
-          {/* Documents Tab */}
-          {activeTab === 11 && (
-            <DocumentsTab
-              department={user?.department || ""}
-              user={user}
-            />
-          )}
-
-          {/* Reports Tab */}
-          {activeTab === 12 && (
-            <ReportsTab
-              courses={courses}
-              faculty={faculty}
-              students={students}
-              enrollments={allEnrollments}
-              attendance={[]}
-            />
-          )}
-
-          {/* Integrations Tab */}
-          {activeTab === 13 && (
-            <IntegrationsTab user={user} />
-          )}
-
-          {/* Settings placeholder */}
-          {[7].includes(activeTab) && (
-            <Box sx={{ textAlign: 'center', py: 15, ...glassStyle, borderRadius: 4 }}>
-              <Box sx={{ mb: 3 }}>
-                {activeTab === 7 && <Settings sx={{ fontSize: 80, color: '#94a3b8' }} />}
-              </Box>
-              <Typography variant="h4" fontWeight={1000} gutterBottom>Department Settings</Typography>
-              <Typography variant="h6" color="text.secondary" fontWeight={700}>
-                Configure department preferences, academic calendar constraints, and access policies.
-              </Typography>
-            </Box>
-          )}
-
-          {/* Details Modal */}
-          <Dialog
-            open={openDetailsModal}
-            onClose={handleCloseDetails}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{ sx: { ...glassStyle, borderRadius: 4, backgroundImage: 'none' } }}
-          >
-            <DialogTitle sx={{ p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="h5" fontWeight={1000}>Applicant Dossier</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={800}>REF: {selectedApp?.id?.slice(0, 8).toUpperCase()}</Typography>
-              </Box>
-              <IconButton onClick={handleCloseDetails} sx={{ bgcolor: alpha('#ef4444', 0.1), color: '#ef4444' }}>
-                <CloseIcon />
-              </IconButton>
-            </DialogTitle>
-            <DialogContent sx={{ p: 4 }}>
-              {selectedApp && (
-                <Grid container spacing={4}>
-                  <Grid item xs={12} md={4}>
-                    <Box sx={{ textAlign: 'center', mb: 4 }}>
-                      <Avatar sx={{ width: 120, height: 120, mx: 'auto', mb: 2, fontSize: '3rem', bgcolor: gradients.premium }}>
-                        {selectedApp.fullName?.[0]}
-                      </Avatar>
-                      <Typography variant="h6" fontWeight={900}>{selectedApp.fullName}</Typography>
-                      <Typography variant="body2" color="text.secondary" fontWeight={700}>{selectedApp.email}</Typography>
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}`, height: "100%" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                      <Typography variant="subtitle2" fontWeight={800} color={HTTU_COLORS.navy}>
+                        Course Grade Averages
+                      </Typography>
+                      <Chip label="Last finalized ▾" size="small" sx={{ fontSize: "0.68rem" }} />
                     </Box>
-                    <Divider sx={{ my: 3 }} />
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight={800}>CONTACT</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                          <Typography variant="body2" fontWeight={700}>{selectedApp.phone || "Not Provided"}</Typography>
-                        </Box>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight={800}>NATIONAL ID</Typography>
-                        <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5 }}>{selectedApp.nationalId}</Typography>
-                      </Box>
-                    </Stack>
-                  </Grid>
-                  <Grid item xs={12} md={8}>
-                    <Typography variant="subtitle1" fontWeight={1000} gutterBottom>Academic Credentials</Typography>
-                    <Grid container spacing={3} sx={{ mb: 4 }}>
-                      <Grid item xs={6}>
-                        <Card variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#6366f1', 0.03) }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>HS GPA</Typography>
-                          <Typography variant="h6" fontWeight={900}>{selectedApp.highSchoolGPA}</Typography>
-                        </Card>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Card variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#a855f7', 0.03) }}>
-                          <Typography variant="caption" color="text.secondary" fontWeight={800}>HS PERCENTAGE</Typography>
-                          <Typography variant="h6" fontWeight={900}>{selectedApp.highSchoolPercentage}%</Typography>
-                        </Card>
-                      </Grid>
-                    </Grid>
-
-                    <Typography variant="subtitle1" fontWeight={1000} gutterBottom>Submitted Documents</Typography>
-                    <Stack spacing={2}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                       {[
-                        { name: 'National ID Copy', icon: <FileIcon />, status: 'Verified' },
-                        { name: 'High School Certificate', icon: <FileIcon />, status: 'Verified' },
-                        { name: 'Birth Certificate', icon: <FileIcon />, status: 'Verified' },
-                      ].map((doc, i) => (
-                        <Box key={i} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar sx={{ bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }}>{doc.icon}</Avatar>
-                            <Typography variant="body2" fontWeight={800}>{doc.name}</Typography>
+                        { name: "BI 210 Hermeneutics", grade: "B+", val: 80, col: HTTU_COLORS.teal },
+                        { name: "NT 305 Synoptics", grade: "B", val: 74, col: HTTU_COLORS.teal },
+                        { name: "OT 210 Pentateuch", grade: "B-", val: 70, col: HTTU_COLORS.teal },
+                        { name: "Greek I", grade: "C+", val: 65, col: "#B48316" },
+                        { name: "Hebrew I", grade: "C", val: 59, col: "#B48316" },
+                        { name: "BI 120 OT Survey", grade: "A-", val: 85, col: HTTU_COLORS.success },
+                      ].map((cg, idx) => (
+                        <Box key={idx}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.4 }}>
+                            <Typography variant="caption" fontWeight={600}>{cg.name}</Typography>
+                            <Typography variant="caption" fontWeight={800}>{cg.grade}</Typography>
                           </Box>
-                          <Button size="small" variant="text" sx={{ fontWeight: 900 }}>View File</Button>
+                          <LinearProgress
+                            variant="determinate"
+                            value={cg.val}
+                            sx={{ height: 6, borderRadius: 3, bgcolor: "#EDF2F7", "& .MuiLinearProgress-bar": { bgcolor: cg.col } }}
+                          />
                         </Box>
                       ))}
-                    </Stack>
-                  </Grid>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2, fontStyle: "italic" }}>
+                      Language courses flagged for tutorial support — proposal to Dean by Mar 20
+                    </Typography>
+                  </Card>
                 </Grid>
-              )}
-            </DialogContent>
-            <DialogActions sx={{ p: 4, pt: 0 }}>
-              {selectedApp?.status === 'pending_dept_review' && (
-                <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
-                  <Button
-                    fullWidth variant="contained" color="success" onClick={() => { handleApproveDept(selectedApp.id); handleCloseDetails(); }}
-                    sx={{ py: 1.5, borderRadius: 2.5, fontWeight: 900, background: gradients.success }}
-                  >
-                    Approve Application
-                  </Button>
-                  <Button
-                    fullWidth variant="contained" color="error" onClick={() => { handleRejectDept(selectedApp.id); handleCloseDetails(); }}
-                    sx={{ py: 1.5, borderRadius: 2.5, fontWeight: 900, background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
-                  >
-                    Reject Application
-                  </Button>
-                </Stack>
-              )}
-            </DialogActions>
-          </Dialog>
+              </Grid>
+
+              {/* Quality & Accreditation Checklist */}
+              <Card sx={{ borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Box sx={{ p: 2, bgcolor: "#F8FAFC", borderBottom: `1px solid ${HTTU_COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="subtitle1" fontWeight={800} color={HTTU_COLORS.navy}>
+                    Quality & Accreditation Checklist
+                  </Typography>
+                  <Chip label="HERQA self-study due Apr 30, 2025" size="small" sx={{ bgcolor: "rgba(18, 128, 140, 0.12)", color: HTTU_COLORS.teal, fontWeight: 700 }} />
+                </Box>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: "#F8FAFC" }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.72rem" }}>CRITERION</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.72rem" }}>EVIDENCE</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.72rem" }}>OWNER</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.72rem" }}>STATUS</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {accreditationItems.map((item, idx) => (
+                      <TableRow key={idx} hover>
+                        <TableCell sx={{ fontWeight: 700, color: HTTU_COLORS.navy }}>{item.crit}</TableCell>
+                        <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>{item.evid}</TableCell>
+                        <TableCell sx={{ fontSize: "0.8rem" }}>{item.owner}</TableCell>
+                        <TableCell align="right">
+                          <Chip
+                            label={item.status}
+                            size="small"
+                            sx={{
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              bgcolor:
+                                item.color === "success"
+                                  ? "rgba(16, 185, 129, 0.12)"
+                                  : item.color === "warning"
+                                  ? "rgba(245, 158, 11, 0.15)"
+                                  : item.color === "danger"
+                                  ? "rgba(239, 68, 68, 0.12)"
+                                  : "#F1F5F9",
+                              color:
+                                item.color === "success"
+                                  ? HTTU_COLORS.success
+                                  : item.color === "warning"
+                                  ? "#B48316"
+                                  : item.color === "danger"
+                                  ? HTTU_COLORS.danger
+                                  : "#64748B",
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </Grid>
+
+            {/* Right Column (Department Approvals, Advising & At-Risk, Upcoming) */}
+            <Grid item xs={12} lg={4}>
+              {/* Department Approvals */}
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}`, mb: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={800} color={HTTU_COLORS.navy}>
+                    Department Approvals
+                  </Typography>
+                  <Chip label="7 pending" size="small" sx={{ bgcolor: "rgba(217, 166, 33, 0.15)", color: "#B48316", fontWeight: 700, fontSize: "0.68rem" }} />
+                </Box>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  {deptApprovals.map((app) => (
+                    <Box key={app.id} sx={{ pb: 1.5, borderBottom: `1px solid ${HTTU_COLORS.border}` }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={700} color={HTTU_COLORS.navy}>{app.title}</Typography>
+                        {app.type === "leave" ? (
+                          <Box sx={{ display: "flex", gap: 0.5 }}>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => setActionAlert(`Approved leave for ${app.title}`)}
+                              sx={{ fontSize: "0.65rem", py: 0.2, px: 1, bgcolor: HTTU_COLORS.teal, textTransform: "none" }}
+                            >
+                              Approve
+                            </Button>
+                            <Button size="small" variant="outlined" sx={{ fontSize: "0.65rem", py: 0.2, px: 1, borderColor: HTTU_COLORS.border, textTransform: "none" }}>
+                              Deny
+                            </Button>
+                          </Box>
+                        ) : (
+                          <Button size="small" variant="outlined" sx={{ fontSize: "0.65rem", py: 0.2, px: 1, borderColor: HTTU_COLORS.border, textTransform: "none" }}>
+                            Review
+                          </Button>
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">{app.detail}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5, fontStyle: "italic" }}>
+                  Leave approvals sync to HR; grade changes escalate to the Dean after 10 days
+                </Typography>
+              </Card>
+
+              {/* Advising & At-Risk */}
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}`, mb: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={800} color={HTTU_COLORS.navy}>
+                    Advising & At-Risk
+                  </Typography>
+                  <Chip label="All advisees →" size="small" sx={{ fontSize: "0.68rem" }} />
+                </Box>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  {atRiskStudents.map((stu, idx) => (
+                    <Box key={idx} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1, borderBottom: idx < 3 ? `1px solid ${HTTU_COLORS.border}` : 0 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Avatar sx={{ width: 32, height: 32, fontSize: "0.75rem", bgcolor: stu.color === "danger" ? "rgba(239, 68, 68, 0.15)" : "rgba(18, 128, 140, 0.15)", color: stu.color === "danger" ? HTTU_COLORS.danger : HTTU_COLORS.teal, fontWeight: 700 }}>
+                          {stu.initials}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={700} color={HTTU_COLORS.navy}>{stu.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{stu.detail}</Typography>
+                        </Box>
+                      </Box>
+                      <Chip
+                        label={stu.tag}
+                        size="small"
+                        sx={{
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                          bgcolor: stu.color === "danger" ? "rgba(239, 68, 68, 0.12)" : stu.color === "success" ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.15)",
+                          color: stu.color === "danger" ? HTTU_COLORS.danger : stu.color === "success" ? HTTU_COLORS.success : "#B48316",
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5, fontStyle: "italic" }}>
+                  39 advisees across 4 staff · advising week Mar 10–14
+                </Typography>
+              </Card>
+
+              {/* Upcoming */}
+              <Card sx={{ p: 2.5, borderRadius: 3, border: `1px solid ${HTTU_COLORS.border}` }}>
+                <Typography variant="subtitle2" fontWeight={800} color={HTTU_COLORS.navy} sx={{ mb: 2 }}>
+                  Upcoming
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  {[
+                    { date: "Mar 10 — Mid-semester exam week begins", note: "Room bookings close Mar 7 · 6 sections need invigilators", bg: "rgba(18, 128, 140, 0.08)" },
+                    { date: "Mar 14 — Department meeting, 14:00", note: "Agenda: NT 305 second section, language tutorials, vacant posts", bg: "rgba(217, 166, 33, 0.1)" },
+                    { date: "Mar 28 — Grade submission deadline", note: "14 of 22 sections have not yet submitted final grades", bg: "rgba(59, 130, 246, 0.08)" },
+                    { date: "Apr 30 — HERQA self-study submission", note: "3 of 5 criteria complete · 1 gap in library holdings", bg: "rgba(168, 85, 247, 0.08)" },
+                  ].map((up, idx) => (
+                    <Box key={idx} sx={{ p: 1.5, borderRadius: 2, bgcolor: up.bg, border: `1px solid ${HTTU_COLORS.border}` }}>
+                      <Typography variant="body2" fontWeight={700} color={HTTU_COLORS.navy}>{up.date}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.3 }}>{up.note}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Card>
+            </Grid>
+          </Grid>
         </Container>
       </Box>
     </Box>
   );
-};
-
-export default DepartmentDashboard;
+}

@@ -20,11 +20,7 @@ export default function EventsCalendarTab({ events }) {
         borderRadius: 3,
     };
 
-    const academicEvents = events || [
-        { title: "Fall Convocation", date: "2026-09-05", type: "Ceremony", location: "Main Auditorium", attendees: "1200+" },
-        { title: "Dean's Townhall", date: "2026-10-12", type: "Meeting", location: "Hall A", attendees: "300" },
-        { title: "Guest Lecture: AI Horizons", date: "2026-11-20", type: "Lecture", location: "Virtual", attendees: "500" },
-    ];
+    const academicEvents = events || [];
 
     return (
         <Box>
@@ -65,15 +61,17 @@ export default function EventsCalendarTab({ events }) {
                                             <Box sx={{ flex: 1, pt: 0.5 }}>
                                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
                                                     <Typography variant="subtitle1" fontWeight={900}>{ev.title}</Typography>
-                                                    <Chip label={ev.type.toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: "0.65rem" }} />
+                                                    <Chip label={ev.type?.toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: "0.65rem" }} />
                                                 </Box>
                                                 <Box sx={{ display: "flex", gap: 3, mt: 1 }}>
-                                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><Event sx={{ fontSize: 14 }} /> {ev.location}</Typography>
-                                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><Groups sx={{ fontSize: 14 }} /> {ev.attendees} expected</Typography>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><Event sx={{ fontSize: 14 }} /> {ev.location || ev.description}</Typography>
                                                 </Box>
                                             </Box>
                                         </Box>
                                     ))}
+                                    {academicEvents.length === 0 && (
+                                        <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>No events scheduled. Add one above!</Typography>
+                                    )}
                                 </Stack>
                             </CardContent>
                         </Card>

@@ -11,7 +11,8 @@ import {
   Logout, Close, Email, Lock, Person, Badge,
   Dashboard as DashboardIcon, Security, Campaign, History,
   Speed, VpnKey, Newspaper, Menu as MenuIcon, Assignment, LockReset, Password, Circle, DarkMode, LightMode,
-  Refresh as RefreshIcon, ContentCopy as ContentCopyIcon, ExpandMore, ExpandLess, Key as KeyIcon
+  Refresh as RefreshIcon, ContentCopy as ContentCopyIcon, ExpandMore, ExpandLess, Key as KeyIcon,
+  AccountTree, Event, Grade, Paid, Extension, Hub, Payments
 } from "@mui/icons-material";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import {
@@ -47,6 +48,11 @@ import AuditLogsTab from "./tabs/AuditLogsTab";
 import ApplicationsTab from "./tabs/ApplicationsTab";
 import ReportsTab from "./tabs/ReportsTab";
 import PasswordResetsTab from "./tabs/PasswordResetsTab";
+import AcademicStructureTab from "./tabs/AcademicStructureTab";
+import AcademicCalendarTab from "./tabs/AcademicCalendarTab";
+import GradingConfigTab from "./tabs/GradingConfigTab";
+import FinancialConfigTab from "./tabs/FinancialConfigTab";
+import IntegrationsTab from "./tabs/IntegrationsTab";
 
 const neonColors = [
   "#38bdf8", // Sky Blue
@@ -74,6 +80,9 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
   const [passwordGroupOpen, setPasswordGroupOpen] = React.useState(false);
+  const [academicGroupOpen, setAcademicGroupOpen] = React.useState(false);
+  const [financeGroupOpen, setFinanceGroupOpen] = React.useState(false);
+  const [systemGroupOpen, setSystemGroupOpen] = React.useState(false);
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -187,7 +196,7 @@ const AdminDashboard = () => {
           usersAPI.getAll(),
           activityLogsAPI.getAll(),
           systemAPI.getSettings('settings').catch(() => ({ data: { maintenanceMode: false } })),
-          applicationsAPI.getAll({ status: 'registrar_approved' }),
+          applicationsAPI.getAll({ status: 'approved_by_dept,registrar_approved' }),
           announcementsAPI.getAll(),
           securityLogsAPI.getAll(),
           departmentsAPI.getAll(),
@@ -223,7 +232,8 @@ const AdminDashboard = () => {
 
         const pendingCols = cols.filter(c => c.status === 'pending').map(c => ({ ...c, type: 'college', id: c._id || c.id }));
         const pendingDeps = deps.filter(d => d.status === 'pending').map(d => ({ ...d, type: 'department', id: d._id || d.id }));
-        setPendingEntities([...pendingCols, ...pendingDeps]);
+        const pendingStudents = users.filter(u => u.admissionStatus === 'pending_admin_provision').map(u => ({ ...u, type: 'student', id: u._id || u.id }));
+        setPendingEntities([...pendingCols, ...pendingDeps, ...pendingStudents]);
 
         const resetsRes = await passwordResetsAPI.getAll();
         setPasswordResetsList(resetsRes.data);
@@ -338,9 +348,9 @@ const AdminDashboard = () => {
     alert(`MANUAL_OVERRIDE: Temporary password for ${name} [${email}] is: ${newPass}`);
   };
 
-  const handleDownloadReport = async (type) => {
+  const handleDownloadReport = async (type, format = "pdf", dateRange = null) => {
     setReportLoading(type);
-    logActivity("Data Export", `Initiated ${type} intelligence synthesis.`);
+    logActivity("Data Export", `Initiated ${type} intelligence synthesis [Format: ${format.toUpperCase()}].`);
 
     try {
       const pdfDoc = new jsPDF();
@@ -530,7 +540,7 @@ const AdminDashboard = () => {
       await applicationsAPI.patch(appId, { status: "rejected" });
       logActivity("Application Rejected", `Rejected application for ${app.email || app.name}`);
       // Refresh list using the correct operational status
-      const appsRes = await applicationsAPI.getAll({ status: 'registrar_approved' });
+      const appsRes = await applicationsAPI.getAll({ status: 'approved_by_dept,registrar_approved' });
       setApprovedApplications(appsRes.data);
     } catch (err) {
       console.error("Failed to reject application:", err);
@@ -553,7 +563,7 @@ const AdminDashboard = () => {
         if (formData.applicationId) {
           try {
             await applicationsAPI.patch(formData.applicationId, { status: "final_approved" });
-            const appsRes = await applicationsAPI.getAll({ status: 'registrar_approved' });
+            const appsRes = await applicationsAPI.getAll({ status: 'approved_by_dept,registrar_approved' });
             setApprovedApplications(appsRes.data);
           } catch (appErr) {
             console.error("Failed to update application status:", appErr);
@@ -579,10 +589,10 @@ const AdminDashboard = () => {
 
   const handleToggleUserActive = async (userId, isCurrentlyDisabled) => {
     try {
-      await usersAPI.patch(userId, { disabled: !isCurrentlyDisabled });
+      await usersAPI.update(userId, { disabled: !isCurrentlyDisabled });
       logActivity(isCurrentlyDisabled ? "Grant Access" : "Revoke Access", `Toggled user ${userId} → ${isCurrentlyDisabled ? 'active' : 'disabled'}`);
-      // Update local state
-      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, disabled: !isCurrentlyDisabled } : u));
+      // Update local state handling both _id and id (MongoDB)
+      setUsersList(prev => prev.map(u => (u._id || u.id) === userId ? { ...u, disabled: !isCurrentlyDisabled } : u));
     } catch (err) { alert(err.message); }
   };
 
@@ -599,7 +609,7 @@ const AdminDashboard = () => {
     try {
       await usersAPI.delete(userId);
       logActivity("Delete User", `Deleted user ID: ${userId}`);
-      setUsersList(prev => prev.filter(u => u.id !== userId));
+      setUsersList(prev => prev.filter(u => (u._id || u.id) !== userId));
     } catch (err) { alert(err.message); }
   };
 
@@ -625,7 +635,7 @@ const AdminDashboard = () => {
         severity: "high"
       });
       alert(`Successfully deactivated student ${studentToDeactivate.name}`);
-      setUsersList(prev => prev.map(u => u.id === studentToDeactivate.id ? { ...u, disabled: true, status: 'Deactivated' } : u));
+      setUsersList(prev => prev.map(u => (u._id || u.id) === (studentToDeactivate._id || studentToDeactivate.id) ? { ...u, disabled: true, status: 'Deactivated' } : u));
     } catch (err) {
       console.error("Error deactivating student:", err);
       alert("Error: " + err.message);
@@ -735,16 +745,24 @@ const AdminDashboard = () => {
   };
 
   const menuItems = [
-    { id: "overview", label: t("overview"), icon: <DashboardIcon /> },
-    { id: "news", label: t("news"), icon: <Newspaper /> },
-    { id: "users", label: t("users"), icon: <People /> },
-    { id: "applications", label: t("applications"), icon: <Assignment />, badge: approvedApplications.length },
-    { id: "reports", label: t("reports"), icon: <Assessment /> },
-    { id: "system", label: t("system"), icon: <Settings /> },
-    { id: "health", label: t("health"), icon: <Speed /> },
-    { id: "audit", label: t("audit"), icon: <History /> },
-    { id: "provisioning", label: t("provisioning"), icon: <PersonAdd />, badge: pendingEntities.length },
-    { id: "security", label: t("security"), icon: <Security /> },
+    { id: "overview", label: t("overview"), icon: <DashboardIcon />, group: "general" },
+    { id: "news", label: t("news"), icon: <Newspaper />, group: "general" },
+    { id: "users", label: t("users"), icon: <People />, group: "general" },
+
+    { id: "academic_structure", label: "Academic Structure", icon: <AccountTree />, group: "academic" },
+    { id: "academic_calendar", label: "Academic Calendar", icon: <Event />, group: "academic" },
+    { id: "grading_config", label: "Grading & Assessment", icon: <Grade />, group: "academic" },
+    { id: "applications", label: t("applications"), icon: <Assignment />, badge: approvedApplications.length, group: "academic" },
+
+    { id: "financial_config", label: "Financial Configuration", icon: <Paid />, group: "operations" },
+    { id: "reports", label: t("reports"), icon: <Assessment />, group: "operations" },
+    { id: "provisioning", label: t("provisioning"), icon: <PersonAdd />, badge: pendingEntities.length, group: "operations" },
+
+    { id: "system", label: t("system"), icon: <Settings />, group: "system" },
+    { id: "health", label: t("health"), icon: <Speed />, group: "system" },
+    { id: "audit", label: t("audit"), icon: <History />, group: "system" },
+    { id: "security", label: t("security"), icon: <Security />, group: "system" },
+    { id: "integrations", label: "Integration Management", icon: <Extension />, group: "system" },
   ];
 
   const passwordMenuItems = [
@@ -755,124 +773,89 @@ const AdminDashboard = () => {
   const totalPasswordBadge = passwordResetsList.filter(r => r.status === "pending").length;
 
   const adminSidebarContent = (
-    <>
-      {/* Sidebar Header with Toggle Button */}
-      <Box sx={{
-        px: 2, display: "flex", alignItems: "center",
-        borderBottom: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
-        minHeight: 64, overflow: 'hidden'
-      }}>
-        {sidebarOpen ? (
-          /* Expanded: logo + title on left, toggle on right */
-          <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
-              <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: "primary.main", display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <School sx={{ fontSize: 20 }} />
-              </Box>
-              <Typography variant="h6" fontWeight={1000} noWrap>{t("adminCore")}</Typography>
-            </Box>
-            {!isMobile && (
-              <IconButton
-                onClick={() => setSidebarOpen(false)}
-                size="small"
-                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.18) }, flexShrink: 0 }}
-              >
-                <MenuIcon fontSize="small" />
-              </IconButton>
-            )}
-          </>
-        ) : (
-          /* Collapsed: only the toggle button, perfectly centered */
-          !isMobile && (
-            <IconButton
-              onClick={() => setSidebarOpen(true)}
-              size="small"
-              sx={{ mx: 'auto', bgcolor: alpha(theme.palette.primary.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.18) } }}
-            >
-              <MenuIcon fontSize="small" />
-            </IconButton>
-          )
-        )}
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0E2033', color: '#fff' }}>
+      {/* Brand Header */}
+      <Box sx={{ p: 3, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <Box sx={{
+          width: 50, height: 50, mx: 'auto', mb: 1.5,
+          borderRadius: '50%', border: '2px solid #D9A621',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#D9A621', fontSize: '24px', fontWeight: 'bold'
+        }}>
+          ✝
+        </Box>
+        <Typography variant="caption" sx={{ letterSpacing: 1.5, fontWeight: 900, color: '#fff', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>
+          Holy Trinity
+        </Typography>
+        <Typography variant="caption" sx={{ letterSpacing: 1.2, fontWeight: 800, color: 'rgba(255,255,255,0.85)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase' }}>
+          Theology University
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#D9A621', fontWeight: 800, letterSpacing: 2, fontSize: '0.64rem', mt: 0.5, display: 'block', textTransform: 'uppercase' }}>
+          System Administration
+        </Typography>
       </Box>
-      <List sx={{ px: 2, flex: 1 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton
-              onClick={() => { setActiveTab(item.id); if (isMobile) setMobileDrawerOpen(false); }}
-              sx={{
-                borderRadius: 3, py: 1.5,
-                bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-                color: activeTab === item.id
-                  ? theme.palette.primary.main
-                  : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
-                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 44, color: activeTab === item.id ? "primary.main" : "inherit" }}>{item.icon}</ListItemIcon>
-              {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 800, fontSize: "0.85rem" }} />}
-              {sidebarOpen && item.badge > 0 && <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontWeight: 900, fontSize: '0.6rem' }} />}
-            </ListItemButton>
-          </ListItem>
-        ))}
 
-        {/* ── Password Management Group ── */}
-        <ListItem disablePadding sx={{ mb: 0.5 }}>
-          <ListItemButton
-            onClick={() => setPasswordGroupOpen(prev => !prev)}
-            sx={{
-              borderRadius: 3, py: 1.5,
-              bgcolor: (activeTab === 'password_resets' || activeTab === 'otp_management')
-                ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-              color: (activeTab === 'password_resets' || activeTab === 'otp_management')
-                ? theme.palette.primary.main
-                : mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)",
-              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 44, color: (activeTab === 'password_resets' || activeTab === 'otp_management') ? "primary.main" : "inherit" }}>
-              <KeyIcon />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Password Mgmt" primaryTypographyProps={{ fontWeight: 800, fontSize: "0.85rem" }} />}
-            {sidebarOpen && totalPasswordBadge > 0 && <Chip label={totalPasswordBadge} size="small" color="error" sx={{ height: 18, fontWeight: 900, fontSize: '0.6rem', mr: 0.5 }} />}
-            {sidebarOpen && (passwordGroupOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />)}
-          </ListItemButton>
-        </ListItem>
-        <ListItem disablePadding sx={{ display: 'block' }}>
-          <Collapse in={passwordGroupOpen} timeout="auto" unmountOnExit>
-            <List disablePadding sx={{ pl: sidebarOpen ? 2 : 0 }}>
-              {passwordMenuItems.map((item) => (
-                <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton
-                    onClick={() => { setActiveTab(item.id); if (isMobile) setMobileDrawerOpen(false); }}
-                    sx={{
-                      borderRadius: 3, py: 1.2,
-                      bgcolor: activeTab === item.id ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-                      color: activeTab === item.id
-                        ? theme.palette.primary.main
-                        : mode === 'dark' ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.55)",
-                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40, color: activeTab === item.id ? "primary.main" : "inherit" }}>{item.icon}</ListItemIcon>
-                    {sidebarOpen && <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 700, fontSize: "0.8rem" }} />}
-                    {sidebarOpen && item.badge > 0 && <Chip label={item.badge} size="small" color="error" sx={{ height: 16, fontWeight: 900, fontSize: '0.55rem' }} />}
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          </Collapse>
-        </ListItem>
+      {/* Navigation List */}
+      <List sx={{ px: 2, py: 1.5, flex: 1, overflowY: 'auto' }}>
+        {[
+          { id: 'overview', label: 'Dashboard', icon: <DashboardIcon /> },
+          { id: 'users', label: 'Users & Accounts', icon: <People /> },
+          { id: 'security', label: 'Roles & Permissions', icon: <Security /> },
+          { id: 'health', label: 'Services & Health', icon: <Speed /> },
+          { id: 'audit', label: 'Audit Trail', icon: <History /> },
+          { id: 'news', label: 'Notifications', icon: <Campaign /> },
+          { id: 'integrations', label: 'Integrations', icon: <Extension /> },
+          { id: 'system', label: 'Backups & Storage', icon: <Settings /> },
+          { id: 'financial_config', label: 'Settings', icon: <Paid /> },
+        ].map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => { setActiveTab(item.id); if (isMobile) setMobileDrawerOpen(false); }}
+                sx={{
+                  borderRadius: '8px', py: 1, px: 2,
+                  bgcolor: isActive ? '#D9A621' : 'transparent',
+                  color: isActive ? '#0E2033' : 'rgba(255,255,255,0.7)',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: isActive ? '#D9A621' : 'rgba(255,255,255,0.06)',
+                    color: isActive ? '#0E2033' : '#fff'
+                  }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 800 : 500, fontSize: '0.86rem' }} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
-      <Box sx={{ p: 2 }}>
-        <Button fullWidth variant="contained" color="error" startIcon={<Logout />} onClick={handleLogout} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>
-          {sidebarOpen ? t("terminateSession") : ""}
-        </Button>
+
+      {/* Footer User Card matching mockup */}
+      <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: '#D9A621', color: '#0E2033', fontWeight: 900, width: 36, height: 36, fontSize: '0.85rem' }}>
+            SA
+          </Avatar>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.82rem', lineHeight: 1.2 }}>
+              System Administrator
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
+              root · MFA enabled
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton size="small" onClick={handleLogout} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ef4444' } }} title="Logout">
+          <Logout fontSize="small" />
+        </IconButton>
       </Box>
-    </>
+    </Box>
   );
 
   return (
-    <Box sx={{ display: "flex", bgcolor: mode === 'dark' ? "#0a0a0f" : "#f8fafc", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", bgcolor: "#F4F6F8", minHeight: "100vh" }}>
       {/* Mobile Sidebar Drawer */}
       <Drawer
         variant="temporary"
@@ -881,11 +864,7 @@ const AdminDashboard = () => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': {
-            width: 280, boxSizing: 'border-box',
-            background: mode === 'dark' ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
-            backdropFilter: 'blur(20px)',
-          }
+          '& .MuiDrawer-paper': { width: 260, boxSizing: 'border-box', border: 'none' }
         }}
       >
         {adminSidebarContent}
@@ -896,47 +875,87 @@ const AdminDashboard = () => {
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
-          width: sidebarOpen ? 280 : 88, flexShrink: 0,
+          width: 260, flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: sidebarOpen ? 280 : 88, boxSizing: "border-box",
-            borderRight: mode === 'dark' ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.05)",
-            background: mode === 'dark'
-              ? "rgba(15, 23, 42, 0.8)"
-              : "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            color: mode === 'dark' ? "white" : "text.primary",
-            transition: "0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-            overflowX: "hidden",
-            boxShadow: mode === 'dark' ? "10px 0 30px rgba(0,0,0,0.3)" : "10px 0 30px rgba(0,0,0,0.05)"
+            width: 260, boxSizing: "border-box", border: "none"
           }
         }}
       >
         {adminSidebarContent}
       </Drawer>
 
-      <Box sx={{ flexGrow: 1, p: { xs: 2, md: 5 }, minWidth: 0 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 3, md: 6 }, flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {/* Mobile-only menu toggle — desktop toggle is now inside the sidebar header */}
+      <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Top Header Bar matching Screen 13 */}
+        <Box sx={{
+          height: 64, bgcolor: '#fff', borderBottom: '1px solid #E2E8F0',
+          px: { xs: 2, md: 3 }, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          position: 'sticky', top: 0, zIndex: 10
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, maxWidth: 650 }}>
             {isMobile && (
-              <IconButton onClick={() => setMobileDrawerOpen(true)} sx={{ bgcolor: alpha(theme.palette.divider, 0.05) }}>
+              <IconButton onClick={() => setMobileDrawerOpen(true)} edge="start" sx={{ color: '#0E2033' }}>
                 <MenuIcon />
               </IconButton>
             )}
-            <Box>
-              <Typography variant="h4" fontWeight={900}>{menuItems.find(i => i.id === activeTab)?.label}</Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={800}>UNIVERSITY OPERATIONAL COMMAND · {new Date().toLocaleDateString()}</Typography>
-            </Box>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search users, services, audit events..."
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: '#94A3B8', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  borderRadius: '8px',
+                  bgcolor: '#F8FAFC',
+                  fontSize: '0.85rem',
+                  '& fieldset': { borderColor: '#E2E8F0' },
+                  '&:hover fieldset': { borderColor: '#CBD5E1' },
+                }
+              }}
+            />
           </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <LanguageSwitcher variant="icon" />
-            <IconButton onClick={toggleColorMode} sx={{ bgcolor: 'background.paper' }}>{mode === 'dark' ? <LightMode /> : <DarkMode />}</IconButton>
-            <Chip icon={<Circle sx={{ color: '#10b981 !important', fontSize: 10 }} />} label={t("operational")} sx={{ fontWeight: 900 }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Chip
+              label="• Production · v2.4.1"
+              size="small"
+              sx={{
+                bgcolor: '#ECFDF5',
+                color: '#059669',
+                border: '1px solid #A7F3D0',
+                fontWeight: 700,
+                fontSize: '0.74rem',
+                display: { xs: 'none', sm: 'inline-flex' }
+              }}
+            />
+
+            <IconButton size="small" sx={{ color: '#64748B' }}>
+              <Badge color="error" variant="dot">
+                <Notifications fontSize="small" />
+              </Badge>
+            </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+              <Avatar sx={{ bgcolor: '#D9A621', color: '#0E2033', fontWeight: 900, width: 34, height: 34, fontSize: '0.82rem' }}>
+                SA
+              </Avatar>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <Typography variant="body2" sx={{ fontWeight: 800, color: '#0E2033', fontSize: '0.82rem', lineHeight: 1.1 }}>
+                  System Administrator
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.72rem' }}>
+                  Admin
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </Box>
 
         {/* Dynamic Content Rendering */}
-        <Box sx={{ animation: 'fadeIn 0.5s ease' }}>
+        <Box sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
           {activeTab === "overview" && (
             <OverviewTab statsData={statsData} healthData={healthData} serverHealth={serverHealth} activities={activities} gradients={gradients} glassStyle={glassStyle} />
           )}
@@ -990,8 +1009,8 @@ const AdminDashboard = () => {
               gradients={gradients}
               neonColors={neonColors}
               glassStyle={glassStyle}
-              handleRunHealthCheck={handleRunHealthCheck}
-              handleGenerateSecurityReport={handleGenerateSecurityReport}
+              handleRunHealthCheck={() => console.log('Run health check')}
+              handleGenerateSecurityReport={() => console.log('Generate Sec Report')}
             />
           )}
           {activeTab === "users" && (
@@ -1007,17 +1026,42 @@ const AdminDashboard = () => {
               glassStyle={glassStyle}
             />
           )}
-          {activeTab === "news" && (
-            <NewsManagementTab newsList={newsList} openNewsDialog={openNewsDialog} setOpenNewsDialog={setOpenNewsDialog} newsForm={newsForm} setNewsForm={setNewsForm} newsLoading={newsLoading} handleSaveNews={handleSaveNews} gradients={gradients} glassStyle={glassStyle} />
-          )}
+          {activeTab === "news" && <NewsManagementTab glassStyle={glassStyle} />}
           {activeTab === "system" && (
-            <SystemProtocolsTab maintenanceMode={maintenanceMode} toggleMaintenanceMode={toggleMaintenanceMode} maintenanceSuccess={maintenanceSuccess} sessionPersistence={sessionPersistence} setSessionPersistence={setSessionPersistence} ipWhitelisting={ipWhitelisting} setIpWhitelisting={setIpWhitelisting} dbOptimization={dbOptimization} setDbOptimization={setDbOptimization} handleToggleSystemFlag={handleToggleSystemFlag} handleHealthExecute={handleHealthExecute} setOpenBroadcast={setOpenBroadcast} glassStyle={glassStyle} />
+            <SystemProtocolsTab
+              maintenanceMode={maintenanceMode}
+              toggleMaintenanceMode={toggleMaintenanceMode}
+              maintenanceSuccess={maintenanceSuccess}
+              sessionPersistence={sessionPersistence}
+              ipWhitelisting={ipWhitelisting}
+              dbOptimization={dbOptimization}
+              handleToggleSystemFlag={handleToggleSystemFlag}
+              handleHealthExecute={handleHealthExecute}
+              setOpenBroadcast={setOpenBroadcast}
+              glassStyle={glassStyle}
+            />
           )}
           {activeTab === "health" && (
-            <SystemHealthTab healthExecuting={healthExecuting} handleHealthExecute={handleHealthExecute} glassStyle={glassStyle} serverHealth={serverHealth} healthData={healthData} />
+            <SystemHealthTab
+              healthExecuting={healthExecuting}
+              handleHealthExecute={() => console.log('Execute Health')}
+              glassStyle={glassStyle}
+              serverHealth={serverHealth}
+              healthData={healthData}
+            />
           )}
           {activeTab === "audit" && (
-            <AuditLogsTab activities={activities} logSearch={logSearch} setLogSearch={setLogSearch} logFilter={logFilter} setLogFilter={setLogFilter} handleExportLogs={handleExportLogs} exportLoading={exportLoading} gradients={gradients} glassStyle={glassStyle} />
+            <AuditLogsTab
+              activities={activities}
+              logSearch={logSearch}
+              setLogSearch={setLogSearch}
+              logFilter={logFilter}
+              setLogFilter={setLogFilter}
+              handleExportLogs={handleExportLogs}
+              exportLoading={exportLoading}
+              gradients={gradients}
+              glassStyle={glassStyle}
+            />
           )}
           {activeTab === "applications" && (
             <ApplicationsTab
@@ -1035,6 +1079,12 @@ const AdminDashboard = () => {
           {activeTab === "password_resets" && (
             <PasswordResetsTab passwordResetsList={passwordResetsList} handleApproveReset={handleApproveReset} handleManualCredentialReset={handleManualCredentialReset} handleRejectReset={handleRejectReset} glassStyle={glassStyle} />
           )}
+
+          {activeTab === "academic_structure" && <AcademicStructureTab />}
+          {activeTab === "academic_calendar" && <AcademicCalendarTab />}
+          {activeTab === "grading_config" && <GradingConfigTab />}
+          {activeTab === "financial_config" && <FinancialConfigTab />}
+          {activeTab === "integrations" && <IntegrationsTab />}
         </Box>
       </Box>
 

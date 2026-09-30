@@ -1,60 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box, Typography, Button, Grid, Card, CardContent,
-  Stack, Avatar, Chip, Tooltip, IconButton,
-  Dialog, DialogTitle, DialogContent, TextField, alpha,
-  MenuItem, Select, FormControl, InputLabel, Snackbar, Alert
-} from '@mui/material';
+  Box, Card, Typography, Stack, TextField, MenuItem, Button,
+  TableContainer, Table, TableHead, TableRow, TableCell, TableBody,
+  Chip, useTheme, Grid, IconButton, Avatar, Tooltip, LinearProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, CircularProgress
+} from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
-  Add, AccountTree, Edit, Delete, School, LocationOn,
-  Timer, Lock, CheckCircle, Error
-} from '@mui/icons-material';
-import { departmentsAPI } from '../../../services/api';
-import { useAuth } from '../../../context/AuthContext';
+  AccountBalance, People, LibraryBooks, TrendingUp, Search,
+  Download, School, Business, BarChart, Group, Percent, Add, Edit, Delete, Lock
+} from "@mui/icons-material";
+import { departmentsAPI } from "../../../services/api";
+import { useAuth } from "../../../context/AuthContext";
 
-const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
+export default function DepartmentsTab({
+  departments: departmentsProp = [],
+  colleges = [],
+  students = [],
+  courses = [],
+  glassStyle,
+  setDepartments: setParentDepartments
+}) {
   const { logAuditActivity, verifyOTP, markOTPUsed } = useAuth();
+  const theme = useTheme();
+  const [search, setSearch] = useState("");
 
-  // Local UI State for Department Dialog
+  // Local state so delete/create updates instantly
+  const [departments, setDepartments] = useState(departmentsProp);
+  const fetchDepts = useCallback(async () => {
+    try { const r = await departmentsAPI.getAll(); setDepartments(r.data); } catch (e) { }
+  }, []);
+  useEffect(() => {
+    if (departmentsProp?.length) setDepartments(departmentsProp);
+    else fetchDepts();
+  }, [departmentsProp, fetchDepts]);
+
   const [openDeptDialog, setOpenDeptDialog] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
-  const [deptForm, setDeptForm] = useState({
-    name: "",
-    code: "",
-    description: "",
-    headName: "",
-    headEmail: "",
-    collegeId: "",
-    duration: "4 Years",
-    seats: 100,
-    requirements: "",
-    iconUrl: "",
-    color: "#1976d2",
-    isPublished: true,
-    admissionOpen: true,
-    requiredDocuments: "Transcript, ID/Passport, Photo"
-  });
+  const [deptForm, setDeptForm] = useState({ name: "", collegeId: "", hod: "", college: "", code: "" });
   const [deptOtp, setDeptOtp] = useState("");
+  const [deptLoading, setDeptLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, dept: null, loading: false });
 
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
+  const showSnackbar = (message, severity = 'success') => setSnackbar({ open: true, message, severity });
 
-  const handleOpenDeptDialog = (dept = null) => {
+  const handleOpenDialog = (dept = null) => {
     if (dept) {
       setEditingDept(dept);
-      setDeptForm({
-        ...dept,
-        collegeId: String(dept.collegeId?._id || dept.collegeId?.id || dept.collegeId || "")
-      });
+      setDeptForm({ name: dept.name, collegeId: dept.collegeId?._id || dept.collegeId, hod: dept.hod, college: dept.college, code: dept.code || "" });
+      setDeptOtp("EXEMPT_FOR_EDIT");
     } else {
       setEditingDept(null);
-      setDeptForm({
-        name: "", code: "", description: "", headName: "", headEmail: "", collegeId: "",
-        duration: "4 Years", seats: 100, requirements: "", iconUrl: "", color: "#1976d2",
-        isPublished: true, admissionOpen: true, requiredDocuments: "Transcript, ID/Passport, Photo"
-      });
+      setDeptForm({ name: "", collegeId: "", hod: "", college: "", code: "" });
       setDeptOtp("");
     }
     setOpenDeptDialog(true);
@@ -62,212 +60,199 @@ const DepartmentsTab = ({ departments, colleges, isDark, glassStyle }) => {
 
   const handleSaveDept = async (e) => {
     e.preventDefault();
-    console.log("Saving department...", deptForm);
+    setDeptLoading(true);
     try {
       if (!editingDept) {
-        // Verify OTP for new department creation
         const otpResult = await verifyOTP(deptOtp, "DEPARTMENT_CREATE");
         if (!otpResult.success) {
           showSnackbar(otpResult.message || "Invalid or expired OTP.", "error");
+          setDeptLoading(false);
           return;
         }
 
-        const data = { ...deptForm };
-        delete data.id;
-        delete data._id; // Ensure no id from previous edits
+        const selectedCol = colleges.find(c => c.id === deptForm.collegeId || c._id === deptForm.collegeId);
+        const payload = { ...deptForm, college: selectedCol ? selectedCol.name : "" };
 
-        await departmentsAPI.create({
-          ...data,
-          status: "active" // Changed from pending_credentials for demo ease
-        });
-        showSnackbar("Academic Sector initialized successfully!", "success");
+        await departmentsAPI.create(payload);
+        await markOTPUsed(otpResult.otpId);
+        logAuditActivity("Department Creation", `Created new department: ${deptForm.name}`);
+        const res = await departmentsAPI.getAll();
+        setDepartments(res.data);
+        if (setParentDepartments) setParentDepartments(res.data);
+        showSnackbar("Department provisioned successfully!", "success");
       } else {
-        const data = { ...deptForm };
-        const id = data._id || data.id;
-        delete data.id;
-        delete data._id;
-        delete data.__v;
-        delete data.createdAt;
-        delete data.updatedAt;
-
-        if (!data.collegeId) {
-          // Don't include empty collegeId in update - keep existing value on server
-          delete data.collegeId;
-        }
-
-        await departmentsAPI.update(id, data);
-        showSnackbar("Academic Sector updated successfully!", "success");
+        const selectedCol = colleges.find(c => c.id === deptForm.collegeId || c._id === deptForm.collegeId);
+        const payload = { ...deptForm, college: selectedCol ? selectedCol.name : deptForm.college };
+        await departmentsAPI.update(editingDept.id || editingDept._id, payload);
+        logAuditActivity("Department Update", `Updated department: ${deptForm.name}`);
+        const res = await departmentsAPI.getAll();
+        setDepartments(res.data);
+        if (setParentDepartments) setParentDepartments(res.data);
+        showSnackbar("Department details updated.", "success");
       }
       setOpenDeptDialog(false);
-      setDeptOtp(""); // Reset OTP
-    } catch (error) {
-      console.error("Department error:", error);
-      showSnackbar(`Critical Error: ${error.message || "Unable to save department"}`, "error");
+    } catch (err) {
+      showSnackbar(`Error: ${err.response?.data?.message || err.message}`, "error");
+    } finally {
+      setDeptLoading(false);
     }
   };
 
-  const handleDeleteDept = async (id) => {
-    if (window.confirm("Permanently remove this academic sector?")) {
-      try {
-        await departmentsAPI.delete(id);
-        showSnackbar("Sector removed successfully!", "success");
-      } catch (error) {
-        console.error("Delete error:", error);
-        showSnackbar(`Failed to delete: ${error.message || error}`, "error");
-      }
+  const handleDeleteDept = (dept) => {
+    setDeleteDialog({ open: true, dept, loading: false });
+  };
+
+  const confirmDeleteDept = async () => {
+    const dept = deleteDialog.dept;
+    const id = dept?._id || dept?.id;
+    if (!id) { showSnackbar('Missing department ID.', 'error'); setDeleteDialog({ open: false, dept: null, loading: false }); return; }
+    setDeleteDialog(d => ({ ...d, loading: true }));
+    try {
+      await departmentsAPI.delete(String(id));
+      setDepartments(prev => prev.filter(d => String(d._id || d.id) !== String(id)));
+      if (setParentDepartments) setParentDepartments(prev => prev.filter(d => String(d._id || d.id) !== String(id)));
+      logAuditActivity('Department Deletion', `Deleted: ${dept.name}`);
+      showSnackbar(`"${dept.name}" removed successfully.`, 'success');
+    } catch (err) {
+      showSnackbar(`Delete failed: ${err.response?.data?.message || err.message}`, 'error');
+    } finally {
+      setDeleteDialog({ open: false, dept: null, loading: false });
     }
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+    <Box>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>Department Catalog</Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={1000} sx={{ letterSpacing: 2 }}>ACADEMIC INFRASTRUCTURE</Typography>
+          <Typography variant="h5" fontWeight={1000}>Departmental Oversite & Performance</Typography>
+          <Typography variant="caption" color="text.secondary" fontWeight={800}>MONITOR ENROLLMENT QUOTAS, ACADEMIC PERFORMANCE, AND RESOURCE UTILIZATION PER FACULTY SECTOR</Typography>
         </Box>
-        <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenDeptDialog()}
-          sx={{ borderRadius: 3, px: 4, py: 1.2, fontWeight: 1000, textTransform: 'none' }}>
-          Initialize Sector
-        </Button>
+        <Stack direction="row" spacing={2}>
+          <Button variant="outlined" startIcon={<Download />} sx={{ borderRadius: 3, fontWeight: 900 }}>Operational Report</Button>
+          <Button variant="contained" className="btn-premium" startIcon={<Add />} onClick={() => handleOpenDialog()} sx={{ borderRadius: 3, fontWeight: 900 }}>
+            Provision Department
+          </Button>
+        </Stack>
       </Box>
 
-      <Grid container spacing={3}>
-        {departments?.length === 0 ? (
-          <Grid item xs={12}>
-            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.3 }}>
-              <AccountTree sx={{ fontSize: 80, mb: 2 }} />
-              <Typography variant="h6" fontWeight={1000}>ESTABLISHING ACADEMIC NETWORK...</Typography>
-            </Box>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { label: 'Avg Enrollment', val: '84%', icon: <People />, color: '#10b981' },
+          { label: 'Resource Load', val: '72%', icon: <TrendingUp />, color: '#6366f1' },
+          { label: 'Academic Standing', val: '3.4 GPA', icon: <School />, color: '#a855f7' },
+          { label: 'Accredited Sectors', val: departments.length, icon: <Business />, color: '#f59e0b' },
+        ].map((s, i) => (
+          <Grid item xs={12} sm={6} md={3} key={i}>
+            <Card sx={{ ...glassStyle, p: 3, borderRadius: 5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: alpha(s.color, 0.1), color: s.color, borderRadius: 2.5 }}>{s.icon}</Avatar>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={1000}>{s.label.toUpperCase()}</Typography>
+                  <Typography variant="h5" fontWeight={1000}>{s.val}</Typography>
+                </Box>
+              </Box>
+            </Card>
           </Grid>
-        ) : (
-          departments?.map((dept) => (
-            <Grid item xs={12} sm={6} md={4} key={dept.id}>
-              <Card sx={{ ...glassStyle, borderRadius: 5, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Chip
-                    label={dept.admissionOpen ? "LIVE" : "CLOSED"}
-                    size="small"
-                    color={dept.admissionOpen ? "primary" : "error"}
-                    sx={{ fontWeight: 1000, fontSize: '0.6rem' }}
-                  />
-                  {dept.status === 'pending_credentials' && (
-                    <Chip label="PENDING PROVISIONING" size="small" color="warning" sx={{ fontWeight: 1000, fontSize: '0.6rem' }} />
-                  )}
-                </Box>
-                <CardContent sx={{ p: 3, pt: 0, flexGrow: 1 }}>
-                  <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', mb: 3, lineClamp: 3, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 60 }}>
-                    {dept.description}
-                  </Typography>
-                  <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: alpha(dept.color || '#1976d2', 0.1), color: dept.color || '#1976d2', width: 32, height: 32 }}>
-                        <School sx={{ fontSize: 18 }} />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="caption" display="block" sx={{ opacity: 0.6, fontWeight: 800 }}>FACULTY HEAD</Typography>
-                        <Typography variant="body2" fontWeight={1000}>{dept.headName || dept.faculty}</Typography>
-                        {dept.headEmail && (
-                          <Typography variant="caption" sx={{ opacity: 0.7 }}>{dept.headEmail}</Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </Stack>
-                </CardContent>
-                <Box sx={{ p: 2, px: 3, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Stack direction="row" spacing={1}>
-                    <Tooltip title="Edit Sector"><IconButton size="small" onClick={() => handleOpenDeptDialog(dept)} sx={{ color: 'primary.main' }}><Edit fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="Remove Sector"><IconButton size="small" onClick={() => handleDeleteDept(dept.id)} sx={{ color: 'error.main' }}><Delete fontSize="small" /></IconButton></Tooltip>
-                  </Stack>
-                  <Chip label={dept.code} size="small" variant="outlined" sx={{ fontWeight: 1000, fontSize: '0.65rem' }} />
-                </Box>
-              </Card>
-            </Grid>
-          ))
-        )}
+        ))}
       </Grid>
 
-      {/* Department Dialog */}
-      <Dialog open={openDeptDialog} onClose={() => setOpenDeptDialog(false)} maxWidth="md" fullWidth
-        PaperProps={{ sx: { ...glassStyle, borderRadius: 6, bgcolor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255,255,255,0.98)', backgroundImage: 'none' } }}>
+      <Card sx={{ ...glassStyle, borderRadius: 6, overflow: 'hidden' }}>
+        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: 2 }}>
+          <TextField size="small" placeholder="Search department name..." value={search} onChange={e => setSearch(e.target.value)} sx={{ flexGrow: 1, '& .MuiOutlinedInput-root': { borderRadius: 3 } }} InputProps={{ startAdornment: <Search sx={{ mr: 1, opacity: 0.5 }} /> }} />
+        </Box>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {["Department Sector", "Head of Dept", "Faculty", "Students", "Courses", "Intake Ratio", "Actions"].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {departments.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase())).map((d, i) => {
+                const studentCount = students.filter(s => s.department === d.name).length;
+                const courseCount = courses.filter(c => c.department === d.name).length;
+                const ratio = Math.min((studentCount / 400) * 100, 100);
+                return (
+                  <TableRow key={i}>
+                    <TableCell><Typography variant="body2" fontWeight={1000}>{d.name}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{d.hod || '—'}</Typography></TableCell>
+                    <TableCell><Typography variant="caption" fontWeight={800}>{d.college || '—'}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" fontWeight={900}>{studentCount}</Typography></TableCell>
+                    <TableCell><Typography variant="body2" fontWeight={900}>{courseCount}</Typography></TableCell>
+                    <TableCell sx={{ minWidth: 120 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress variant="determinate" value={ratio} sx={{ flexGrow: 1, height: 6, borderRadius: 4 }} />
+                        <Typography variant="caption" fontWeight={1000}>{ratio.toFixed(0)}%</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1}>
+                        <Tooltip title="Modify Details"><IconButton size="small" onClick={() => handleOpenDialog(d)}><Edit fontSize="small" /></IconButton></Tooltip>
+                        <Tooltip title="Disband Department"><IconButton size="small" color="error" onClick={() => handleDeleteDept(d)}><Delete fontSize="small" /></IconButton></Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+
+      {/* Initialize Department Dialog */}
+      <Dialog open={openDeptDialog} onClose={() => setOpenDeptDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { ...glassStyle, borderRadius: 6, p: 1 } }}>
         <DialogTitle sx={{ p: 4, pb: 1 }}>
-          <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif' }}>{editingDept ? 'Modify Sector' : 'Initialize Academic Sector'}</Typography>
+          <Typography variant="h5" fontWeight={1000}>{editingDept ? 'Modify Department' : 'Initialize Department'}</Typography>
         </DialogTitle>
         <form onSubmit={handleSaveDept}>
           <DialogContent sx={{ p: 4 }}>
             {!editingDept && (
               <Box sx={{ mb: 4, p: 3, borderRadius: 4, bgcolor: alpha('#6366f1', 0.05), border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1, letterSpacing: 1 }}>AUTHORIZATION REQUIRED</Typography>
-                <TextField
-                  fullWidth
-                  label="One-Time Password (DEPARTMENT_CREATE)"
-                  placeholder="Enter sector entry key"
-                  value={deptOtp}
-                  onChange={e => setDeptOtp(e.target.value)}
-                  required
-                  InputProps={{
-                    sx: { borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'white' },
-                    startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} />
-                  }}
-                />
-                <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>A valid OTP from the Administrator is required to establish new academic departments.</Typography>
+                <Typography variant="caption" color="primary.main" fontWeight={1000} display="block" sx={{ mb: 1 }}>AUTHENTICATION REQUIRED</Typography>
+                <TextField fullWidth label="OTP (DEPARTMENT_CREATE)" value={deptOtp} onChange={e => setDeptOtp(e.target.value)} required InputProps={{ sx: { borderRadius: 3 }, startAdornment: <Lock sx={{ mr: 1, opacity: 0.5 }} /> }} />
               </Box>
             )}
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Stack spacing={3}>
-                  <TextField fullWidth label="Department Name" value={deptForm.name} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} required />
-                  <TextField fullWidth label="Code" value={deptForm.code} onChange={e => setDeptForm({ ...deptForm, code: e.target.value })} required />
-                  <FormControl fullWidth required={!editingDept}>
-                    <InputLabel>Parent College{!editingDept ? " *" : ""}</InputLabel>
-                    <Select value={deptForm.collegeId || ""} label={"Parent College" + (!editingDept ? " *" : "")} onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })}>
-                      {editingDept && <MenuItem value=""><em>Keep existing</em></MenuItem>}
-                      {colleges?.map(c => {
-                        const cId = String(c._id || c.id || "");
-                        return <MenuItem key={cId} value={cId}>{c.name}</MenuItem>;
-                      })}
-                    </Select>
-                  </FormControl>
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Stack spacing={3}>
-                  <TextField fullWidth label="Faculty Head Name" value={deptForm.headName} onChange={e => setDeptForm({ ...deptForm, headName: e.target.value })} required />
-                  <TextField fullWidth label="Head Email" type="email" value={deptForm.headEmail} onChange={e => setDeptForm({ ...deptForm, headEmail: e.target.value })} required />
-                  <TextField fullWidth label="Duration" value={deptForm.duration} onChange={e => setDeptForm({ ...deptForm, duration: e.target.value })} />
-                  <TextField fullWidth label="Available Seats" type="number" value={deptForm.seats} onChange={e => setDeptForm({ ...deptForm, seats: e.target.value })} />
-                </Stack>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth multiline rows={4} label="About & Requirements" value={deptForm.requirements} onChange={e => setDeptForm({ ...deptForm, requirements: e.target.value })} required />
-              </Grid>
-            </Grid>
+            <Stack spacing={3}>
+              <TextField fullWidth label="Department Name" value={deptForm.name} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} required InputProps={{ sx: { borderRadius: 3 } }} />
+              <TextField fullWidth label="Department Code" value={deptForm.code} onChange={e => setDeptForm({ ...deptForm, code: e.target.value })} required InputProps={{ sx: { borderRadius: 3 } }} />
+              <TextField select fullWidth label="Parent College" value={deptForm.collegeId} onChange={e => setDeptForm({ ...deptForm, collegeId: e.target.value })} required InputProps={{ sx: { borderRadius: 3 } }}>
+                {colleges.map(c => (
+                  <MenuItem key={c._id || c.id} value={c._id || c.id}>{c.name}</MenuItem>
+                ))}
+              </TextField>
+              <TextField fullWidth label="Head of Department" value={deptForm.hod} onChange={e => setDeptForm({ ...deptForm, hod: e.target.value })} InputProps={{ sx: { borderRadius: 3 } }} />
+            </Stack>
           </DialogContent>
           <Box sx={{ p: 4, pt: 0, display: 'flex', gap: 2 }}>
-            <Button fullWidth variant="outlined" onClick={() => setOpenDeptDialog(false)} sx={{ borderRadius: 3, py: 1.5 }}>Cancel</Button>
-            <Button fullWidth variant="contained" type="submit" sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000 }}>
-              {editingDept ? 'Update Sector' : 'Establish Sector'}
+            <Button fullWidth variant="outlined" onClick={() => setOpenDeptDialog(false)} sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000 }}>Cancel</Button>
+            <Button fullWidth variant="contained" type="submit" disabled={deptLoading} sx={{ borderRadius: 3, py: 1.5, fontWeight: 1000 }}>
+              {deptLoading ? <CircularProgress size={24} color="inherit" /> : 'Execute Provision'}
             </Button>
           </Box>
         </form>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ borderRadius: 2, fontWeight: 700 }}
-        >
-          {snackbar.message}
-        </Alert>
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} variant="filled" sx={{ borderRadius: 2, fontWeight: 700 }}>{snackbar.message}</Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => !deleteDialog.loading && setDeleteDialog({ open: false, dept: null, loading: false })} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 900 }}>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete <strong>{deleteDialog.dept?.name}</strong>? This determines massive structural orphans.
+          </Typography>
+        </DialogContent>
+        <Box sx={{ p: 2, px: 3, display: 'flex', gap: 2 }}>
+          <Button fullWidth variant="outlined" onClick={() => setDeleteDialog({ open: false, dept: null, loading: false })} disabled={deleteDialog.loading} sx={{ borderRadius: 3, fontWeight: 900 }}>Cancel</Button>
+          <Button fullWidth variant="contained" color="error" onClick={confirmDeleteDept} disabled={deleteDialog.loading} sx={{ borderRadius: 3, fontWeight: 900 }}>
+            {deleteDialog.loading ? <CircularProgress size={22} color="inherit" /> : 'Delete Department'}
+          </Button>
+        </Box>
+      </Dialog>
     </Box>
   );
-};
-
-export default DepartmentsTab;
+}

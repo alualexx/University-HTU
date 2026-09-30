@@ -50,8 +50,7 @@ export default function CollegeDashboard() {
     const [loading, setLoading] = useState(true);
     const [college, setCollege] = useState(null);
     const [departments, setDepartments] = useState([]);
-    const [facultyList, setFacultyList] = useState([]);
-    const [allStudents, setAllStudents] = useState([]);
+    const [dashboardData, setDashboardData] = useState(null);
 
     const glass = {
         background: isDark ? "rgba(15,23,42,0.85)" : "rgba(255,255,255,0.85)",
@@ -63,21 +62,15 @@ export default function CollegeDashboard() {
         const loadInitialData = async () => {
             try {
                 // Determine college from context or login. Assuming admin is logging in.
-                // Fetch first college for demo purposes if context is not fully wired yet
-                const colls = await collegesAPI.getAll();
+                const colls = await collegesAPI.getAll(user?.email ? { deanEmail: user.email } : {});
                 const myCol = colls.data?.length ? colls.data[0] : null;
-                setCollege(myCol);
 
                 if (myCol) {
-                    const depts = await departmentsAPI.getAll({ collegeId: myCol._id || myCol.id });
-                    setDepartments(depts.data || []);
-                }
-
-                // Pre-fetch global staff list
-                const users = await usersAPI.getAll();
-                if (users.data) {
-                    setFacultyList(users.data.filter(u => u.role === "teacher"));
-                    setAllStudents(users.data.filter(u => u.role === "student"));
+                    const dashboardRes = await collegesAPI.getDashboardMetrics(myCol._id || myCol.id);
+                    const dbData = dashboardRes.data;
+                    setCollege(dbData.college);
+                    setDepartments(dbData.departments || []);
+                    setDashboardData(dbData);
                 }
             } catch (err) {
                 console.error("Failed to load college context:", err);
@@ -86,7 +79,7 @@ export default function CollegeDashboard() {
             }
         };
         loadInitialData();
-    }, []);
+    }, [user]);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -99,7 +92,7 @@ export default function CollegeDashboard() {
                     <CanvasIcon />
                 </Avatar>
                 <Box>
-                    <Typography variant="subtitle1" fontWeight={1000} sx={{ lineHeight: 1.1 }}>Command Core</Typography>
+                    <Typography variant="subtitle1" fontWeight={1000} sx={{ lineHeight: 1.1 }}>{college?.name || "Command Core"}</Typography>
                     <Typography variant="caption" fontWeight={800} color="text.secondary">College Admin</Typography>
                 </Box>
             </Box>
@@ -173,18 +166,18 @@ export default function CollegeDashboard() {
             <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 4 }, width: { sm: `calc(100% - ${drawerWidth}px)` }, pt: { xs: 10, sm: 4 } }}>
                 <Container maxWidth="xl" disableGutters>
                     {/* Render active module based on state */}
-                    {activeTab === "overview" && <OverviewTab college={college} departments={departments} students={allStudents.length} faculty={facultyList.length} />}
+                    {activeTab === "overview" && <OverviewTab college={college} departments={dashboardData?.departments} students={dashboardData?.studentCount} faculty={dashboardData?.facultyCount} researchProjects={dashboardData?.researchProjects} events={dashboardData?.events} pendingCourses={dashboardData?.pendingCourses} budget={dashboardData?.budget} deptPerf={dashboardData?.deptPerf} />}
                     {activeTab === "profile" && <ProfileTab college={college} setCollege={setCollege} />}
-                    {activeTab === "departments" && <DepartmentManagementTab departments={departments} collegeContext={college} facultyList={facultyList} />}
-                    {activeTab === "academic" && <AcademicOversightTab college={college} departments={departments} />}
-                    {activeTab === "faculty" && <FacultyStaffTab college={college} departments={departments} facultyList={facultyList} />}
-                    {activeTab === "students" && <StudentOversightTab departments={departments} students={allStudents.length} />}
-                    {activeTab === "financial" && <FinancialManagementTab />}
-                    {activeTab === "research" && <ResearchInnovationTab />}
+                    {activeTab === "departments" && <DepartmentManagementTab college={college} departments={departments} setDepartments={setDepartments} pendingCourses={dashboardData?.pendingCourses} setPendingCourses={(fn) => setDashboardData(prev => ({ ...prev, pendingCourses: typeof fn === "function" ? fn(prev?.pendingCourses || []) : fn }))} />}
+                    {activeTab === "academic" && <AcademicOversightTab college={college} departments={departments} courses={dashboardData?.courses} />}
+                    {activeTab === "faculty" && <FacultyStaffTab college={college} departments={departments} facultyList={dashboardData?.faculty} />}
+                    {activeTab === "students" && <StudentOversightTab departments={departments} studentsCount={dashboardData?.studentCount} students={dashboardData?.students} />}
+                    {activeTab === "financial" && <FinancialManagementTab budget={dashboardData?.budget} />}
+                    {activeTab === "research" && <ResearchInnovationTab researchProjects={dashboardData?.researchProjects} />}
                     {activeTab === "partnerships" && <PartnershipsTab />}
-                    {activeTab === "events" && <EventsCalendarTab />}
+                    {activeTab === "events" && <EventsCalendarTab events={dashboardData?.events} />}
                     {activeTab === "policy" && <PolicyGovernanceTab />}
-                    {activeTab === "reports" && <ReportsAnalyticsTab />}
+                    {activeTab === "reports" && <ReportsAnalyticsTab college={college} departments={departments} dashboardData={dashboardData} />}
                     {activeTab === "notifications" && <NotificationsTab />}
                 </Container>
             </Box>

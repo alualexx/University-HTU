@@ -2,56 +2,47 @@ import React, { useState } from 'react';
 import {
   Box, Container, Typography, Card, CardContent, TextField, Button,
   CircularProgress, Alert, Collapse, Stepper, Step, StepLabel,
-  useTheme, alpha, Divider, Chip, Fade, Stack, IconButton,
+  useTheme, alpha, Chip, Fade, Stack
 } from '@mui/material';
 import {
   Search as SearchIcon, Timeline, CheckCircle, Pending, Cancel,
-  ArrowBack, AssignmentInd, School, LockOutlined, InfoOutlined,
-  TrackChanges,
+  ArrowBack, School, LockOutlined, TrackChanges,
 } from '@mui/icons-material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../services/Firebase';
 import { applicationsAPI } from '../../services/api';
 
 const STATUS_STEPS = [
-  { label: 'Application Submitted', key: 'submitted', description: 'Application received and securely encrypted.' },
-  { label: 'Department Review', key: 'pending_dept_review', description: 'Under review by the academic department.' },
-  { label: 'Registrar Final Decision', key: 'registrar_decision', description: 'Final verification by the Office of the Registrar.' },
-  { label: 'Student Account Issued', key: 'enrolled', description: 'Institutional email and login provisioned.' },
+  { label: 'Application Initialized', key: 'submitted', description: 'Data packets received and encrypted securely.' },
+  { label: 'Departmental Processing', key: 'pending_dept_review', description: 'Subject under review by the academic core.' },
+  { label: 'Registrar Finalization', key: 'registrar_decision', description: 'Final verification protocol by the Central Registrar.' },
+  { label: 'Identity Provisioned', key: 'enrolled', description: 'Institutional access credentials deployed.' },
 ];
 
 const STATUS_LABELS = {
-  'pending_dept_review': 'Under Review',
-  'approved_by_dept': 'Dept Approved',
-  'rejected_by_dept': 'Application Declined',
-  'approved_by_registrar': 'Registration Authorized',
-  'final_approved': 'Admission Confirmed',
-  'rejected_by_registrar': 'Application Declined',
-  'enrolled': 'Enrolled / Active',
+  'pending_dept_review': 'Protocol Analyzing',
+  'approved_by_dept': 'Department Authorized',
+  'rejected_by_dept': 'Application Terminated',
+  'approved_by_registrar': 'Registration Cleared',
+  'final_approved': 'Admission Secured',
+  'rejected_by_registrar': 'Application Terminated',
+  'enrolled': 'Active Enrollment',
 };
 
-const TrackApplication = () => {
+export default function TrackApplication() {
   const theme = useTheme();
-  const navigate = useNavigate();
   const isDark = theme.palette.mode === 'dark';
-
   const [applicationId, setApplicationId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [applicationData, setApplicationData] = useState(null);
 
-  const normalizeReferenceId = (input) => {
-    // Just trim and uppercase, let the backend handle dash-insensitivity
-    return input.trim().toUpperCase();
-  };
+  const normalizeReferenceId = (input) => input.trim().toUpperCase();
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!applicationId.trim()) {
-      setError('Please enter your Protocol Reference ID.');
-      return;
-    }
+    if (!applicationId.trim()) return setError('Please enter your Protocol Reference ID.');
 
     setLoading(true);
     setError('');
@@ -67,22 +58,17 @@ const TrackApplication = () => {
             const paymentsRef = collection(db, "tuition_payments");
             const pq = query(paymentsRef, where("studentId", "==", appData.studentId), orderBy("timestamp", "desc"), limit(1));
             const paymentSnap = await getDocs(pq);
-            if (!paymentSnap.empty) {
-              appData.registrationStatus = paymentSnap.docs[0].data().status;
-            }
+            if (!paymentSnap.empty) appData.registrationStatus = paymentSnap.docs[0].data().status;
           } catch (paymentErr) {
-            console.error("Error fetching registration payments:", paymentErr);
+            console.error("Error fetching registration payments", paymentErr);
           }
         }
         setApplicationData(appData);
       } else {
-        setError('Application not found. Please check your Protocol Reference ID.');
+        setError('Application not found. Please re-enter your Reference Node ID.');
       }
     } catch (err) {
-      console.error('Error fetching application:', err);
-      setError(err.response?.status === 404
-        ? 'Application not found. Verify your Reference ID.'
-        : 'Connection lost. Please try again.');
+      setError(err.response?.status === 404 ? 'Application not found. Verify your Protocol ID.' : 'Connection unstable. Retry transmission.');
     } finally {
       setLoading(false);
     }
@@ -105,74 +91,70 @@ const TrackApplication = () => {
 
   return (
     <Box sx={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      pt: { xs: 12, md: 20 },
-      pb: 10,
-      position: 'relative',
-      overflow: 'hidden'
+      minHeight: '100vh', bgcolor: isDark ? '#0f172a' : '#f8fafc',
+      color: isDark ? 'white' : 'text.primary',
+      pt: { xs: 15, md: 22 }, pb: 15,
+      position: 'relative', overflow: 'hidden'
     }}>
-      {/* Background Orbs */}
-      <Box sx={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', top: -150, right: -150, background: 'radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%)', filter: 'blur(80px)' }} />
-      <Box sx={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', bottom: -100, left: -100, background: 'radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+      <Box sx={{ position: 'absolute', width: "60vw", height: "60vw", borderRadius: '50%', top: "-20%", right: "-10%", background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 60%)', filter: 'blur(100px)' }} />
+      <Box sx={{ position: 'absolute', width: "50vw", height: "50vw", borderRadius: '50%', bottom: "-10%", left: "-10%", background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 60%)', filter: 'blur(100px)' }} />
 
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
         <Fade in timeout={600}>
           <Box>
-            {/* Nav Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={6}>
               <Button
-                startIcon={<ArrowBack />} component={RouterLink} to="/"
-                sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none', fontWeight: 700, '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' } }}
+                startIcon={<ArrowBack />} component={RouterLink} to="/apply"
+                sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', textTransform: 'none', fontWeight: 800, borderRadius: 50, px: 2, '&:hover': { color: isDark ? 'white' : 'primary.main', bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' } }}
               >
-                Back to Home
+                Abort & Return
               </Button>
-              <Chip icon={<TrackChanges sx={{ fontSize: '1rem !important', color: 'primary.main !important' }} />} label="Real-time Tracking" sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: 'primary.main', fontWeight: 800, border: '1px solid rgba(99,102,241,0.2)' }} />
+              <Chip icon={<TrackChanges sx={{ fontSize: '1rem !important', color: isDark ? 'white !important' : 'inherit !important' }} />} label="LIVE TRACKING" sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.1)' : alpha(theme.palette.primary.main, 0.1), color: isDark ? 'white' : 'primary.main', fontWeight: 900, border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : alpha(theme.palette.primary.main, 0.2)}`, letterSpacing: 1 }} />
             </Stack>
 
-            {/* Search Card */}
-            <Card elevation={0} sx={{
-              borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)',
-              bgcolor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)',
-              overflow: 'hidden', mb: 6
+            <Card sx={{
+              borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}`,
+              background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(30px)',
+              overflow: 'hidden', mb: 6, boxShadow: isDark ? "0 20px 40px rgba(0,0,0,0.4)" : "0 20px 40px rgba(0,0,0,0.05)"
             }}>
-              <Box sx={{ height: 6, background: 'linear-gradient(90deg, #6366f1, #a855f7)' }} />
-              <CardContent sx={{ p: { xs: 4, md: 6 } }}>
-                <Box sx={{ textAlign: 'center', mb: 6 }}>
-                  <Typography variant="h3" fontWeight={900} color="white" sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', mb: 2 }}>
-                    Track Your <Box component="span" sx={{ color: 'primary.main' }}>Admission</Box>
+              <Box sx={{ height: 4, background: 'linear-gradient(90deg, #6366f1, #a855f7)' }} />
+              <CardContent sx={{ p: { xs: 4, md: 8 } }}>
+                <Box sx={{ textAlign: 'center', mb: 8 }}>
+                  <Typography variant="h2" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary', fontFamily: 'Outfit', letterSpacing: '-0.02em', mb: 2 }}>
+                    Locate Your <Box component="span" sx={{ background: "linear-gradient(90deg, #6366f1, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Admission</Box>
                   </Typography>
-                  <Typography variant="body1" color="rgba(255,255,255,0.5)" fontWeight={500} sx={{ maxWidth: 500, mx: 'auto' }}>
-                    Enter your Protocol Reference ID to visualize your journey towards academic excellence.
+                  <Typography variant="body1" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', fontWeight: 500, maxWidth: 500, mx: 'auto' }}>
+                    Deploy your Protocol Reference ID to visualize your structural journey towards academic excellence.
                   </Typography>
                 </Box>
 
                 <Box component="form" onSubmit={handleSearch}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
                     <TextField
-                      fullWidth variant="outlined" placeholder="e.g. ABCD—123456"
+                      fullWidth variant="outlined" placeholder="REFERENCE NODE (e.g. ABCD—123456)"
                       value={applicationId} onChange={(e) => setApplicationId(e.target.value)}
-                      helperText="You can use a hyphen (-) or an em-dash (—)"
-                      FormHelperTextProps={{ sx: { color: 'rgba(255,255,255,0.4)', fontWeight: 600 } }}
+                      helperText="Hyphens (-) or em-dashes (—) are valid connectors."
+                      FormHelperTextProps={{ sx: { color: isDark ? 'rgba(255,255,255,0.4)' : 'text.secondary', fontWeight: 600, mt: 1.5 } }}
                       sx={{
                         "& .MuiOutlinedInput-root": {
-                          borderRadius: 3, bgcolor: 'rgba(0,0,0,0.2)', color: 'white', fontWeight: 600,
-                          "& fieldset": { borderColor: 'rgba(255,255,255,0.1)' },
-                          "&:hover fieldset": { borderColor: 'primary.main' },
-                          "&.Mui-focused fieldset": { borderColor: 'primary.main' },
-                        }
+                          borderRadius: 50, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', color: isDark ? 'white' : 'text.primary', fontWeight: 800,
+                          "& fieldset": { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+                          "&:hover fieldset": { borderColor: 'rgba(99, 102, 241, 0.5)' },
+                          "&.Mui-focused fieldset": { borderColor: '#6366f1' },
+                        },
+                        "& .MuiInputBase-input::placeholder": { color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)", opacity: 1, fontWeight: 600 }
                       }}
                     />
                     <Button
                       type="submit" variant="contained" disabled={loading}
-                      startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
-                      sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 800, textTransform: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }}
+                      startIcon={loading ? <CircularProgress size={18} sx={{ color: "white" }} /> : <SearchIcon />}
+                      sx={{ borderRadius: 50, px: 5, py: 2, height: 56, fontWeight: 900, textTransform: 'none', background: 'linear-gradient(135deg, #6366f1, #a855f7)', boxShadow: '0 8px 24px rgba(99,102,241,0.3)', "&:hover": { filter: "brightness(1.2)" } }}
                     >
-                      {loading ? 'Decrypting...' : 'Track Status'}
+                      {loading ? 'Decrypting...' : 'Initiate Scan'}
                     </Button>
                   </Stack>
                   <Collapse in={Boolean(error)}>
-                    <Alert severity="error" sx={{ mt: 3, borderRadius: 3, bgcolor: 'rgba(244,67,54,0.08)', color: '#f44336', border: '1px solid rgba(244,67,54,0.2)' }}>
+                    <Alert severity="error" sx={{ mt: 4, borderRadius: 4, bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: 800 }}>
                       {error}
                     </Alert>
                   </Collapse>
@@ -180,40 +162,38 @@ const TrackApplication = () => {
               </CardContent>
             </Card>
 
-            {/* Results Area */}
             <Collapse in={Boolean(applicationData)}>
               {applicationData && (
                 <Box>
-                  {/* Summary Block */}
-                  <Card elevation={0} sx={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(20px)', mb: 4 }}>
-                    <CardContent sx={{ p: 4 }}>
+                  <Card sx={{ borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.9)', backdropFilter: 'blur(30px)', mb: 5, boxShadow: isDark ? "0 20px 40px rgba(0,0,0,0.4)" : "0 20px 40px rgba(0,0,0,0.05)" }}>
+                    <CardContent sx={{ p: 5 }}>
                       <Grid container spacing={4} alignItems="center">
                         <Grid item xs={12} md={7}>
-                          <Stack direction="row" spacing={2.5} alignItems="center">
-                            <Box sx={{ width: 64, height: 64, borderRadius: 4, bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 24px rgba(99,102,241,0.3)' }}>
+                          <Stack direction="row" spacing={3} alignItems="center">
+                            <Box sx={{ width: 64, height: 64, borderRadius: 4, background: 'linear-gradient(135deg, #3b82f6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)' }}>
                               <School sx={{ color: 'white', fontSize: 32 }} />
                             </Box>
                             <Box>
-                              <Typography variant="h5" fontWeight={900} color="white" sx={{ fontFamily: 'Outfit, sans-serif' }}>
+                              <Typography variant="h4" fontWeight={1000} sx={{ color: isDark ? 'white' : 'text.primary', fontFamily: 'Outfit' }}>
                                 {applicationData.firstName} {applicationData.lastName}
                               </Typography>
-                              <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                              <Typography variant="body2" fontWeight={900} color="#3b82f6" sx={{ textTransform: 'uppercase', letterSpacing: 2 }}>
                                 {applicationData.intendedMajor}
                               </Typography>
                             </Box>
                           </Stack>
                         </Grid>
                         <Grid item xs={12} md={5} sx={{ textAlign: { md: 'right' } }}>
-                          <Typography variant="caption" fontWeight={800} color="rgba(255,255,255,0.3)" sx={{ textTransform: 'uppercase', letterSpacing: 2, display: 'block', mb: 1 }}>
-                            Current Protocol
+                          <Typography variant="caption" fontWeight={900} sx={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'text.secondary', textTransform: 'uppercase', letterSpacing: 3, display: 'block', mb: 1.5 }}>
+                            CURRENT STATUS
                           </Typography>
                           <Chip
                             label={displayStatus}
                             sx={{
-                              fontWeight: 900, px: 2, py: 2.5, borderRadius: 3,
-                              bgcolor: isRejected ? 'rgba(244,67,54,0.1)' : 'rgba(16,185,129,0.1)',
-                              color: isRejected ? '#f44336' : '#10b981',
-                              border: `1px solid ${isRejected ? 'rgba(244,67,54,0.2)' : 'rgba(16,185,129,0.2)'}`
+                              fontWeight: 1000, px: 2, py: 3, borderRadius: 50, letterSpacing: 1, textTransform: "uppercase",
+                              bgcolor: isRejected ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                              color: isRejected ? '#ef4444' : '#10b981',
+                              border: `1px solid ${isRejected ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`
                             }}
                           />
                         </Grid>
@@ -221,18 +201,17 @@ const TrackApplication = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Journey Stepper */}
-                  <Card elevation={0} sx={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(20px)' }}>
-                    <CardContent sx={{ p: { xs: 4, md: 6 } }}>
-                      <Typography variant="h6" fontWeight={800} color="white" mb={5} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Timeline sx={{ color: 'primary.main' }} /> Admission Journey
+                  <Card sx={{ borderRadius: 6, border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.9)', backdropFilter: 'blur(30px)', boxShadow: isDark ? "0 20px 40px rgba(0,0,0,0.4)" : "0 20px 40px rgba(0,0,0,0.05)" }}>
+                    <CardContent sx={{ p: { xs: 4, md: 8 } }}>
+                      <Typography variant="h5" fontWeight={900} sx={{ color: isDark ? 'white' : 'text.primary', mb: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Timeline sx={{ color: '#3b82f6', fontSize: 30 }} /> Progression Log
                       </Typography>
 
                       <Stepper
                         activeStep={activeStep} orientation="vertical"
                         sx={{
-                          '& .MuiStepConnector-line': { minHeight: 60, borderLeft: '2px dashed rgba(255,255,255,0.1)' },
-                          '& .MuiStepConnector-root.Mui-active .MuiStepConnector-line': { borderLeft: '2px solid #6366f1' },
+                          '& .MuiStepConnector-line': { minHeight: 60, borderLeft: `2px dashed ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` },
+                          '& .MuiStepConnector-root.Mui-active .MuiStepConnector-line': { borderLeft: '2px solid #3b82f6' },
                           '& .MuiStepConnector-root.Mui-completed .MuiStepConnector-line': { borderLeft: '2px solid #10b981' },
                         }}
                       >
@@ -246,23 +225,23 @@ const TrackApplication = () => {
                               <StepLabel
                                 StepIconComponent={() => (
                                   <Box sx={{
-                                    width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    bgcolor: isFail ? 'rgba(244,67,54,0.1)' : isDone ? 'rgba(16,185,129,0.1)' : isActive ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.05)',
+                                    width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    bgcolor: isFail ? 'rgba(239, 68, 68, 0.1)' : isDone ? 'rgba(16, 185, 129, 0.1)' : isActive ? 'rgba(59, 130, 246, 0.1)' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
                                     border: '2px solid',
-                                    borderColor: isFail ? '#f44336' : isDone ? '#10b981' : isActive ? '#6366f1' : 'rgba(255,255,255,0.1)',
-                                    color: isFail ? '#f44336' : isDone ? '#10b981' : isActive ? '#6366f1' : 'rgba(255,255,255,0.3)',
-                                    transition: 'all 0.3s ease'
+                                    borderColor: isFail ? '#ef4444' : isDone ? '#10b981' : isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
+                                    color: isFail ? '#ef4444' : isDone ? '#10b981' : isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                                    transition: 'all 0.3s ease', boxShadow: isActive ? "0 0 20px rgba(59, 130, 246, 0.4)" : "none"
                                   }}>
-                                    {isFail ? <Cancel sx={{ fontSize: 24 }} /> : isDone ? <CheckCircle sx={{ fontSize: 24 }} /> : <Pending sx={{ fontSize: 24, animation: isActive ? 'pulse 2s infinite' : 'none' }} />}
+                                    {isFail ? <Cancel sx={{ fontSize: 26 }} /> : isDone ? <CheckCircle sx={{ fontSize: 26 }} /> : <Pending sx={{ fontSize: 26, animation: isActive ? 'pulse 2s infinite' : 'none' }} />}
                                   </Box>
                                 )}
                               >
                                 <Box sx={{ ml: 2 }}>
-                                  <Typography variant="subtitle1" fontWeight={800} color={isFail ? '#f44336' : isDone ? '#10b981' : isActive ? 'white' : 'rgba(255,255,255,0.35)'}>
+                                  <Typography variant="h6" fontWeight={900} color={isFail ? '#ef4444' : isDone ? '#10b981' : isActive ? (isDark ? 'white' : 'text.primary') : (isDark ? 'rgba(255,255,255,0.3)' : 'text.disabled')}>
                                     {step.label}
                                   </Typography>
-                                  <Typography variant="body2" color="rgba(255,255,255,0.4)" sx={{ mt: 0.5, fontWeight: 500, lineHeight: 1.6 }}>
-                                    {isFail ? 'Unfortunately, your journey ends here for this term.' : isActive ? step.description : isDone ? 'Stage successfully cleared.' : 'Waiting for previous stages...'}
+                                  <Typography variant="body1" sx={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'text.secondary', mt: 1, fontWeight: 500, lineHeight: 1.6 }}>
+                                    {isFail ? 'Unfortunately, your journey ends here for this term.' : isActive ? step.description : isDone ? 'Stage successfully cleared.' : 'Awaiting clearance...'}
                                   </Typography>
                                 </Box>
                               </StepLabel>
@@ -272,14 +251,14 @@ const TrackApplication = () => {
                       </Stepper>
 
                       {applicationData.status === 'enrolled' && (
-                        <Box sx={{ mt: 6, p: 3, borderRadius: 4, bgcolor: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: 2.5, alignItems: 'center' }}>
-                          <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <LockOutlined sx={{ color: 'white' }} />
+                        <Box sx={{ mt: 8, p: 4, borderRadius: 4, bgcolor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: 3, alignItems: 'center' }}>
+                          <Box sx={{ width: 56, height: 56, borderRadius: 4, bgcolor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: "0 0 20px rgba(16,185,129,0.4)" }}>
+                            <LockOutlined sx={{ color: 'white', fontSize: 28 }} />
                           </Box>
                           <Box>
-                            <Typography variant="subtitle2" fontWeight={800} color="#10b981">Action Required: Portal Access</Typography>
-                            <Typography variant="caption" color="rgba(255,255,255,0.5)" sx={{ lineHeight: 1.5, display: 'block', mt: 0.5 }}>
-                              Your student account is active. Please use the credentials sent to your registered contact number to login to the Portal.
+                            <Typography variant="h6" fontWeight={1000} color="#10b981">ACTION REQUIRED: SECURE LOGIN</Typography>
+                            <Typography variant="body2" sx={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'text.secondary', lineHeight: 1.5, display: 'block', mt: 1, fontWeight: 500 }}>
+                              Your student account is initialized. Utilize the credentials beamed to your registered communication device to access the Portal.
                             </Typography>
                           </Box>
                         </Box>
@@ -295,13 +274,11 @@ const TrackApplication = () => {
 
       <style>{`
         @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
+          0% { transform: scale(1); opacity: 1; boxShadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          70% { transform: scale(1); opacity: 1; boxShadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+          100% { transform: scale(1); opacity: 1; boxShadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
       `}</style>
     </Box>
   );
-};
-
-export default TrackApplication;
+}

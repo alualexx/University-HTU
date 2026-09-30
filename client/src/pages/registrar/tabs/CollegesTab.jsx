@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Grid, Card, CardContent,
   Stack, Avatar, Chip, Divider, Tooltip, IconButton,
@@ -11,8 +11,23 @@ import {
 import { collegesAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
-const CollegesTab = ({ colleges, isDark, glassStyle }) => {
+const CollegesTab = ({ colleges: collegesProp, isDark, glassStyle, setColleges: setParentColleges }) => {
   const { logAuditActivity, verifyOTP, markOTPUsed } = useAuth();
+
+  // Own local state so create/delete updates without parent re-render
+  const [colleges, setColleges] = useState(collegesProp || []);
+
+  const fetchColleges = useCallback(async () => {
+    try {
+      const res = await collegesAPI.getAll();
+      setColleges(res.data);
+    } catch (e) { /* silent fallback */ }
+  }, []);
+
+  useEffect(() => {
+    if (collegesProp?.length) setColleges(collegesProp);
+    else fetchColleges();
+  }, [collegesProp, fetchColleges]);
 
   // Local UI State for College Dialog
   const [openCollegeDialog, setOpenCollegeDialog] = useState(false);
@@ -29,6 +44,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
   const [collegeOtp, setCollegeOtp] = useState("");
   const [collegeLoading, setCollegeLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, college: null, loading: false });
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -83,9 +99,16 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
 
         await markOTPUsed(otpResult.otpId);
         logAuditActivity("College Creation", `Created new college: ${collegeForm.name}`);
-        showSnackbar("College created successfully! Pending Administrator provisioning.", "success");
+        const res = await collegesAPI.getAll();
+        setColleges(res.data);
+        if (setParentColleges) setParentColleges(res.data);
+        showSnackbar("College created successfully!", "success");
+      } else {
         await collegesAPI.update(editingCollege.id || editingCollege._id, collegeForm);
         logAuditActivity("College Update", `Updated college: ${collegeForm.name}`);
+        const res = await collegesAPI.getAll();
+        setColleges(res.data);
+        if (setParentColleges) setParentColleges(res.data);
         showSnackbar("College updated successfully", "success");
       }
       setOpenCollegeDialog(false);
@@ -98,18 +121,36 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
     }
   };
 
-  const handleDeleteCollege = async (collegeId) => {
-    if (window.confirm("Are you sure you want to delete this college? This will orphan all associated departments and data.")) {
-      try {
-        await collegesAPI.delete(collegeId);
-        logAuditActivity("College Deletion", `Deleted college with ID: ${collegeId}`);
-        showSnackbar("College removed successfully", "success");
-      } catch (err) {
-        console.error("Error deleting college:", err);
-        showSnackbar("Failed to delete college.", "error");
-      }
+  const handleDeleteCollege = (college) => {
+    setDeleteDialog({ open: true, college, loading: false });
+  };
+
+  const confirmDeleteCollege = async () => {
+    const college = deleteDialog.college;
+    const collegeId = college?._id || college?.id;
+    console.log('[DELETE] college object:', college);
+    console.log('[DELETE] resolved id:', collegeId);
+    if (!collegeId) {
+      showSnackbar('Cannot delete: missing college ID.', 'error');
+      setDeleteDialog({ open: false, college: null, loading: false });
+      return;
+    }
+    setDeleteDialog(d => ({ ...d, loading: true }));
+    try {
+      await collegesAPI.delete(String(collegeId));
+      setColleges(prev => prev.filter(c => String(c._id || c.id) !== String(collegeId)));
+      if (setParentColleges) setParentColleges(prev => prev.filter(c => String(c._id || c.id) !== String(collegeId)));
+      logAuditActivity('College Deletion', `Deleted college: ${college.name}`);
+      showSnackbar(`"${college.name}" deleted successfully.`, 'success');
+    } catch (err) {
+      console.error('Delete error:', err);
+      const msg = err.response?.data?.message || err.message;
+      showSnackbar(`Delete failed: ${msg}`, 'error');
+    } finally {
+      setDeleteDialog({ open: false, college: null, loading: false });
     }
   };
+
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -134,7 +175,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
           </Grid>
         ) : (
           colleges?.map((college) => (
-            <Grid item xs={12} sm={6} md={4} key={college.id}>
+            <Grid item xs={12} sm={6} md={4} key={college._id || college.id}>
               <Card sx={{
                 ...glassStyle,
                 borderRadius: 5,
@@ -179,7 +220,7 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
                 <Divider sx={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
                 <Box sx={{ p: 2, px: 3, display: 'flex', justifyContent: 'flex-end', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
                   <Tooltip title="Modify College"><IconButton size="small" onClick={() => handleOpenCollegeDialog(college)} sx={{ color: "primary.main", bgcolor: 'rgba(99, 102, 241, 0.05)' }}><Edit fontSize="small" /></IconButton></Tooltip>
-                  <Tooltip title="Delete College"><IconButton size="small" onClick={() => handleDeleteCollege(college.id)} sx={{ color: "error.main", bgcolor: 'rgba(239, 68, 68, 0.05)' }}><Delete fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title="Delete College"><IconButton size="small" onClick={() => handleDeleteCollege(college)} sx={{ color: "error.main", bgcolor: 'rgba(239, 68, 68, 0.05)' }}><Delete fontSize="small" /></IconButton></Tooltip>
                 </Box>
               </Card>
             </Grid>
@@ -271,6 +312,22 @@ const CollegesTab = ({ colleges, isDark, glassStyle }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => !deleteDialog.loading && setDeleteDialog({ open: false, college: null, loading: false })} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 900 }}>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete <strong>{deleteDialog.college?.name}</strong>? This will orphan all associated departments and data.
+          </Typography>
+        </DialogContent>
+        <Box sx={{ p: 2, px: 3, display: 'flex', gap: 2 }}>
+          <Button fullWidth variant="outlined" onClick={() => setDeleteDialog({ open: false, college: null, loading: false })} disabled={deleteDialog.loading} sx={{ borderRadius: 3, fontWeight: 900 }}>Cancel</Button>
+          <Button fullWidth variant="contained" color="error" onClick={confirmDeleteCollege} disabled={deleteDialog.loading} sx={{ borderRadius: 3, fontWeight: 900 }}>
+            {deleteDialog.loading ? <CircularProgress size={22} color="inherit" /> : 'Delete College'}
+          </Button>
+        </Box>
+      </Dialog>
     </Box>
   );
 };

@@ -1,41 +1,42 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const jwt = require('jsonwebtoken');
+const db = require('../database/db');
 
-const protect = async (req, res, next) => {
-  let token;
+const JWT_SECRET = process.env.JWT_SECRET || 'httu-holy-trinity-theology-secret-key-2026';
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select("-password");
-      if (!req.user) {
-        return res.status(401).json({ message: "Not authorized, user no longer exists." });
-      }
-      return next();
-    } catch (error) {
-      console.error("Token verification failed:", error);
-      return res.status(401).json({ message: "Not authorized, token failed." });
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authorization token required' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = db.findById('users', decoded.id);
+    if (!user || !user.is_active) {
+      return res.status(401).json({ error: 'User is inactive or not found' });
     }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
+}
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token." });
-  }
-};
-
-const requireRole = (...roles) => {
+function authorize(allowedRoles = []) {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        message: `Access denied. Role '${req.user.role}' is not permitted.`,
-      });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role) && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Insufficient privileges' });
     }
     next();
   };
-};
+}
 
-module.exports = { protect, requireRole };
+module.exports = {
+  authenticate,
+  authorize,
+  JWT_SECRET
+};

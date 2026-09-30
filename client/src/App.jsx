@@ -22,12 +22,16 @@ const Departments = React.lazy(() => import("./pages/public/Departments"));
 const AboutUs = React.lazy(() => import("./pages/public/AboutUs"));
 const StudentDashboard = React.lazy(() => import("./pages/student/StudentDashboard"));
 const RegistrarDashboard = React.lazy(() => import("./pages/registrar/RegistrarDashboard"));
+const DeanDashboard = React.lazy(() => import("./pages/dean/DeanDashboard"));
 const DepartmentDashboard = React.lazy(() => import("./pages/faculty/DepartmentDashboard"));
 const TeacherDashboard = React.lazy(() => import("./pages/faculty/TeacherDashboard"));
 const FacultyDashboard = React.lazy(() => import("./pages/faculty/FacultyDashboard"));
 const CollegeAdminDashboard = React.lazy(() => import("./pages/faculty/CollegeAdminDashboard"));
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const PresidentDashboard = React.lazy(() => import("./pages/admin/PresidentDashboard"));
 const FinanceDashboard = React.lazy(() => import("./pages/finance/FinanceDashboard"));
+const LibraryDashboard = React.lazy(() => import("./pages/library/LibraryDashboard"));
+const HRDashboard = React.lazy(() => import("./pages/hr/HRDashboard"));
 const CreateAccount = React.lazy(() => import("./pages/admin/CreateAccount"));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
 const ChangePassword = React.lazy(() => import("./pages/public/ChangePassword"));
@@ -115,6 +119,15 @@ function App() {
             />
 
             <Route
+              path="/library-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.LIBRARY, ROLES.ADMIN]}>
+                  <LibraryDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/admin/create-account/:applicationId"
               element={
                 <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
@@ -170,42 +183,46 @@ function App() {
               }
             />
 
-            {/* Teacher Dashboard */}
+            {/* Faculty (Instructor) Dashboard */}
             <Route
-              path="/teacher-dashboard"
+              path="/faculty-dashboard"
               element={
-                <ProtectedRoute allowedRoles={[ROLES.TEACHER]}>
+                <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
                   {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <TeacherDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Dean / Academic Admin Dashboard */}
+            <Route
+              path="/dean-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.DEAN, ROLES.ADMIN]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <DeanDashboard />}
                 </ProtectedRoute>
               }
             />
 
             {/* Department Head Dashboard */}
             <Route
-              path="/department-dashboard"
+              path="/depthead-dashboard"
               element={
-                <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
+                <ProtectedRoute allowedRoles={[ROLES.DEAN, ROLES.FACULTY, ROLES.ADMIN]}>
                   {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <DepartmentDashboard />}
                 </ProtectedRoute>
               }
             />
-
-            {/* Faculty College Dashboard */}
             <Route
-              path="/faculty-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={[ROLES.FACULTY]}>
-                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FacultyDashboard />}
-                </ProtectedRoute>
-              }
+              path="/department-dashboard"
+              element={<Navigate to="/depthead-dashboard" replace />}
             />
 
-            {/* College Administrator Dashboard (Dean) */}
+            {/* President / Executive Dashboard */}
             <Route
-              path="/college-dashboard"
+              path="/president-dashboard"
               element={
-                <ProtectedRoute allowedRoles={[ROLES.COLLEGE_ADMIN]}>
-                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <CollegeAdminDashboard />}
+                <ProtectedRoute allowedRoles={[ROLES.PRESIDENT]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <PresidentDashboard />}
                 </ProtectedRoute>
               }
             />
@@ -216,6 +233,26 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={[ROLES.FINANCE, ROLES.ADMIN]}>
                   {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <FinanceDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* HR Dashboard */}
+            <Route
+              path="/hr-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.HR, ROLES.ADMIN]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <HRDashboard />}
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Library Dashboard */}
+            <Route
+              path="/library-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.LIBRARIAN, ROLES.ADMIN]}>
+                  {maintenanceMode && !isAdmin ? <Navigate to="/maintenance" /> : <LibraryDashboard />}
                 </ProtectedRoute>
               }
             />

@@ -1,77 +1,102 @@
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const connectDB = require("./config/db");
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const eventBus = require('./events/eventBus');
 
 dotenv.config();
 
-// Connect to MongoDB then optionally auto-seed
-connectDB().then(async () => {
-  try {
-    const User = require("./models/User");
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      console.log("🌱 Database is empty. Running auto-seed...");
-      const { seedData } = require("./scripts/seed_logic");
-      await seedData();
-    }
-  } catch (err) {
-    console.warn("⚠️ Auto-seeding skipped:", err.message);
-  }
-});
-
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
-  credentials: true,
-}));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Request logger
-app.use((req, _res, next) => {
-  console.log(`${req.method} ${req.url}`);
+app.use((req, res, next) => {
+  console.log(`[HTTU-EMS] ${req.method} ${req.url}`);
   next();
 });
 
-// API Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/users", require("./routes/users"));
-app.use("/api/courses", require("./routes/courses"));
-app.use("/api/colleges", require("./routes/colleges"));
-app.use("/api/departments", require("./routes/departments"));
-app.use("/api/applications", require("./routes/applications"));
-app.use("/api/announcements", require("./routes/announcements"));
-app.use("/api/research", require("./routes/research"));
-app.use("/api/enrollments", require("./routes/enrollments"));
-app.use("/api/tuition", require("./routes/tuition"));
-app.use("/api/notifications", require("./routes/notifications"));
-app.use("/api/transcripts", require("./routes/transcripts"));
-app.use("/api/schedules", require("./routes/schedules"));
-app.use("/api/system", require("./routes/system"));
-app.use("/api/activity-logs", require("./routes/activity_logs"));
-app.use("/api/security-logs", require("./routes/security_logs"));
-app.use("/api/password-resets", require("./routes/password_resets"));
-app.use("/api/system-broadcasts", require("./routes/system_broadcasts"));
-app.use("/api/otps", require("./routes/otps"));
-app.use("/api/academic-events", require("./routes/academic_events"));
-app.use("/api/budgets", require("./routes/budgets"));
-app.use("/api/attendance", require("./routes/attendance"));
-app.use("/api/assignments", require("./routes/assignments"));
-
-// Health check
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", message: "University API Server is running." });
+// Health & System Status Endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'online',
+    institution: 'Ethiopia Holy Trinity Theology University (HTTU)',
+    system: 'Enterprise Management System (HTTU-EMS)',
+    version: '2.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ message: "Route not found." });
+// System Event Audit Trail
+app.get('/api/v1/events/audit', (req, res) => {
+  res.json({
+    success: true,
+    count: eventBus.history.length,
+    events: eventBus.getAuditTrail(100)
+  });
+});
+
+// Mount Domain Subsystem Routes with versioned and unversioned paths
+const authRoutes = require('./routes/authRoutes');
+const academicRoutes = require('./routes/academicRoutes');
+const sisRoutes = require('./routes/sisRoutes');
+const lmsRoutes = require('./routes/lmsRoutes');
+const hrRoutes = require('./routes/hrRoutes');
+const libraryRoutes = require('./routes/libraryRoutes');
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/auth', authRoutes);
+
+app.use('/api/v1/academic', academicRoutes);
+app.use('/api/academic', academicRoutes);
+
+app.use('/api/v1/sis', sisRoutes);
+app.use('/api/sis', sisRoutes);
+
+app.use('/api/v1/lms', lmsRoutes);
+app.use('/api/lms', lmsRoutes);
+
+app.use('/api/v1/hr', hrRoutes);
+app.use('/api/hr', hrRoutes);
+
+app.use('/api/v1/library', libraryRoutes);
+app.use('/api/library', libraryRoutes);
+
+// Direct shortcuts for core collections
+app.use('/api/departments', (req, res, next) => { req.url = '/departments'; academicRoutes(req, res, next); });
+app.use('/api/programs', (req, res, next) => { req.url = '/programs'; academicRoutes(req, res, next); });
+app.use('/api/courses', (req, res, next) => { req.url = '/courses'; academicRoutes(req, res, next); });
+app.use('/api/students', (req, res, next) => { req.url = '/students'; sisRoutes(req, res, next); });
+app.use('/api/applications', (req, res, next) => { req.url = '/admissions/applications'; sisRoutes(req, res, next); });
+
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    requested_url: req.url,
+    institution: 'Ethiopia Holy Trinity Theology University'
+  });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[HTTU-EMS Error]', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`================================================================`);
+  console.log(` Ethiopia Holy Trinity Theology University (HTTU)`);
+  console.log(` Enterprise Management System - API Gateway running on port ${PORT}`);
+  console.log(` Academic, SIS, LMS, HR, and Library Subsystems ACTIVE`);
+  console.log(`================================================================`);
 });
+
+module.exports = app;

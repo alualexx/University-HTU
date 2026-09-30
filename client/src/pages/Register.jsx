@@ -192,14 +192,14 @@ const Register = () => {
         docsBase64[key] = await fileToBase64(file);
       }
 
+      const { role, ...cleanFormData } = formData;
       const applicationData = {
-        ...formData,
+        ...cleanFormData,
         documents: {
           ...docsBase64,
           photo: await fileToBase64(photoFile),
         },
         referenceId: referenceIdPreview,
-        status: "pending_dept_review",
         ipAddress: userIp || "Unknown",
       };
 

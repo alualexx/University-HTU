@@ -3,78 +3,59 @@ import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
     Box, Container, Typography, Grid, Card, CardContent, Button,
     TextField, MenuItem, Chip, LinearProgress, alpha, Stack,
-    CircularProgress, Fade, Stepper, Step, StepLabel, Divider,
+    CircularProgress, Fade
 } from "@mui/material";
 import {
-    Person, School, Description, CloudUpload, CheckCircle,
-    ArrowBack, ArrowForward, Send, AssignmentInd, Phone,
-    CalendarToday, Public, Male, Female, ArticleOutlined,
-    LockOutlined, InfoOutlined,
+    Person, School, CloudUpload, CheckCircle,
+    ArrowBack, ArrowForward, Send, AssignmentInd,
+    Male, Female, ArticleOutlined, LockOutlined
 } from "@mui/icons-material";
-import { collection, serverTimestamp, addDoc } from "firebase/firestore";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../../services/Firebase";
 import { applicationsAPI, departmentsAPI } from "../../services/api";
 
-/* ── Department meta helper ────────────────────────────── */
 const getDeptMeta = (dept) => {
-    if (!dept) return { color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", code: "DEPT" };
+    if (!dept) return { color: "#D9A621", gradient: "linear-gradient(135deg,#0E2033,#1a365d)", code: "THEO" };
     const n = (dept.name || "").toLowerCase();
-    if (n.includes("computer") || n.includes("software") || n.includes("it")) return { color: "#3b82f6", gradient: "linear-gradient(135deg,#3b82f6,#2563eb)", code: dept.code || "CS" };
-    if (n.includes("engineering")) return { color: "#f59e0b", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", code: dept.code || "ENG" };
-    if (n.includes("science")) return { color: "#10b981", gradient: "linear-gradient(135deg,#10b981,#059669)", code: dept.code || "SCI" };
-    if (n.includes("business") || n.includes("management") || n.includes("finance")) return { color: "#8b5cf6", gradient: "linear-gradient(135deg,#8b5cf6,#7c3aed)", code: dept.code || "BBA" };
-    if (n.includes("art") || n.includes("design") || n.includes("architecture")) return { color: "#ec4899", gradient: "linear-gradient(135deg,#ec4899,#db2777)", code: dept.code || "ART" };
-    if (n.includes("law")) return { color: "#64748b", gradient: "linear-gradient(135deg,#64748b,#475569)", code: dept.code || "LAW" };
-    if (n.includes("medicine") || n.includes("medical")) return { color: "#e53935", gradient: "linear-gradient(135deg,#e53935,#ef9a9a)", code: dept.code || "MED" };
-    if (n.includes("theology") || n.includes("divinity") || n.includes("religion")) return { color: "#7c4dff", gradient: "linear-gradient(135deg,#7c4dff,#651fff)", code: dept.code || "THEO" };
-    return { color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", code: dept.code || "DEPT" };
+    if (n.includes("biblical")) return { color: "#D9A621", gradient: "linear-gradient(135deg,#D9A621,#b45309)", code: "BIB" };
+    if (n.includes("theology") || n.includes("systematic")) return { color: "#12808C", gradient: "linear-gradient(135deg,#12808C,#0d5c64)", code: "THEO" };
+    if (n.includes("history")) return { color: "#D9A621", gradient: "linear-gradient(135deg,#D9A621,#92400e)", code: "CHIS" };
+    if (n.includes("pastoral")) return { color: "#12808C", gradient: "linear-gradient(135deg,#12808C,#047857)", code: "PAST" };
+    if (n.includes("liturg")) return { color: "#D9A621", gradient: "linear-gradient(135deg,#D9A621,#b45309)", code: "LIT" };
+    if (n.includes("music") || n.includes("yared")) return { color: "#12808C", gradient: "linear-gradient(135deg,#12808C,#0369a1)", code: "CHM" };
+    if (n.includes("ge'ez") || n.includes("language")) return { color: "#D9A621", gradient: "linear-gradient(135deg,#D9A621,#78350f)", code: "GEZ" };
+    return { color: "#D9A621", gradient: "linear-gradient(135deg,#0E2033,#1e293b)", code: dept.code || "HTTU" };
 };
 
 const STEPS = ["Personal Info", "Academic Background", "Documents & Statement", "Review & Submit"];
 
-/* ── Success Screen ─────────────────────────────────────── */
+/* ── Success Screen ── */
 const SuccessScreen = ({ applicationId, applicantName, department }) => (
-    <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#0f172a,#1e293b)", position: "relative", overflow: "hidden" }}>
-        <Box sx={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", top: -100, right: -100, background: "radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 70%)", filter: "blur(60px)" }} />
+    <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#060913", position: "relative", overflow: "hidden" }}>
+        <Box sx={{ position: "absolute", width: "60vw", height: "60vw", borderRadius: "50%", top: "-20%", right: "-10%", background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 60%)", filter: "blur(100px)" }} />
         <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
             <Fade in timeout={600}>
-                <Card elevation={0} sx={{ borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", bgcolor: "rgba(255,255,255,0.02)", backdropFilter: "blur(20px)", overflow: "hidden", textAlign: "center" }}>
-                    <Box sx={{ height: 6, background: "linear-gradient(90deg,#6366f1,#a855f7,#ec4899)" }} />
+                <Card sx={{ borderRadius: 6, border: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)", backdropFilter: "blur(30px)", overflow: "hidden", textAlign: "center" }}>
+                    <Box sx={{ height: 6, background: "linear-gradient(90deg, #10b981, #3b82f6)" }} />
                     <CardContent sx={{ p: { xs: 5, md: 8 } }}>
-                        <Box sx={{ width: 96, height: 96, borderRadius: "50%", mx: "auto", mb: 4, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <CheckCircle sx={{ fontSize: 52, color: "#10b981" }} />
+                        <Box sx={{ width: 100, height: 100, borderRadius: "50%", mx: "auto", mb: 4, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 30px rgba(16,185,129,0.2)" }}>
+                            <CheckCircle sx={{ fontSize: 56, color: "#10b981" }} />
                         </Box>
-                        <Chip label="APPLICATION SUBMITTED" sx={{ bgcolor: "rgba(16,185,129,0.1)", color: "#10b981", fontWeight: 800, letterSpacing: 1, mb: 3, border: "1px solid rgba(16,185,129,0.2)" }} />
-                        <Typography variant="h3" fontWeight={900} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em", mb: 2 }}>
-                            You're on your way, <Box component="span" sx={{ color: "primary.main" }}>{applicantName.split(" ")[0]}</Box>
+                        <Chip label="APPLICATION SECURED" sx={{ bgcolor: "rgba(16,185,129,0.15)", color: "#10b981", fontWeight: 1000, letterSpacing: 2, textTransform: 'uppercase', mb: 3, border: "1px solid rgba(16,185,129,0.3)" }} />
+                        <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit", mb: 2 }}>
+                            You're in the queue, <Box component="span" sx={{ color: "#10b981" }}>{applicantName.split(" ")[0]}</Box>
                         </Typography>
-                        <Typography color="rgba(255,255,255,0.45)" sx={{ lineHeight: 1.8, mb: 5, fontSize: "1.05rem" }}>
-                            Your application for <strong style={{ color: "rgba(255,255,255,0.7)" }}>{department}</strong> has been securely submitted to the Registrar's Office.
+                        <Typography color="rgba(255,255,255,0.5)" sx={{ lineHeight: 1.8, mb: 5, fontSize: "1.1rem" }}>
+                            Your application profile for <span style={{ color: "white", fontWeight: 800 }}>{department}</span> is currently transmitting to the Registrar's core framework.
                         </Typography>
 
-                        <Box sx={{ p: 3, borderRadius: 4, bgcolor: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.04)", mb: 4 }}>
-                            <Typography variant="caption" fontWeight={700} color="rgba(255,255,255,0.3)" sx={{ textTransform: "uppercase", letterSpacing: 2, display: "block", mb: 1 }}>Reference ID</Typography>
-                            <Typography variant="h5" fontWeight={900} sx={{ fontFamily: "monospace", color: "primary.main", letterSpacing: 4 }}>
+                        <Box sx={{ p: 4, borderRadius: 4, bgcolor: "rgba(0,0,0,0.5)", border: "1px dashed rgba(255,255,255,0.1)", mb: 4 }}>
+                            <Typography variant="caption" fontWeight={900} color="rgba(255,255,255,0.4)" sx={{ textTransform: "uppercase", letterSpacing: 3, display: "block", mb: 1 }}>Reference Node</Typography>
+                            <Typography variant="h4" fontWeight={1000} sx={{ fontFamily: "monospace", color: "#3b82f6", letterSpacing: 4 }}>
                                 {applicationId?.slice(0, 4).toUpperCase()}—{applicationId?.slice(4, 10).toUpperCase()}
                             </Typography>
                         </Box>
 
-                        <Box sx={{ p: 3, borderRadius: 4, bgcolor: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", mb: 5, textAlign: "left" }}>
-                            <Stack direction="row" spacing={2} alignItems="flex-start">
-                                <LockOutlined sx={{ color: "primary.main", mt: 0.3, fontSize: 20 }} />
-                                <Box>
-                                    <Typography variant="body2" fontWeight={700} color="white" mb={0.5}>Email & Access Credentials</Typography>
-                                    <Typography variant="caption" color="rgba(255,255,255,0.4)" sx={{ lineHeight: 1.6 }}>
-                                        The admin will send your university email and OTP login credentials once your application is reviewed (3–7 business days).
-                                    </Typography>
-                                </Box>
-                            </Stack>
-                        </Box>
-
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center">
-                            <Button variant="contained" component={RouterLink} to="/" sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800, px: 4, py: 1.5 }}>Back to Home</Button>
-                            <Button variant="outlined" component={RouterLink} to="/apply" sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800, px: 4, py: 1.5, borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", "&:hover": { borderColor: "white", color: "white" } }}>View Departments</Button>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" mt={6}>
+                            <Button variant="contained" component={RouterLink} to="/" sx={{ borderRadius: 50, textTransform: "none", fontWeight: 900, px: 5, py: 2, background: "linear-gradient(135deg, #10b981, #059669)", "&:hover": { filter: "brightness(1.2)" } }}>Back to Home</Button>
                         </Stack>
                     </CardContent>
                 </Card>
@@ -83,68 +64,47 @@ const SuccessScreen = ({ applicationId, applicantName, department }) => (
     </Box>
 );
 
-/* ── Field Component ─────────────────────────────────────── */
 const FormField = ({ label, name, value, onChange, error, helperText, type = "text", multiline = false, rows, select, children, placeholder, inputProps, InputLabelProps, color }) => (
     <TextField
         fullWidth label={label} name={name} value={value} onChange={onChange}
         error={!!error} helperText={error || helperText} type={type}
         multiline={multiline} rows={rows} select={select} placeholder={placeholder}
-        inputProps={inputProps} InputLabelProps={InputLabelProps}
+        inputProps={inputProps} InputLabelProps={{ ...InputLabelProps, sx: { color: "rgba(255,255,255,0.5)", "&.Mui-focused": { color } } }}
         variant="outlined"
         sx={{
             "& .MuiOutlinedInput-root": {
-                borderRadius: 2.5,
-                bgcolor: "rgba(0,0,0,0.01)",
-                "& fieldset": { borderColor: "rgba(0,0,0,0.1)" },
-                "&:hover fieldset": { borderColor: color || "primary.main" },
-                "&.Mui-focused fieldset": { borderColor: color || "primary.main" },
+                borderRadius: 3, bgcolor: "rgba(255,255,255,0.03)", backdropFilter: "blur(10px)", color: "white",
+                "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                "&:hover fieldset": { borderColor: alpha(color, 0.5) },
+                "&.Mui-focused fieldset": { borderColor: color, borderWidth: 2 },
             },
-            "& .MuiInputLabel-root.Mui-focused": { color: color || "primary.main" },
+            "& .MuiInputBase-input::placeholder": { color: "rgba(255,255,255,0.3)", opacity: 1 },
+            "& .MuiFormHelperText-root": { color: "rgba(255,255,255,0.4)" },
+            "& .Mui-error .MuiFormHelperText-root": { color: "#ef4444" },
+            "& .MuiSelect-icon": { color: "rgba(255,255,255,0.5)" }
         }}
     >{children}</TextField>
 );
 
-/* ── Step Header ─────────────────────────────────────────── */
 const StepHeader = ({ icon: Icon, title, subtitle, color }) => (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, mb: 5, pb: 4, borderBottom: "1px solid", borderColor: "divider" }}>
-        <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha(color, 0.08), color, border: `1px solid ${alpha(color, 0.15)}`, display: "flex" }}>
-            <Icon sx={{ fontSize: 26 }} />
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 3, mb: 6, pb: 4, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <Box sx={{ width: 64, height: 64, borderRadius: 4, bgcolor: alpha(color, 0.1), color, border: `1px solid ${alpha(color, 0.2)}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 20px ${alpha(color, 0.2)}`, flexShrink: 0 }}>
+            <Icon sx={{ fontSize: 32 }} />
         </Box>
         <Box>
-            <Typography variant="h5" fontWeight={900} sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{title}</Typography>
-            <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mt: 0.3 }}>{subtitle}</Typography>
+            <Typography variant="h3" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit", mb: 1 }}>{title}</Typography>
+            <Typography variant="body1" color="rgba(255,255,255,0.5)" fontWeight={500}>{subtitle}</Typography>
         </Box>
     </Box>
 );
 
-/* ── Main Form ─────────────────────────────────────────────── */
-const ApplicationForm = () => {
+export default function ApplicationForm() {
     const { departmentId } = useParams();
     const navigate = useNavigate();
 
     const [deptData, setDeptData] = useState(null);
     const [deptLoading, setDeptLoading] = useState(true);
     const [deptError, setDeptError] = useState(false);
-
-    useEffect(() => {
-        const fetchDept = async () => {
-            setDeptLoading(true);
-            try {
-                const res = await departmentsAPI.getAll();
-                const found = res.data.find(d =>
-                    d._id === departmentId || d.id === departmentId || d.slug === departmentId ||
-                    (d.name || "").toLowerCase().replace(/\s+/g, "-") === departmentId
-                );
-                if (found) {
-                    const meta = getDeptMeta(found);
-                    setDeptData({ ...found, ...meta, name: found.name, code: found.code || meta.code });
-                } else setDeptError(true);
-            } catch { setDeptError(true); }
-            finally { setDeptLoading(false); }
-        };
-        fetchDept();
-    }, [departmentId]);
-
     const [activeStep, setActiveStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -152,25 +112,44 @@ const ApplicationForm = () => {
     const [errors, setErrors] = useState({});
 
     const [form, setForm] = useState({
-        firstName: "", lastName: "", dateOfBirth: "", gender: "",
-        nationality: "", phone: "", address: "",
-        highSchoolName: "", graduationYear: "", gpa: "", gradeSystem: "",
-        previousQualification: "", extraCurricular: "",
+        firstName: "", lastName: "", email: "", dateOfBirth: "", gender: "", nationality: "", phone: "", address: "",
+        highSchoolName: "", graduationYear: "", gpa: "", gradeSystem: "", previousQualification: "", extraCurricular: "",
         personalStatement: "", whyThisDepartment: "",
-        idDocument: null, idDocumentName: "",
-        transcript: null, transcriptName: "",
-        photo: null, photoName: "",
-        recommendationLetter: null, recommendationLetterName: "",
+        idDocument: null, idDocumentName: "", transcript: null, transcriptName: "", photo: null, photoName: "", recommendationLetter: null, recommendationLetterName: "",
     });
 
-    const [uploading, setUploading] = useState(false);
+    useEffect(() => {
+        const fetchDept = async () => {
+            setDeptLoading(true);
+            try {
+                const res = await departmentsAPI.getById(departmentId);
+                if (res.data) {
+                    const meta = getDeptMeta(res.data);
+                    setDeptData({ ...res.data, ...meta, name: res.data.name, code: res.data.code || meta.code });
+                } else {
+                    setDeptError(true);
+                }
+            } catch (err) {
+                console.error("Error fetching department:", err);
+                setDeptError(true);
+            } finally {
+                setDeptLoading(false);
+            }
+        };
+        if (departmentId) {
+            fetchDept();
+        } else {
+            setDeptError(true);
+            setDeptLoading(false);
+        }
+    }, [departmentId]);
 
-    if (deptLoading) return <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}><CircularProgress size={40} /></Box>;
+    if (deptLoading) return <Box sx={{ minHeight: "100vh", bgcolor: "#060913", display: "flex", alignItems: "center", justifyContent: "center" }}><CircularProgress sx={{ color: "white" }} /></Box>;
     if (deptError || !deptData) return (
-        <Box sx={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "#060913", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Box textAlign="center">
-                <Typography variant="h5" fontWeight={700} mb={2}>Department not found</Typography>
-                <Button component={RouterLink} to="/apply" variant="contained" sx={{ borderRadius: 3, textTransform: "none" }}>Browse Departments</Button>
+                <Typography variant="h3" color="white" fontWeight={1000} mb={2}>Sector Offline</Typography>
+                <Button component={RouterLink} to="/apply" variant="contained" sx={{ borderRadius: 50, px: 4, py: 1.5, textTransform: "none" }}>Browse Domains</Button>
             </Box>
         </Box>
     );
@@ -184,15 +163,17 @@ const ApplicationForm = () => {
     };
     const handleFileChange = (field) => (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setForm({ ...form, [field]: file, [`${field}Name`]: file.name });
-        }
+        if (file) setForm({ ...form, [field]: file, [`${field}Name`]: file.name });
     };
+
     const validate = () => {
         const e = {};
+        const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         if (activeStep === 0) {
             if (!form.firstName) e.firstName = "Required";
             if (!form.lastName) e.lastName = "Required";
+            if (!form.email) e.email = "Required";
+            else if (!validateEmail(form.email)) e.email = "Invalid email address";
             if (!form.dateOfBirth) e.dateOfBirth = "Required";
             if (!form.gender) e.gender = "Required";
             if (!form.phone) e.phone = "Required";
@@ -203,139 +184,109 @@ const ApplicationForm = () => {
             if (!form.gpa) e.gpa = "Required";
         }
         if (activeStep === 2) {
-            if (!form.personalStatement || form.personalStatement.length < 50) e.personalStatement = "At least 50 characters required";
-            if (!form.whyThisDepartment || form.whyThisDepartment.length < 30) e.whyThisDepartment = "At least 30 characters required";
+            if (!form.personalStatement || form.personalStatement.length < 50) e.personalStatement = "At least 50 chars required";
+            if (!form.whyThisDepartment || form.whyThisDepartment.length < 30) e.whyThisDepartment = "At least 30 chars required";
         }
         setErrors(e);
         return Object.keys(e).length === 0;
     };
+
     const handleNext = () => { if (validate()) setActiveStep(p => p + 1); };
     const handleBack = () => setActiveStep(p => p - 1);
 
+    const fileToBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            if (!file) { resolve(""); return; }
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
     const handleSubmit = async () => {
         setSubmitting(true);
-        setUploading(true);
-        const part1 = Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
-        const part2 = Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
-        const refId = `${part1}\u2014${part2}`;
+        const refId = `${Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("")}—${Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("")}`;
 
         try {
-            // 1. Upload Documents via Base64 to MongoDB (Bypassing Firebase)
-            const docUrls = {};
-            const filesToUpload = [
-                { key: 'idDocument', file: form.idDocument },
-                { key: 'transcript', file: form.transcript },
-                { key: 'photo', file: form.photo },
-                { key: 'recommendationLetter', file: form.recommendationLetter }
-            ];
-
-            const toBase64 = file => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-
-            for (const item of filesToUpload) {
-                if (item.file) {
-                    try {
-                        const base64Str = await toBase64(item.file);
-                        docUrls[item.key] = base64Str;
-                    } catch (e) {
-                        console.error(`Failed to convert ${item.key} to Base64`, e);
-                    }
-                }
-            }
-
-            setUploading(false);
+            const docsBase64 = {};
+            if (form.idDocument) docsBase64.idDocument = await fileToBase64(form.idDocument);
+            if (form.transcript) docsBase64.transcript = await fileToBase64(form.transcript);
+            if (form.photo) docsBase64.photo = await fileToBase64(form.photo);
+            if (form.recommendationLetter) docsBase64.recommendationLetter = await fileToBase64(form.recommendationLetter);
 
             const data = {
                 firstName: form.firstName,
                 lastName: form.lastName,
-                name: `${form.firstName} ${form.lastName}`,
+                email: form.email,
                 phone: form.phone,
-                email: form.email || `pending_${refId.toLowerCase()}@htu.edu`,
                 dob: form.dateOfBirth,
-                dateOfBirth: form.dateOfBirth,
                 gender: form.gender,
                 nationality: form.nationality,
                 address: form.address,
                 highSchoolName: form.highSchoolName,
                 graduationYear: form.graduationYear,
-                highSchoolGrades: form.gpa,
                 gradeSystem: form.gradeSystem,
+                highSchoolGrades: form.gpa,
                 previousQualification: form.previousQualification,
                 extraCurricular: form.extraCurricular,
                 personalStatement: form.personalStatement,
                 whyThisDepartment: form.whyThisDepartment,
-                documents: docUrls,
-                intendedMajor: dept.name,
-                departmentId,
-                departmentCode: dept.code,
+                college: dept.collegeId?.name || "University Department",
+                department: dept.name,
+                program: form.whyThisDepartment?.substring(0, 50),
+                year: "1",
+                semester: "Fall 2026",
                 referenceId: refId,
-                status: "pending_dept_review",
+                documents: docsBase64,
             };
 
-            // 2. Submit to MongoDB API
-            await applicationsAPI.submit(data);
+            const response = await applicationsAPI.submit(data);
 
-            // 3. Backup to Firestore
-            const ref = await addDoc(collection(db, "applications"), { ...data, submittedAt: serverTimestamp() });
-            setApplicationId(ref.id);
+            setApplicationId(refId);
             setSubmitted(true);
         } catch (err) {
-            console.error("Submission Error:", err.response?.data || err.message);
-            setErrors({ submit: `Submission Failed: ${err.response?.data?.message || err.message}` });
+            setErrors({ submit: `Transmission Failed: ${err.response?.data?.message || err.message}` });
         } finally {
             setSubmitting(false);
-            setUploading(false);
         }
     };
 
     if (submitted) return <SuccessScreen applicationId={applicationId} applicantName={`${form.firstName} ${form.lastName}`} department={dept.name} />;
 
-    /* ── render ── */
     return (
-        <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
-            {/* ── Header ── */}
-            <Box sx={{ background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)", pt: { xs: 14, md: 18 }, pb: 10, position: "relative", overflow: "hidden" }}>
-                <Box sx={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", top: -100, right: -100, background: `radial-gradient(circle,${alpha(dept.color, 0.12)} 0%,transparent 70%)`, filter: "blur(80px)" }} />
-                <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
+        <Box sx={{ bgcolor: "#060913", minHeight: "100vh", color: "white" }}>
+            <Box sx={{ pt: { xs: 15, md: 20 }, pb: 10, position: "relative", overflow: "hidden" }}>
+                <Box sx={{ position: "absolute", width: "50vw", height: "50vw", borderRadius: "50%", top: "-30%", left: "-10%", background: `radial-gradient(circle, ${alpha(dept.color, 0.2)} 0%, transparent 60%)`, filter: "blur(100px)" }} />
+
+                <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
                     <Button startIcon={<ArrowBack />} onClick={() => navigate("/apply")}
-                        sx={{ color: "rgba(255,255,255,0.35)", textTransform: "none", fontWeight: 700, mb: 5, px: 2, borderRadius: 2, "&:hover": { color: "white", bgcolor: "rgba(255,255,255,0.05)" } }}>
-                        Back to Departments
+                        sx={{ color: "rgba(255,255,255,0.4)", textTransform: "none", fontWeight: 800, mb: 4, borderRadius: 50, px: 2, "&:hover": { color: "white", bgcolor: "rgba(255,255,255,0.05)" } }}>
+                        Abort Process
                     </Button>
 
-                    <Stack direction="row" spacing={2.5} alignItems="center" mb={5}>
-                        <Box sx={{ width: 60, height: 60, borderRadius: 3, background: dept.gradient, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 12px 24px ${alpha(dept.color, 0.3)}` }}>
-                            <School sx={{ color: "white", fontSize: 28 }} />
-                        </Box>
-                        <Box>
-                            <Chip label={dept.code} size="small" sx={{ bgcolor: alpha(dept.color, 0.15), color: dept.color, fontWeight: 800, mb: 0.5 }} />
-                            <Typography variant="h3" fontWeight={900} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
-                                {dept.name}
-                            </Typography>
-                        </Box>
+                    <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="flex-end" mb={6}>
+                        <Stack direction="row" spacing={3} alignItems="center">
+                            <Box sx={{ width: 80, height: 80, borderRadius: 4, background: dept.gradient, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 30px ${alpha(dept.color, 0.3)}` }}>
+                                <School sx={{ color: "white", fontSize: 40 }} />
+                            </Box>
+                            <Box>
+                                <Chip label={dept.code} size="small" sx={{ bgcolor: alpha(dept.color, 0.2), color: "white", fontWeight: 900, mb: 1, px: 1, border: `1px solid ${alpha(dept.color, 0.4)}` }} />
+                                <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit", letterSpacing: "-0.02em" }}>{dept.name}</Typography>
+                            </Box>
+                        </Stack>
                     </Stack>
 
-                    {/* Progress */}
-                    <Box>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                            <Typography variant="caption" fontWeight={800} color="rgba(255,255,255,0.5)" sx={{ textTransform: "uppercase", letterSpacing: 1.5 }}>
-                                Step {activeStep + 1} of {STEPS.length} — {STEPS[activeStep]}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700} color="rgba(255,255,255,0.3)" sx={{ letterSpacing: 1 }}>
-                                {Math.round(progress)}%
-                            </Typography>
+                    <Box sx={{ bgcolor: "rgba(255,255,255,0.02)", p: 4, borderRadius: 6, border: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(20px)" }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                            <Typography variant="caption" fontWeight={900} color="rgba(255,255,255,0.5)" sx={{ textTransform: "uppercase", letterSpacing: 2 }}>Phase {activeStep + 1} // {STEPS[activeStep]}</Typography>
+                            <Typography variant="h6" fontWeight={1000} color={dept.color}>{Math.round(progress)}%</Typography>
                         </Stack>
-                        <LinearProgress variant="determinate" value={progress} sx={{
-                            height: 5, borderRadius: 3, bgcolor: "rgba(255,255,255,0.06)",
-                            "& .MuiLinearProgress-bar": { background: dept.gradient, borderRadius: 3 }
-                        }} />
-                        <Stack direction="row" spacing={1} mt={2} sx={{ display: { xs: "none", md: "flex" } }}>
+                        <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3, bgcolor: "rgba(255,255,255,0.05)", "& .MuiLinearProgress-bar": { background: dept.gradient, borderRadius: 3 } }} />
+                        <Stack direction="row" spacing={2} mt={3} sx={{ display: { xs: "none", md: "flex" } }}>
                             {STEPS.map((s, i) => (
-                                <Box key={s} sx={{ flex: 1, py: 0.8, px: 1.5, borderRadius: 2, bgcolor: i === activeStep ? alpha(dept.color, 0.2) : i < activeStep ? alpha(dept.color, 0.08) : "rgba(255,255,255,0.03)", border: "1px solid", borderColor: i === activeStep ? alpha(dept.color, 0.4) : "transparent", textAlign: "center" }}>
-                                    <Typography variant="caption" fontWeight={700} color={i === activeStep ? dept.color : "rgba(255,255,255,0.25)"} sx={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: 0.5 }}>{s}</Typography>
+                                <Box key={s} sx={{ flex: 1, py: 1.5, px: 2, borderRadius: 3, bgcolor: i === activeStep ? alpha(dept.color, 0.15) : i < activeStep ? "rgba(255,255,255,0.05)" : "transparent", border: "1px solid", borderColor: i === activeStep ? alpha(dept.color, 0.5) : "rgba(255,255,255,0.05)", textAlign: "center" }}>
+                                    <Typography variant="caption" fontWeight={900} color={i === activeStep ? "white" : "rgba(255,255,255,0.3)"} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>{s}</Typography>
                                 </Box>
                             ))}
                         </Stack>
@@ -343,195 +294,127 @@ const ApplicationForm = () => {
                 </Container>
             </Box>
 
-            {/* ── Form Card ── */}
-            <Container maxWidth="md" sx={{ mt: -4, pb: 10, position: "relative", zIndex: 1 }}>
-                <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", overflow: "visible" }}>
-                    <CardContent sx={{ p: { xs: 3, md: 6 } }}>
-                        <Fade in key={activeStep} timeout={300}>
+            <Container maxWidth="lg" sx={{ pb: 15 }}>
+                <Card sx={{ borderRadius: 6, background: "rgba(255,255,255,0.02)", backdropFilter: "blur(30px)", border: "1px solid rgba(255,255,255,0.05)", overflow: "visible" }}>
+                    <CardContent sx={{ p: { xs: 4, md: 8 } }}>
+                        <Fade in key={activeStep} timeout={400}>
                             <Box>
-                                {/* ── Step 0: Personal Info ── */}
+                                {/* Step 0 */}
                                 {activeStep === 0 && (
                                     <Box>
-                                        <StepHeader icon={Person} title="Personal Information" subtitle="Your identification details as they appear on official documents." color={dept.color} />
+                                        <StepHeader icon={Person} title="Subject Identification" subtitle="Official bio-data synchronization." color={dept.color} />
 
-                                        {/* OTP notice */}
-                                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, p: 3, borderRadius: 3, bgcolor: alpha(dept.color, 0.05), border: `1px solid ${alpha(dept.color, 0.15)}`, mb: 5 }}>
-                                            <LockOutlined sx={{ color: dept.color, fontSize: 20, mt: 0.2, flexShrink: 0 }} />
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, p: 3, borderRadius: 3, bgcolor: alpha(dept.color, 0.1), border: `1px solid ${alpha(dept.color, 0.2)}`, mb: 6 }}>
+                                            <LockOutlined sx={{ color: dept.color, fontSize: 24 }} />
                                             <Box>
-                                                <Typography variant="body2" fontWeight={700} color={dept.color} mb={0.3}>University Email & Password</Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                                                    Your university email and OTP login credentials will be provided by the Registrar's Office after your application is reviewed and accepted.
-                                                </Typography>
+                                                <Typography variant="body1" fontWeight={800} color="white">Secure Identity Node</Typography>
+                                                <Typography variant="caption" color="rgba(255,255,255,0.6)" sx={{ fontSize: "0.85rem" }}>Credentials will be beamed upon administration clearance.</Typography>
                                             </Box>
                                         </Box>
 
-                                        <Grid container spacing={3}>
+                                        <Grid container spacing={4}>
+                                            <Grid item xs={12} sm={6}><FormField label="First Name" name="firstName" value={form.firstName} onChange={handleChange} error={errors.firstName} color={dept.color} /></Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Last Name" name="lastName" value={form.lastName} onChange={handleChange} error={errors.lastName} color={dept.color} /></Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Email Address" name="email" value={form.email} onChange={handleChange} error={errors.email} color={dept.color} /></Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Birth Date" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} error={errors.dateOfBirth} type="date" InputLabelProps={{ shrink: true }} color={dept.color} /></Grid>
                                             <Grid item xs={12} sm={6}>
-                                                <FormField label="First Name *" name="firstName" value={form.firstName} onChange={handleChange} error={errors.firstName} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Last Name *" name="lastName" value={form.lastName} onChange={handleChange} error={errors.lastName} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Date of Birth *" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} error={errors.dateOfBirth} type="date" InputLabelProps={{ shrink: true }} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Gender *" name="gender" value={form.gender} onChange={handleChange} error={errors.gender} select color={dept.color}>
-                                                    <MenuItem value="male"><Stack direction="row" spacing={1} alignItems="center"><Male fontSize="small" /> <span>Male</span></Stack></MenuItem>
-                                                    <MenuItem value="female"><Stack direction="row" spacing={1} alignItems="center"><Female fontSize="small" /> <span>Female</span></Stack></MenuItem>
+                                                <FormField label="Gender" name="gender" value={form.gender} onChange={handleChange} error={errors.gender} select color={dept.color} SelectProps={{ MenuProps: { PaperProps: { sx: { bgcolor: "#0f172a", color: "white" } } } }}>
+                                                    <MenuItem value="male"><Stack direction="row" spacing={1} alignItems="center"><Male /> <span>Male</span></Stack></MenuItem>
+                                                    <MenuItem value="female"><Stack direction="row" spacing={1} alignItems="center"><Female /> <span>Female</span></Stack></MenuItem>
+                                                    <MenuItem value="other"><Stack direction="row" spacing={1} alignItems="center"><span>Other</span></Stack></MenuItem>
+                                                    <MenuItem value="prefer_not_to_say"><Stack direction="row" spacing={1} alignItems="center"><span>Prefer not to say</span></Stack></MenuItem>
                                                 </FormField>
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Nationality *" name="nationality" value={form.nationality} onChange={handleChange} error={errors.nationality} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Phone Number *" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} placeholder="+1 555 000 0000" color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12}>
-                                                <FormField label="Residential Address" name="address" value={form.address} onChange={handleChange} multiline rows={3} placeholder="Street, City, Postal Code, Country" color={dept.color} />
-                                            </Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Nationality" name="nationality" value={form.nationality} onChange={handleChange} error={errors.nationality} color={dept.color} /></Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Comm Link (Phone)" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} color={dept.color} /></Grid>
+                                            <Grid item xs={12}><FormField label="Physical Coordinates" name="address" value={form.address} onChange={handleChange} multiline rows={3} color={dept.color} /></Grid>
                                         </Grid>
                                     </Box>
                                 )}
 
-                                {/* ── Step 1: Academic Background ── */}
+                                {/* Step 1 */}
                                 {activeStep === 1 && (
                                     <Box>
-                                        <StepHeader icon={School} title="Academic Background" subtitle="Your educational history and academic achievements." color={dept.color} />
-                                        <Grid container spacing={3}>
-                                            <Grid item xs={12}>
-                                                <FormField label="High School / Secondary Institution *" name="highSchoolName" value={form.highSchoolName} onChange={handleChange} error={errors.highSchoolName} color={dept.color} />
-                                            </Grid>
+                                        <StepHeader icon={School} title="Academic Metrics" subtitle="Previous institutional performance data." color={dept.color} />
+                                        <Grid container spacing={4}>
+                                            <Grid item xs={12}><FormField label="Prior Institution" name="highSchoolName" value={form.highSchoolName} onChange={handleChange} error={errors.highSchoolName} color={dept.color} /></Grid>
+                                            <Grid item xs={12} sm={6}><FormField label="Graduation Year" name="graduationYear" value={form.graduationYear} onChange={handleChange} error={errors.graduationYear} type="number" color={dept.color} /></Grid>
                                             <Grid item xs={12} sm={6}>
-                                                <FormField label="Graduation Year *" name="graduationYear" value={form.graduationYear} onChange={handleChange} error={errors.graduationYear} type="number" inputProps={{ min: 2010, max: 2026 }} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <FormField label="Grade System *" name="gradeSystem" value={form.gradeSystem} onChange={handleChange} select color={dept.color}>
-                                                    <MenuItem value="gpa_4">GPA (4.0 scale)</MenuItem>
-                                                    <MenuItem value="percentage">Percentage (%)</MenuItem>
-                                                    <MenuItem value="grade_letter">Letter Grade (A–F)</MenuItem>
-                                                    <MenuItem value="other">Other</MenuItem>
+                                                <FormField label="Grading Paradigm" name="gradeSystem" value={form.gradeSystem} onChange={handleChange} select color={dept.color} SelectProps={{ MenuProps: { PaperProps: { sx: { bgcolor: "#0f172a", color: "white" } } } }}>
+                                                    <MenuItem value="gpa_4">GPA Base-4.0</MenuItem>
+                                                    <MenuItem value="percentage">Percentage Scale</MenuItem>
+                                                    <MenuItem value="grade_letter">Letter Metric</MenuItem>
                                                 </FormField>
                                             </Grid>
-                                            <Grid item xs={12}>
-                                                <FormField label="Final Grade / Score *" name="gpa" value={form.gpa} onChange={handleChange} error={errors.gpa} placeholder="e.g. 3.9 / 4.0 or 95% or A+" helperText="Your verified cumulative academic result" color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12}>
-                                                <FormField label="Additional Qualifications / Certifications" name="previousQualification" value={form.previousQualification} onChange={handleChange} multiline rows={3} placeholder="IB, A-levels, technical certs, awards (optional)" color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12}>
-                                                <FormField label="Extracurricular Activities" name="extraCurricular" value={form.extraCurricular} onChange={handleChange} multiline rows={3} placeholder="Sports, clubs, volunteering, projects (optional)" color={dept.color} />
-                                            </Grid>
+                                            <Grid item xs={12}><FormField label="Final Metric Score" name="gpa" value={form.gpa} onChange={handleChange} error={errors.gpa} color={dept.color} /></Grid>
+                                            <Grid item xs={12}><FormField label="Auxiliary Certifications" name="previousQualification" value={form.previousQualification} onChange={handleChange} multiline rows={3} color={dept.color} /></Grid>
+                                            <Grid item xs={12}><FormField label="Extracurricular Ventures" name="extraCurricular" value={form.extraCurricular} onChange={handleChange} multiline rows={3} color={dept.color} /></Grid>
                                         </Grid>
                                     </Box>
                                 )}
 
-                                {/* ── Step 2: Documents & Statement ── */}
+                                {/* Step 2 */}
                                 {activeStep === 2 && (
                                     <Box>
-                                        <StepHeader icon={ArticleOutlined} title="Documents & Statement" subtitle="Upload your documents and write your personal statement." color={dept.color} />
+                                        <StepHeader icon={ArticleOutlined} title="Data Uploads" subtitle="Attach verified physical counterparts." color={dept.color} />
 
-                                        <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ textTransform: "uppercase", letterSpacing: 1.5, mb: 2.5, display: "block" }}>Required Documents</Typography>
-                                        <Grid container spacing={2.5} mb={5}>
-                                            {[
-                                                { label: "Government ID / Passport", field: "idDocumentName", accept: "image/*,.pdf" },
-                                                { label: "Academic Transcripts", field: "transcriptName", accept: ".pdf,image/*" },
-                                                { label: "Biometric Photo", field: "photoName", accept: "image/*" },
-                                                { label: "Recommendation Letter (optional)", field: "recommendationLetterName", accept: ".pdf,image/*" },
-                                            ].map((doc) => (
+                                        <Typography variant="caption" fontWeight={900} color="rgba(255,255,255,0.4)" sx={{ textTransform: "uppercase", letterSpacing: 2, mb: 3, display: "block" }}>Required Packets</Typography>
+                                        <Grid container spacing={3} mb={6}>
+                                            {[{ label: "Global ID", field: "idDocumentName" }, { label: "Transcripts", field: "transcriptName" }, { label: "Biometric Scan", field: "photoName" }, { label: "Recommendation", field: "recommendationLetterName" }].map((doc) => (
                                                 <Grid item xs={12} sm={6} key={doc.field}>
                                                     <Box component="label" sx={{
-                                                        display: "flex", alignItems: "center", gap: 2, p: 3, borderRadius: 3, cursor: "pointer",
-                                                        border: "1.5px dashed", borderColor: form[doc.field] ? "success.main" : alpha(dept.color, 0.3),
-                                                        bgcolor: form[doc.field] ? alpha("#10b981", 0.04) : alpha(dept.color, 0.02),
-                                                        transition: "all 0.25s ease",
-                                                        "&:hover": { borderColor: dept.color, bgcolor: alpha(dept.color, 0.05) }
+                                                        display: "flex", alignItems: "center", gap: 3, p: 3, borderRadius: 4, cursor: "pointer",
+                                                        border: "1px dashed", borderColor: form[doc.field] ? "#10b981" : "rgba(255,255,255,0.2)",
+                                                        bgcolor: form[doc.field] ? alpha("#10b981", 0.1) : "rgba(255,255,255,0.02)",
+                                                        transition: "all 0.3s ease", "&:hover": { borderColor: dept.color, bgcolor: alpha(dept.color, 0.05) }
                                                     }}>
-                                                        <input type="file" hidden accept={doc.accept} onChange={handleFileChange(doc.field.replace('Name', ''))} />
-                                                        <Box sx={{ width: 40, height: 40, borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center", bgcolor: form[doc.field] ? alpha("#10b981", 0.1) : alpha(dept.color, 0.08), flexShrink: 0 }}>
-                                                            {form[doc.field] ? <CheckCircle sx={{ color: "success.main", fontSize: 22 }} /> : <CloudUpload sx={{ color: dept.color, fontSize: 22 }} />}
+                                                        <input type="file" hidden onChange={handleFileChange(doc.field.replace('Name', ''))} />
+                                                        <Box sx={{ width: 48, height: 48, borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", bgcolor: form[doc.field] ? alpha("#10b981", 0.2) : "rgba(255,255,255,0.05)" }}>
+                                                            {form[doc.field] ? <CheckCircle sx={{ color: "#10b981", fontSize: 24 }} /> : <CloudUpload sx={{ color: "white", fontSize: 24 }} />}
                                                         </Box>
                                                         <Box sx={{ minWidth: 0 }}>
-                                                            <Typography variant="caption" fontWeight={800} sx={{ color: form[doc.field] ? "success.main" : "text.secondary", textTransform: "uppercase", letterSpacing: 0.5, display: "block" }}>{doc.label}</Typography>
-                                                            <Typography variant="caption" color="text.disabled" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{form[doc.field] || "Click to upload"}</Typography>
+                                                            <Typography variant="body2" fontWeight={800} color={form[doc.field] ? "#10b981" : "white"} sx={{ textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>{doc.label}</Typography>
+                                                            <Typography variant="caption" color="rgba(255,255,255,0.5)" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{form[doc.field] || "Awaiting file..."}</Typography>
                                                         </Box>
                                                     </Box>
                                                 </Grid>
                                             ))}
                                         </Grid>
 
-                                        <Divider sx={{ mb: 5, opacity: 0.5 }} />
-
-                                        <Grid container spacing={3}>
-                                            <Grid item xs={12}>
-                                                <FormField label="Personal Statement *" name="personalStatement" value={form.personalStatement} onChange={handleChange} error={errors.personalStatement} multiline rows={6} placeholder="Describe your academic journey, goals, and what makes you a strong candidate..." helperText={!errors.personalStatement ? `${form.personalStatement.length} / 50+ characters` : undefined} color={dept.color} />
-                                            </Grid>
-                                            <Grid item xs={12}>
-                                                <FormField label={`Why ${dept.name}? *`} name="whyThisDepartment" value={form.whyThisDepartment} onChange={handleChange} error={errors.whyThisDepartment} multiline rows={4} placeholder={`Explain why you chose ${dept.name} and how it aligns with your career goals...`} helperText={!errors.whyThisDepartment ? `${form.whyThisDepartment.length} / 30+ characters` : undefined} color={dept.color} />
-                                            </Grid>
+                                        <Grid container spacing={4}>
+                                            <Grid item xs={12}><FormField label="Personal Statement" name="personalStatement" value={form.personalStatement} onChange={handleChange} error={errors.personalStatement} multiline rows={6} color={dept.color} /></Grid>
+                                            <Grid item xs={12}><FormField label={`Why ${dept.name}?`} name="whyThisDepartment" value={form.whyThisDepartment} onChange={handleChange} error={errors.whyThisDepartment} multiline rows={4} color={dept.color} /></Grid>
                                         </Grid>
                                     </Box>
                                 )}
 
-                                {/* ── Step 3: Review ── */}
+                                {/* Step 3 */}
                                 {activeStep === 3 && (
                                     <Box>
-                                        <StepHeader icon={AssignmentInd} title="Review & Submit" subtitle="Verify all your details before submitting your application." color={dept.color} />
+                                        <StepHeader icon={AssignmentInd} title="Final Verification" subtitle="Ensure all metrics are aligned prior to dispatch." color={dept.color} />
+                                        {errors.submit && <Typography color="error" mb={4}>{errors.submit}</Typography>}
 
-                                        {errors.submit && (
-                                            <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha("#ef4444", 0.06), border: "1px solid", borderColor: alpha("#ef4444", 0.2), mb: 4 }}>
-                                                <Typography variant="body2" fontWeight={700} color="error">{errors.submit}</Typography>
-                                            </Box>
-                                        )}
-
-                                        {[
-                                            {
-                                                title: "Personal Details",
-                                                rows: [
-                                                    ["Full Name", `${form.firstName} ${form.lastName}`],
-                                                    ["Date of Birth", form.dateOfBirth],
-                                                    ["Gender", form.gender],
-                                                    ["Nationality", form.nationality],
-                                                    ["Phone", form.phone],
-                                                ]
-                                            },
-                                            {
-                                                title: "Academic Background",
-                                                rows: [
-                                                    ["Institution", form.highSchoolName],
-                                                    ["Graduation Year", form.graduationYear],
-                                                    ["Grade / Score", `${form.gpa} (${form.gradeSystem})`],
-                                                ]
-                                            },
-                                            {
-                                                title: "Documents",
-                                                rows: [
-                                                    ["ID / Passport", form.idDocumentName || "Not uploaded"],
-                                                    ["Transcripts", form.transcriptName || "Not uploaded"],
-                                                    ["Photo", form.photoName || "Not uploaded"],
-                                                ]
-                                            },
-                                        ].map((section) => (
-                                            <Box key={section.title} sx={{ mb: 3, borderRadius: 4, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
-                                                <Box sx={{ px: 3, py: 2, bgcolor: alpha(dept.color, 0.04), borderBottom: "1px solid", borderColor: "divider" }}>
-                                                    <Typography variant="caption" fontWeight={900} color={dept.color} sx={{ textTransform: "uppercase", letterSpacing: 1.5 }}>{section.title}</Typography>
+                                        {[{ title: "Bio-Data", rows: [["Name", `${form.firstName} ${form.lastName}`], ["Email", form.email], ["Comm", form.phone]] }, { title: "Metrics", rows: [["Institute", form.highSchoolName], ["Score", form.gpa]] }].map((sec) => (
+                                            <Box key={sec.title} sx={{ mb: 4, borderRadius: 4, bgcolor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                                <Box sx={{ px: 4, py: 2, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                                                    <Typography variant="caption" fontWeight={1000} color={dept.color} sx={{ letterSpacing: 2, textTransform: "uppercase" }}>{sec.title}</Typography>
                                                 </Box>
-                                                <Grid container sx={{ p: 2 }} spacing={0}>
-                                                    {section.rows.map(([lbl, val]) => (
-                                                        <Grid item xs={12} sm={6} key={lbl} sx={{ p: 1.5 }}>
-                                                            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.3 }}>{lbl}</Typography>
-                                                            <Typography variant="body2" fontWeight={700} color={val?.includes("Not") ? "error.main" : "text.primary"}>{val || "—"}</Typography>
+                                                <Grid container sx={{ p: 2 }}>
+                                                    {sec.rows.map(([lbl, val]) => (
+                                                        <Grid item xs={12} sm={6} key={lbl} sx={{ p: 2 }}>
+                                                            <Typography variant="caption" color="rgba(255,255,255,0.4)" fontWeight={800} sx={{ letterSpacing: 1, textTransform: "uppercase", display: "block", mb: 1 }}>{lbl}</Typography>
+                                                            <Typography variant="body1" fontWeight={800} color="white">{val || "—"}</Typography>
                                                         </Grid>
                                                     ))}
                                                 </Grid>
                                             </Box>
                                         ))}
 
-                                        <Box sx={{ p: 3, borderRadius: 4, background: `linear-gradient(135deg,${alpha(dept.color, 0.08)},${alpha(dept.color, 0.02)})`, border: `1px solid ${alpha(dept.color, 0.2)}`, display: "flex", alignItems: "center", gap: 2.5, mt: 4 }}>
-                                            <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: dept.color, boxShadow: `0 0 0 4px ${alpha(dept.color, 0.2)}`, flexShrink: 0 }} />
+                                        <Box sx={{ p: 4, borderRadius: 4, background: `linear-gradient(135deg, ${alpha(dept.color, 0.15)}, transparent)`, border: `1px solid ${alpha(dept.color, 0.3)}`, display: "flex", alignItems: "center", gap: 3, mt: 6 }}>
+                                            <Box sx={{ width: 14, height: 14, borderRadius: "50%", bgcolor: dept.color, boxShadow: `0 0 15px ${dept.color}` }} />
                                             <Box>
-                                                <Typography variant="subtitle1" fontWeight={900} sx={{ fontFamily: "Outfit, sans-serif", color: dept.color }}>{dept.name}</Typography>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>{dept.code} · Intake 2026</Typography>
+                                                <Typography variant="h5" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit" }}>{dept.name}</Typography>
+                                                <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 2 }}>{dept.code} /// Intake 2026</Typography>
                                             </Box>
                                         </Box>
                                     </Box>
@@ -539,22 +422,22 @@ const ApplicationForm = () => {
                             </Box>
                         </Fade>
 
-                        {/* ── Navigation ── */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 6, pt: 4, borderTop: "1px solid", borderColor: "divider" }}>
+                        {/* Navigation */}
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 8, pt: 4, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                             <Button variant="outlined" startIcon={<ArrowBack />} onClick={activeStep === 0 ? () => navigate("/apply") : handleBack}
-                                sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800, px: 3.5, py: 1.5, borderColor: "divider", color: "text.secondary", "&:hover": { borderColor: "text.primary", color: "text.primary" } }}>
-                                {activeStep === 0 ? "Cancel" : "Back"}
+                                sx={{ borderRadius: 50, textTransform: "none", fontWeight: 900, px: 4, py: 1.5, borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", "&:hover": { borderColor: "white", color: "white" } }}>
+                                {activeStep === 0 ? "Abort" : "Reverse"}
                             </Button>
 
                             {activeStep < STEPS.length - 1 ? (
                                 <Button variant="contained" endIcon={<ArrowForward />} onClick={handleNext}
-                                    sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800, px: 4, py: 1.5, background: dept.gradient, boxShadow: `0 8px 24px ${alpha(dept.color, 0.35)}`, "&:hover": { background: dept.gradient, boxShadow: `0 12px 32px ${alpha(dept.color, 0.5)}`, transform: "translateY(-2px)" }, transition: "all 0.2s" }}>
-                                    Continue
+                                    sx={{ borderRadius: 50, textTransform: "none", fontWeight: 900, px: 5, py: 1.5, background: dept.gradient, "&:hover": { filter: "brightness(1.2)" } }}>
+                                    Proceed
                                 </Button>
                             ) : (
                                 <Button variant="contained" startIcon={submitting ? null : <Send />} onClick={handleSubmit} disabled={submitting}
-                                    sx={{ borderRadius: 3, textTransform: "none", fontWeight: 800, px: 5, py: 1.5, background: "linear-gradient(135deg,#10b981,#059669)", boxShadow: "0 8px 24px rgba(16,185,129,0.3)", "&:hover": { background: "linear-gradient(135deg,#059669,#047857)", transform: "translateY(-2px)" }, "&.Mui-disabled": { background: "rgba(16,185,129,0.25)", color: "rgba(255,255,255,0.5)" }, transition: "all 0.2s" }}>
-                                    {submitting ? "Submitting..." : "Submit Application"}
+                                    sx={{ borderRadius: 50, textTransform: "none", fontWeight: 900, px: 6, py: 1.5, background: "linear-gradient(135deg, #10b981, #059669)", "&:hover": { filter: "brightness(1.2)" } }}>
+                                    {submitting ? "Transmitting..." : "Initialize Transfer"}
                                 </Button>
                             )}
                         </Box>
@@ -563,6 +446,4 @@ const ApplicationForm = () => {
             </Container>
         </Box>
     );
-};
-
-export default ApplicationForm;
+}

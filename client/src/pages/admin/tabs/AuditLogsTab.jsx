@@ -1,10 +1,13 @@
 import React from "react";
 import {
-  Box, Card, Typography, Stack, TextField, MenuItem, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Avatar, Chip, useTheme
+  Box, Card, Typography, Stack, TextField, MenuItem, Button, IconButton,
+  TableContainer, Table, TableHead, TableRow, TableCell, TableBody,
+  Avatar, Chip, useTheme, Divider, Grid
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
-  Search, Storage, History
+  Search, Storage, History, FilterList, Download, DeleteSweep,
+  AdminPanelSettings, Shield
 } from "@mui/icons-material";
 
 const AuditLogsTab = ({
@@ -15,55 +18,71 @@ const AuditLogsTab = ({
   setLogFilter,
   handleExportLogs,
   exportLoading,
-  gradients,
   glassStyle
 }) => {
   const theme = useTheme();
 
   const filteredLogs = activities.filter(log => {
     const searchLower = logSearch.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       (log.action || "").toLowerCase().includes(searchLower) ||
       (log.adminName || "").toLowerCase().includes(searchLower) ||
       (log.details || "").toLowerCase().includes(searchLower);
-    
+
     const matchesFilter = logFilter === 'all' || log.sector === logFilter;
-    
+
     return matchesSearch && matchesFilter;
   });
 
   return (
     <Box>
-      <Card sx={{ ...glassStyle, borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)', overflow: "hidden" }}>
-        <Box sx={{ p: 4, borderBottom: '1px solid rgba(255,255,255,0.05)', display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 3 }}>
-          <Box>
-            <Typography variant="h6" fontWeight={900}>Security Audit Intelligence</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>High-fidelity trail of all administrative maneuvers.</Typography>
-          </Box>
-          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" fontWeight={1000}>Administrative Audit Intelligence</Typography>
+        <Typography variant="caption" color="text.secondary" fontWeight={800}>TRACK STRATEGIC MANEUVERS, SYSTEM MUTATIONS, AND ACCESS VECTORS ACROSS ALL SECTORS</Typography>
+      </Box>
+
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={8}>
+          <Card sx={{ ...glassStyle, p: 3, borderRadius: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
             <TextField
-              size="small" placeholder="Search protocol..." value={logSearch} onChange={(e) => setLogSearch(e.target.value)}
-              sx={{ width: 220, "& .MuiOutlinedInput-root": { borderRadius: 3, bgcolor: 'rgba(255,255,255,0.02)' } }}
+              size="small" placeholder="Search protocol ID, admin, or action..."
+              value={logSearch} onChange={(e) => setLogSearch(e.target.value)}
+              sx={{ flexGrow: 1, "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
               InputProps={{ startAdornment: <Search sx={{ mr: 1, opacity: 0.5 }} /> }}
             />
             <TextField
               select size="small" value={logFilter} onChange={(e) => setLogFilter(e.target.value)}
-              sx={{ width: 160, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              sx={{ width: 180, "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
             >
               <MenuItem value="all">All Sectors</MenuItem>
-              <MenuItem value="security">Security Protocol</MenuItem>
+              <MenuItem value="security">Security Intelligence</MenuItem>
               <MenuItem value="users">Identity Mgmt</MenuItem>
-              <MenuItem value="system">Core Control</MenuItem>
+              <MenuItem value="academic">Academic Core</MenuItem>
+              <MenuItem value="finance">Financial Node</MenuItem>
+              <MenuItem value="system">Operational Control</MenuItem>
             </TextField>
             <Button
-              variant="contained" startIcon={<Storage />} onClick={handleExportLogs} disabled={exportLoading}
-              sx={{ borderRadius: 3, textTransform: "none", fontWeight: 1000, background: gradients[3], px: 3 }}
+              variant="contained" startIcon={<Download />} onClick={handleExportLogs} disabled={exportLoading}
+              sx={{ borderRadius: 3, fontWeight: 900, px: 3 }}
             >
               Export Dossier
             </Button>
-          </Box>
-        </Box>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ ...glassStyle, p: 3, borderRadius: 4, border: '1px solid rgba(56,189,248,0.2)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="caption" fontWeight={1000} color="primary.main">RETENTION_POLICY</Typography>
+                <Typography variant="body2" fontWeight={1000}>90 Day Historical Trail</Typography>
+              </Box>
+              <IconButton size="small" color="primary"><DeleteSweep /></IconButton>
+            </Box>
+          </Card>
+        </Grid>
+      </Grid>
 
+      <Card sx={{ ...glassStyle, borderRadius: 5, border: '1px solid rgba(255,255,255,0.1)', overflow: "hidden" }}>
         <TableContainer sx={{ maxHeight: 700 }}>
           <Table stickyHeader>
             <TableHead>
@@ -80,16 +99,16 @@ const AuditLogsTab = ({
                 <TableRow key={i} sx={{ '& td': { borderBottom: '1px solid rgba(255,255,255,0.03)' }, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                   <TableCell sx={{ p: 3 }}>
                     <Typography variant="body2" fontWeight={1000} color="primary.main">
-                      {log.timestamp?.toDate?.() ? log.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "N/A"}
+                      {log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "N/A"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                      {log.timestamp?.toDate?.() ? log.timestamp.toDate().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : "---"}
+                      {log.timestamp ? new Date(log.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : "---"}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 1000, fontSize: '0.75rem' }}>
-                        {log.adminName?.[0]}
+                        {(log.adminName || "U")[0]}
                       </Avatar>
                       <Box>
                         <Typography variant="body2" fontWeight={900}>{log.adminName}</Typography>

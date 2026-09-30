@@ -13,7 +13,7 @@ export const translations = {
     chatGreeting: "Hello! 👋 I'm your University Assistant. I can help you with admissions, courses, registration, grades, and more. How can I assist you today?",
     chatUnknown: "I'm not sure about that. Please contact the registrar's office or visit the university help center for more information.",
     chatLanguage: "Language",
-    chatFooter: "University AI Assistant • Powered by Alex University",
+    chatFooter: "Holy Trinity Theology University AI Assistant",
     chatAdmission: "Admission info",
     chatCourses: "Course registration",
     chatFees: "Tuition fees",
@@ -63,7 +63,7 @@ export const translations = {
     portalLogin: "Portal Login",
     applyNow: "Apply Now",
     aboutUs: "About Us",
-    universityName: "ALEX UNIVERSITY",
+    universityName: "HOLY TRINITY THEOLOGY UNIVERSITY",
     provisioning: "Provisioning",
     otpManagement: "Access Keys",
     security: "Cyber Security",
@@ -186,7 +186,7 @@ export const translations = {
     portalLogin: "ወደ ፖርታል ግባ",
     applyNow: "አሁን ያመልክቱ",
     aboutUs: "ስለ እኛ",
-    universityName: "አሌክስ ዩኒቨርሲቲ",
+    universityName: "የቅድስት ሥላሴ ቴዎሎጂ ዩኒቨርሲቲ",
 
     // User Roles
     registrarAuthority: "የሬጅስትራር ባለስልጣን",

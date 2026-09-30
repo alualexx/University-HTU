@@ -22,19 +22,10 @@ export default function FinancialManagementTab({ budget }) {
         borderRadius: 3,
     };
 
-    const allocations = budget?.allocations || [
-        { category: "Faculty & Staff", amount: 1500000 },
-        { category: "Research Grants", amount: 450000 },
-        { category: "Infrastructure", amount: 300000 },
-        { category: "Student Welfare", amount: 120000 },
-    ];
+    const allocations = budget?.allocations || [];
     const totalBudget = allocations.reduce((a, b) => a + b.amount, 0);
 
-    const procurement = [
-        { id: "PR-901", item: "Lab Computers", dept: "Computer Science", amount: 45000, status: "pending" },
-        { id: "PR-902", item: "Chemical Supplies", dept: "Sciences", amount: 12500, status: "approved" },
-        { id: "PR-903", item: "Conference Sponsorship", dept: "Business", amount: 5000, status: "pending" },
-    ];
+    const procurement = [];
 
     return (
         <Box>

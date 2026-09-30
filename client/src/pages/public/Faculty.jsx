@@ -1,162 +1,223 @@
 import React, { useState } from "react";
 import {
   Box, Container, Grid, Card, CardContent, Typography,
-  Avatar, Chip, TextField, InputAdornment, Stack, alpha,
+  Avatar, Chip, TextField, InputAdornment, Stack, alpha
 } from "@mui/material";
-import { Email, Phone, Groups, Search } from "@mui/icons-material";
+import { Email, Phone, Groups, Search, Church, School } from "@mui/icons-material";
 
-const avatarGradients = [
-  "linear-gradient(135deg,#1976d2,#42a5f5)",
-  "linear-gradient(135deg,#2e7d32,#66bb6a)",
-  "linear-gradient(135deg,#e65100,#ffa726)",
-  "linear-gradient(135deg,#6a1b9a,#ba68c8)",
-  "linear-gradient(135deg,#0d2b6e,#1976d2)",
-  "linear-gradient(135deg,#004d40,#26a69a)",
+const FACULTY_MEMBERS = [
+  {
+    id: 1,
+    name: "Dr. Alemeyahu Worku",
+    amharic_name: "ዶ/ር ዓለማየሁ ወርቁ",
+    department: "Biblical Studies & Ge'ez",
+    position: "Professor & Department Chair",
+    ordination: "Priest · Ordained 2012",
+    email: "dr.alemeyahu@httu.edu.et",
+    phone: "+251 11 123 4567",
+    specialization: "Old Testament Exegesis, Septuagint, Classical Ge'ez Paleography"
+  },
+  {
+    id: 2,
+    name: "Dr. Sofia Assefa",
+    amharic_name: "ዶ/ር ሶፊያ አሰፋ",
+    department: "Systematic Theology",
+    position: "Associate Professor & Department Chair",
+    ordination: "Theologian & Scholar",
+    email: "fr.yohannes@httu.edu.et",
+    phone: "+251 11 123 4568",
+    specialization: "Patristic Christology, Nicene-Constantinopolitan Dogmatics, Trinity Theology"
+  },
+  {
+    id: 3,
+    name: "Rev. Dr. Abeba Zerihun",
+    amharic_name: "መልአከ ብርሃን ዶ/ር አበበ ዘሪሁን",
+    department: "Church History & Patristics",
+    position: "Professor & Academic Dean",
+    ordination: "Archpriest (Mel'ake Birhan) · Ordained 2004",
+    email: "dean@httu.edu.et",
+    phone: "+251 11 123 4569",
+    specialization: "Ecumenical Councils, Ethiopian Monasticism, Ancient Christian Heritage"
+  },
+  {
+    id: 4,
+    name: "Archbishop Merkorios Tilahun",
+    amharic_name: "ብፁዕ አቡነ መርቆሬዎስ ጥላሁን",
+    department: "Pastoral Theology",
+    position: "Professor & University President",
+    ordination: "Archbishop (Abune) · Holy Synod Member",
+    email: "president@httu.edu.et",
+    phone: "+251 11 123 4570",
+    specialization: "Pastoral Counseling, Spiritual Formation, Diocesan Administration"
+  },
+  {
+    id: 5,
+    name: "Memhir Hailemariam Tesfaye",
+    amharic_name: "መምህር ኃይለማርያም ተስፋዬ",
+    department: "Church Music & Hymnology",
+    position: "Senior Lecturer & Music Director",
+    ordination: "Merigeta & Sacred Chant Master",
+    email: "music.chair@httu.edu.et",
+    phone: "+251 11 123 4571",
+    specialization: "St. Yared Modalities (Ge'ez, Ezel, Araray), Diggua, Tsome Diggua, Aquaquam"
+  },
+  {
+    id: 6,
+    name: "Fr. Teklehaimanot Gebre",
+    amharic_name: "ቀሲስ ተክለሃይማኖት ገብሬ",
+    department: "Liturgical Studies",
+    position: "Assistant Professor & Liturgics Chair",
+    ordination: "Priest · Ordained 2016",
+    email: "liturgics@httu.edu.et",
+    phone: "+251 11 123 4572",
+    specialization: "Eucharistic Anaphoras, Sacramentology, Fetha Nagast (Canon Law)"
+  },
+  {
+    id: 7,
+    name: "Tsehay Girma",
+    amharic_name: "ፀሐይ ግርማ",
+    department: "Manuscript Archives & Library",
+    position: "Chief Librarian & Archivist",
+    ordination: "Manuscript Conservator",
+    email: "librarian@httu.edu.et",
+    phone: "+251 11 123 4573",
+    specialization: "Ancient Ge'ez Vellum Restoration, MARC21 Cataloging, IIIF Digital Preservation"
+  }
 ];
 
-const positionColors = {
-  "Professor": "#1976d2",
-  "Associate Professor": "#2e7d32",
-  "Assistant Professor": "#e65100",
-};
-
-const facultyMembers = [
-  { id: 1, name: "Dr. John Smith", department: "Computer Science", position: "Professor", email: "john.smith@university.edu", phone: "+1 (555) 123-4567", specialization: "Artificial Intelligence, Machine Learning" },
-  { id: 2, name: "Dr. Sarah Johnson", department: "Computer Science", position: "Associate Professor", email: "sarah.johnson@university.edu", phone: "+1 (555) 234-5678", specialization: "Database Systems, Data Mining" },
-  { id: 3, name: "Prof. Michael Williams", department: "Mathematics", position: "Professor", email: "michael.williams@university.edu", phone: "+1 (555) 345-6789", specialization: "Applied Mathematics, Statistics" },
-  { id: 4, name: "Dr. Emily Brown", department: "Physics", position: "Associate Professor", email: "emily.brown@university.edu", phone: "+1 (555) 456-7890", specialization: "Quantum Mechanics, Thermodynamics" },
-  { id: 5, name: "Dr. Robert Davis", department: "English", position: "Professor", email: "robert.davis@university.edu", phone: "+1 (555) 567-8901", specialization: "American Literature, Creative Writing" },
-  { id: 6, name: "Dr. Jennifer Miller", department: "Chemistry", position: "Assistant Professor", email: "jennifer.miller@university.edu", phone: "+1 (555) 678-9012", specialization: "Organic Chemistry, Biochemistry" },
-];
-
-const Faculty = () => {
+export default function Faculty() {
   const [search, setSearch] = useState("");
-  const filtered = facultyMembers.filter(m =>
+
+  const filtered = FACULTY_MEMBERS.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.amharic_name.includes(search) ||
     m.department.toLowerCase().includes(search.toLowerCase()) ||
     m.specialization.toLowerCase().includes(search.toLowerCase())
   );
 
-  const initials = (name) => name.split(" ").map(n => n[0]).filter((_, i, a) => i === 0 || i === a.length - 1).join("");
-
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-      {/* ── Premium Header ── */}
+    <Box sx={{ bgcolor: '#09131F', minHeight: '100vh', color: "white" }}>
+      {/* Header */}
       <Box sx={{
-        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-        pt: 15, pb: 10, position: 'relative', overflow: 'hidden'
+        position: 'relative', pt: { xs: 14, md: 18 }, pb: 8,
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background: "radial-gradient(circle at 50% 20%, #122842 0%, #09131F 80%)"
       }}>
-        <Box sx={{ position: 'absolute', top: -100, left: -100, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-
         <Container maxWidth="lg">
-          <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'flex-end' }, justifyContent: 'space-between', gap: 4 }}>
             <Box>
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, borderRadius: 100, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', mb: 3 }}>
-                <Groups sx={{ color: 'primary.main', fontSize: 18 }} />
-                <Typography variant="caption" fontWeight={1000} sx={{ color: 'white', letterSpacing: 1.5, textTransform: 'uppercase' }}>Academic Authority</Typography>
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 0.8, borderRadius: 50, bgcolor: 'rgba(217,166,33,0.15)', border: '1px solid rgba(217,166,33,0.3)', mb: 2 }}>
+                <Church sx={{ color: '#D9A621', fontSize: 18 }} />
+                <Typography variant="caption" fontWeight={900} sx={{ color: '#D9A621', letterSpacing: 1 }}>
+                  THEOLOGICAL SCHOLARS & CLERGY
+                </Typography>
               </Box>
-              <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', mb: 1 }}>
-                Our <Box component="span" sx={{ color: 'primary.main' }}>Faculty</Box>
+              <Typography variant="h2" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', mb: 1, fontSize: { xs: "2.2rem", md: "3.5rem" } }}>
+                Distinguished <Box component="span" sx={{ color: "#D9A621" }}>Faculty</Box>
               </Typography>
-              <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
-                Meet the global experts driving innovation and academic excellence.
+              <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.7)", maxWidth: 640 }}>
+                Ordained hierarchs, patristic theologians, Ge'ez paleographers, and masters of sacred hymnody guiding our seminarians.
               </Typography>
             </Box>
 
             <TextField
-              sx={{
-                width: { xs: "100%", md: 450 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 4,
-                  bgcolor: "rgba(255,255,255,0.03)",
-                  backdropFilter: "blur(20px)",
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  "& fieldset": { border: 'none' },
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
-                  "&.Mui-focused": { bgcolor: "rgba(255,255,255,0.08)", border: '1px solid rgba(99, 102, 241, 0.5)' }
-                },
-                "& input": { color: "white", py: 2.5, fontWeight: 600 },
-                "& input::placeholder": { color: "rgba(255,255,255,0.4)", opacity: 1 }
-              }}
-              placeholder="Search by name, department, or expertise…"
+              size="small"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search faculty by name, department, or field..."
               InputProps={{
-                startAdornment: <InputAdornment position="start"><Search sx={{ color: "primary.main" }} /></InputAdornment>
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: '#D9A621' }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                  width: { xs: '100%', sm: 340 }
+                }
               }}
             />
           </Box>
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: 12 }}>
-        {filtered.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 15, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 8, border: '1px dashed', borderColor: 'divider' }}>
-            <Groups sx={{ fontSize: 84, color: "divider", mb: 3 }} />
-            <Typography variant="h5" fontWeight={1000} color="text.secondary">No faculty members matched</Typography>
-            <Typography variant="body1" color="text.disabled">Try refining your search terms.</Typography>
-          </Box>
-        ) : (
-          <Grid container spacing={4}>
-            {filtered.map((member, i) => (
-              <Grid item xs={12} sm={6} md={4} key={member.id}>
-                <Card elevation={0} sx={{
-                  height: "100%", borderRadius: 6, border: "1px solid", borderColor: "divider",
-                  overflow: "hidden", display: "flex", flexDirection: "column",
-                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": { transform: "translateY(-10px)", boxShadow: "0 32px 64px -12px rgba(0,0,0,0.12)", borderColor: 'primary.light' }
-                }}>
-                  <Box sx={{ height: 100, background: avatarGradients[i % avatarGradients.length], position: "relative" }}>
-                    <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.2))' }} />
-                    <Avatar
-                      sx={{
-                        width: 92, height: 92,
-                        background: avatarGradients[(i + 1) % avatarGradients.length],
-                        border: "6px solid white",
-                        fontSize: 28, fontWeight: 1000,
-                        fontFamily: 'Outfit, sans-serif',
-                        position: "absolute", bottom: -46, left: "50%", transform: "translateX(-50%)",
-                        boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
-                      }}
-                    >
-                      {initials(member.name)}
+      {/* Faculty Cards Grid */}
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Grid container spacing={3}>
+          {filtered.map((faculty) => (
+            <Grid item xs={12} sm={6} md={4} key={faculty.id}>
+              <Card sx={{
+                bgcolor: 'rgba(14, 32, 51, 0.5)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 4,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-6px)',
+                  borderColor: '#D9A621',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.5)'
+                }
+              }}>
+                <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{
+                      width: 58, height: 58,
+                      bgcolor: 'rgba(217,166,33,0.15)',
+                      color: '#D9A621',
+                      border: '2px solid #D9A621',
+                      fontSize: '1.2rem',
+                      fontWeight: 900
+                    }}>
+                      ✝
                     </Avatar>
-                  </Box>
-
-                  <CardContent sx={{ pt: 8, textAlign: "center", px: 4, pb: 5 }}>
-                    <Typography variant="h5" fontWeight={1000} sx={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em', mb: 1 }}>{member.name}</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3 }}>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
+                        {faculty.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#D9A621', fontWeight: 700, display: 'block' }}>
+                        {faculty.amharic_name}
+                      </Typography>
                       <Chip
-                        label={member.position} size="small"
-                        sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase', py: 1.5, bgcolor: alpha(positionColors[member.position] || "#1e293b", 0.1), color: positionColors[member.position] || "#1e293b", border: `1px solid ${alpha(positionColors[member.position] || "#1e293b", 0.2)}` }}
+                        label={faculty.ordination}
+                        size="small"
+                        sx={{ bgcolor: 'rgba(18,128,140,0.15)', color: '#12808C', fontWeight: 700, fontSize: '0.68rem', height: 20, mt: 0.5 }}
                       />
                     </Box>
+                  </Box>
 
-                    <Typography variant="body2" fontWeight={800} color="primary.main" sx={{ mb: 3, letterSpacing: 1, textTransform: 'uppercase' }}>{member.department}</Typography>
+                  <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5 }}>
+                    {faculty.department}
+                  </Typography>
 
-                    <Box sx={{ px: 2, py: 2, bgcolor: alpha('#000', 0.02), borderRadius: 4, mb: 4, border: '1px solid rgba(0,0,0,0.03)' }}>
-                      <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ fontStyle: "italic", lineHeight: 1.6 }}>"{member.specialization}"</Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, mb: 1.5 }}>
+                    {faculty.position}
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.84rem', lineHeight: 1.6, flex: 1, mb: 2 }}>
+                    <strong>Specialization:</strong> {faculty.specialization}
+                  </Typography>
+
+                  <Box sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 0.8 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Email sx={{ fontSize: 16, color: '#D9A621' }} />
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>{faculty.email}</Typography>
                     </Box>
-
-                    <Stack spacing={2}>
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, color: "text.secondary" }}>
-                        <Email sx={{ fontSize: 18, opacity: 0.6 }} />
-                        <Typography variant="body2" fontWeight={600}>{member.email}</Typography>
-                      </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, color: "text.secondary" }}>
-                        <Phone sx={{ fontSize: 18, opacity: 0.6 }} />
-                        <Typography variant="body2" fontWeight={600}>{member.phone}</Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Phone sx={{ fontSize: 16, color: '#12808C' }} />
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>{faculty.phone}</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Container>
     </Box>
   );
-};
-
-export default Faculty;
+}

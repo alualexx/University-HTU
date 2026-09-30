@@ -26,11 +26,11 @@ const STATUS_CHIP = {
     rejected_by_college: { label: "Rejected", color: "#ef4444" },
 };
 
-export default function AcademicOversightTab({ college, departments }) {
+export default function AcademicOversightTab({ college, departments, courses: dashboardCourses }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const [subTab, setSubTab] = useState(0);
-    const [courses, setCourses] = useState([]);
+    const [courses, setCourses] = useState(dashboardCourses || []);
     const [events, setEvents] = useState([]);
     const [search, setSearch] = useState("");
     const [openEventDialog, setOpenEventDialog] = useState(false);
@@ -44,22 +44,22 @@ export default function AcademicOversightTab({ college, departments }) {
     };
 
     useEffect(() => {
-        const fetchData = async () => {
+        if (dashboardCourses) {
+            setCourses(dashboardCourses);
+        }
+    }, [dashboardCourses]);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
             try {
                 const collegeId = college?._id || college?.id;
-                const deptNames = departments?.map(d => d.name) || [];
-                if (deptNames.length > 0) {
-                    const res = await coursesAPI.getAll({ department: deptNames[0] });
-                    setCourses(res.data || []);
-                }
                 if (collegeId) {
-                    const res2 = await academicEventsAPI.getAll({ collegeId });
-                    setEvents(res2.data || []);
+                    const res = await academicEventsAPI.getAll({ collegeId });
+                    setEvents(res.data || []);
                 }
             } catch (e) { console.error(e); }
         };
-        if (college) fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (college) fetchEvents();
     }, [college]);
 
     const handleAddEvent = async () => {
@@ -76,24 +76,9 @@ export default function AcademicOversightTab({ college, departments }) {
         !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.code?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const policyItems = [
-        { title: "Academic Integrity Policy", status: "active", lastUpdated: "2026-01-15", dept: "All" },
-        { title: "Grading & Assessment Policy", status: "active", lastUpdated: "2025-09-01", dept: "All" },
-        { title: "Examination Procedures", status: "active", lastUpdated: "2025-08-20", dept: "All" },
-        { title: "Credit Transfer Policy", status: "pending", lastUpdated: "2026-05-10", dept: "Registrar" },
-        { title: "Doctoral Research Guidelines", status: "active", lastUpdated: "2025-12-01", dept: "Graduate" },
-    ];
-
-    const creditTransfers = [
-        { student: "Ali Hassan", from: "External Univ.", to: "CS301", credits: 3, status: "pending" },
-        { student: "Sara Mohammed", from: "Community College", to: "MATH201", credits: 4, status: "approved" },
-        { student: "Khalid Omar", from: "Online Platform", to: "ENG101", credits: 2, status: "rejected" },
-    ];
-
-    const integrityCases = [
-        { id: "IC-2026-01", student: "Anonymous", type: "Plagiarism", course: "CS401", severity: "High", status: "under_review" },
-        { id: "IC-2026-02", student: "Anonymous", type: "Cheating", course: "MATH301", severity: "Medium", status: "resolved" },
-    ];
+    const policyItems = [];
+    const creditTransfers = [];
+    const integrityCases = [];
 
     const subTabs = ["Programs & Courses", "Academic Calendar", "Policy Review", "Credit Transfers", "Integrity Cases"];
 
@@ -159,13 +144,7 @@ export default function AcademicOversightTab({ college, departments }) {
                         </Button>
                     </Box>
                     <Stack spacing={2}>
-                        {(events.length > 0 ? events : [
-                            { title: "Semester Registration Opens", date: "2026-08-01", type: "Academic", description: "Registration portal opens for S1 2026/2027" },
-                            { title: "First Day of Classes", date: "2026-09-01", type: "Academic", description: "Semester 1 begins" },
-                            { title: "Midterm Examinations", date: "2026-10-20", type: "Exam", description: "College-wide midterm exam period" },
-                            { title: "College Research Fair", date: "2026-11-05", type: "Research", description: "Annual research showcase" },
-                            { title: "Final Examinations", date: "2026-12-15", type: "Exam", description: "End-of-semester final exams" },
-                        ]).map((ev, i) => (
+                        {events.map((ev, i) => (
                             <Card key={i} sx={{ ...glass }}>
                                 <CardContent sx={{ p: 3 }}>
                                     <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
@@ -186,6 +165,9 @@ export default function AcademicOversightTab({ college, departments }) {
                                 </CardContent>
                             </Card>
                         ))}
+                        {events.length === 0 && (
+                            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>No events scheduled.</Typography>
+                        )}
                     </Stack>
                 </Box>
             )}

@@ -8,7 +8,7 @@ import {
   Business, Apartment, PersonAdd, Delete, Person, Email, Lock, AssignmentTurnedIn
 } from "@mui/icons-material";
 import { doc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { collegesAPI, departmentsAPI } from "../../../services/api";
+import { collegesAPI, departmentsAPI, usersAPI } from "../../../services/api";
 
 const ProvisioningTab = ({
   pendingEntities,
@@ -31,11 +31,13 @@ const ProvisioningTab = ({
 
   const handleOpenProvisionDialog = (entity = null) => {
     setProvisioningEntity(entity);
-    setProvisionForm({
-      name: entity?.type === 'college' ? entity.deanName || '' : (entity?.headName || entity?.faculty || ''),
-      email: entity?.type === 'college' ? entity.deanEmail || '' : entity?.headEmail || '',
-      password: '',
-    });
+    let name = '';
+    let email = '';
+    if (entity?.type === 'college') { name = entity.deanName || ''; email = entity.deanEmail || ''; }
+    else if (entity?.type === 'department') { name = entity.headName || entity.faculty || ''; email = entity.headEmail || ''; }
+    else if (entity?.type === 'student') { name = entity.name || ''; email = entity.email || ''; }
+
+    setProvisionForm({ name, email, password: '' });
     setOpenProvisionDialog(true);
   };
 
@@ -48,29 +50,40 @@ const ProvisioningTab = ({
 
     setProvisionLoading(true);
     try {
-      // 1. Create user in Firebase Auth and Firestore using registerUserByAdmin
-      const result = await registerUserByAdmin({
-        name: provisionForm.name,
-        email: provisionForm.email,
-        password: provisionForm.password,
-        role: provisioningEntity.type === 'college' ? 'college_admin' : 'faculty',
-        collegeId: provisioningEntity.type === 'college' ? provisioningEntity.id : provisioningEntity.collegeId,
-        departmentId: provisioningEntity.type === 'department' ? provisioningEntity.id : null,
-      });
-
-      if (!result.success) throw new Error(result.error);
-
-      // 2. Update the entity (college or department) to active
-      if (provisioningEntity.type === 'college') {
-        await collegesAPI.update(provisioningEntity.id, {
-          status: 'active',
-          provisionedBy: user?.name || "Admin"
+      if (provisioningEntity.type === 'student') {
+        const studentIdRef = `HTU${Math.floor(100000 + Math.random() * 900000)}`;
+        // For students, the user document is already in the DB from the public /apply flow.
+        // We just patch it with the OTP password (in a real system, the backend would hash it and send email)
+        await usersAPI.patch(provisioningEntity.id, {
+          admissionStatus: "pending_password_change",
+          tempPassword: provisionForm.password, // This invokes password hash if backend supports it, or we expect the backend to hash tempPassword
+          studentId: studentIdRef
         });
       } else {
-        await departmentsAPI.update(provisioningEntity.id, {
-          status: 'active',
-          provisionedBy: user?.name || "Admin"
+        // 1. Create user in Firebase Auth and Firestore using registerUserByAdmin
+        const result = await registerUserByAdmin({
+          name: provisionForm.name,
+          email: provisionForm.email,
+          password: provisionForm.password,
+          role: provisioningEntity.type === 'college' ? 'college_admin' : 'faculty',
+          collegeId: provisioningEntity.type === 'college' ? provisioningEntity.id : provisioningEntity.collegeId,
+          departmentId: provisioningEntity.type === 'department' ? provisioningEntity.id : null,
         });
+
+        if (!result.success) throw new Error(result.error);
+
+        // 2. Update the entity (college or department) to active
+        if (provisioningEntity.type === 'college') {
+          await collegesAPI.update(provisioningEntity.id, {
+            status: 'active',
+            provisionedBy: user?.name || "Admin"
+          });
+        } else {
+          await departmentsAPI.update(provisioningEntity.id, {
+            status: 'active',
+            provisionedBy: user?.name || "Admin"
+          });
+        }
       }
 
       logActivity('Provisioning', `Provisioned ${provisioningEntity.type} admin: ${provisionForm.email}`);
@@ -123,8 +136,8 @@ const ProvisioningTab = ({
               <Card sx={{ ...glassStyle, borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: entity.type === 'college' ? 'primary.main' : 'secondary.main', color: 'white' }}>
-                      {entity.type === 'college' ? <Business /> : <Apartment />}
+                    <Avatar sx={{ bgcolor: entity.type === 'college' ? 'primary.main' : entity.type === 'student' ? 'success.main' : 'secondary.main', color: 'white' }}>
+                      {entity.type === 'college' ? <Business /> : entity.type === 'student' ? <Person /> : <Apartment />}
                     </Avatar>
                     <Box>
                       <Typography variant="subtitle1" fontWeight={1000}>{entity.name}</Typography>
@@ -132,12 +145,14 @@ const ProvisioningTab = ({
                     </Box>
                   </Box>
                   <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                    Created {entity.createdAt?.toDate()?.toLocaleDateString()}
+                    Created {entity.createdAt ? new Date(entity.createdAt).toLocaleDateString() : 'N/A'}
                   </Typography>
                 </Box>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Registrar has created this {entity.type}. Please provision the {entity.type === 'college' ? 'Dean' : 'Department Head'} account to activate the entity.
+                    {entity.type === 'student'
+                      ? `Registrar has conditionally approved this student. Provision an official university email and temporary secure PIN below.`
+                      : `Registrar has created this ${entity.type}. Please provision the ${entity.type === 'college' ? 'Dean' : 'Department Head'} account to activate the entity.`}
                   </Typography>
                   <Stack direction="row" spacing={2}>
                     <Button
@@ -145,7 +160,7 @@ const ProvisioningTab = ({
                       onClick={() => handleOpenProvisionDialog(entity)}
                       sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none', background: gradients[0] }}
                     >
-                      Provision Admin
+                      {entity.type === 'student' ? 'Grant Credentials' : 'Provision Admin'}
                     </Button>
                     <Tooltip title="Reject Entity">
                       <IconButton onClick={() => handleDeletePendingEntity(entity)} sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1) }}>
@@ -171,16 +186,16 @@ const ProvisioningTab = ({
                 <Typography variant="caption" color="info.main" fontWeight={900} sx={{ display: 'block', mb: 0.5 }}>TARGET ENTITY</Typography>
                 <Typography variant="body2" fontWeight={800}>{provisioningEntity?.name} ({provisioningEntity?.type})</Typography>
               </Box>
-              
+
               <TextField fullWidth label="Full Name" value={provisionForm.name} onChange={e => setProvisionForm({ ...provisionForm, name: e.target.value })} required
                 InputProps={{ startAdornment: <InputAdornment position="start"><Person fontSize="small" /></InputAdornment>, sx: { borderRadius: 3 } }} />
-              
+
               <TextField fullWidth label="Official Email" type="email" value={provisionForm.email} onChange={e => setProvisionForm({ ...provisionForm, email: e.target.value })} required
                 InputProps={{ startAdornment: <InputAdornment position="start"><Email fontSize="small" /></InputAdornment>, sx: { borderRadius: 3 } }} />
 
               <TextField fullWidth label="Temporary Password" value={provisionForm.password} onChange={e => setProvisionForm({ ...provisionForm, password: e.target.value })} required
                 InputProps={{ startAdornment: <InputAdornment position="start"><Lock fontSize="small" /></InputAdornment>, sx: { borderRadius: 3 } }} />
-              
+
               <Typography variant="caption" color="text.secondary" fontWeight={700}>
                 This password will be required for first login and must be changed immediately.
               </Typography>

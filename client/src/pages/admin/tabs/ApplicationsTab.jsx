@@ -1,37 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box, Typography, Chip, Button, useTheme, Avatar, Stack, Fade,
-  TextField, InputAdornment, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, Tooltip, LinearProgress
+  TextField, InputAdornment, Table, TableBody, TableCell, CircularProgress,
+  TableContainer, TableHead, TableRow, Tooltip, Tabs, Tab, Divider, Grid, Card, Snackbar, Alert
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
-  AssignmentTurnedIn, Shield, VerifiedUser, School as SchoolIcon,
-  Search, CheckCircle, Cancel, HourglassEmpty, ThumbUp, ThumbDown, Circle
+  AssignmentTurnedIn, VerifiedUser, School as SchoolIcon,
+  Search, CheckCircle, GroupAdd, DocumentScanner, History
 } from "@mui/icons-material";
-
-const STATUS_CONFIG = {
-  registrar_approved: { label: "AWAITING AUTH", color: "#f59e0b", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.25)" },
-  final_approved: { label: "PROVISIONED", color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)" },
-  rejected: { label: "REJECTED", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.25)" },
-  pending_dept_review: { label: "DEPT REVIEW", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.25)" },
-  pending: { label: "PENDING", color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)" },
-};
-
-const getStatus = (status) =>
-  STATUS_CONFIG[status] || {
-    label: status?.replace(/_/g, " ").toUpperCase() || "PENDING",
-    color: "#94a3b8",
-    bg: "rgba(148,163,184,0.08)",
-    border: "rgba(148,163,184,0.2)",
-  };
-
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "registrar_approved", label: "Awaiting Auth" },
-  { key: "final_approved", label: "Provisioned" },
-  { key: "rejected", label: "Rejected" },
-];
+import { enrollmentsAPI, applicationsAPI } from "../../../services/api";
 
 const ApplicationsTab = ({
   applications = [],
@@ -39,432 +17,225 @@ const ApplicationsTab = ({
   handleRejectApplication,
   clearanceStudents = [],
   handleDeactivateStudent,
-  glassStyle,
-  mode,
+  glassStyle
 }) => {
   const theme = useTheme();
-  const isDark = mode === "dark";
+  const [subTab, setSubTab] = useState(0);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [enrollments, setEnrollments] = useState([]);
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
 
-  const filtered = applications.filter((app) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !search ||
-      app.name?.toLowerCase().includes(q) ||
-      app.email?.toLowerCase().includes(q) ||
-      app.intendedMajor?.toLowerCase().includes(q) ||
-      app.referenceId?.toLowerCase().includes(q);
-    const matchFilter = filter === "all" || app.status === filter;
-    return matchSearch && matchFilter;
-  });
+  const showSnack = (msg, severity = "success") => setSnack({ open: true, msg, severity });
 
-  const pending = applications.filter((a) => a.status === "registrar_approved").length;
-  const approved = applications.filter((a) => a.status === "final_approved").length;
-  const rejected = applications.filter((a) => a.status === "rejected").length;
+  const fetchEnrollments = useCallback(async () => {
+    setEnrollLoading(true);
+    try {
+      const res = await enrollmentsAPI.getAll();
+      setEnrollments(res.data || []);
+    } catch { /* ignore */ }
+    finally { setEnrollLoading(false); }
+  }, []);
 
-  const cellSx = {
-    borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
-    py: 2,
-    px: 2.5,
-  };
+  useEffect(() => {
+    if (subTab === 1) fetchEnrollments();
+  }, [subTab, fetchEnrollments]);
 
-  const headCellSx = {
-    ...cellSx,
-    fontWeight: 1000,
-    fontSize: "0.62rem",
-    letterSpacing: 1.5,
-    color: "text.secondary",
-    textTransform: "uppercase",
-    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.025)",
-    whiteSpace: "nowrap",
+  const filteredApps = applications.filter(app =>
+    app.name?.toLowerCase().includes(search.toLowerCase()) ||
+    app.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Group enrollments by semester/batch
+  const batches = enrollments.reduce((acc, e) => {
+    const key = e.semester || e.batch || "General";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(e);
+    return acc;
+  }, {});
+
+  const handleFinalizeEnrollment = async (batchKey) => {
+    if (!window.confirm(`Finalize enrollment for ${batchKey}? This locks the batch.`)) return;
+    try {
+      const batchItems = batches[batchKey] || [];
+      await Promise.all(batchItems.map(e => enrollmentsAPI.update(e._id || e.id, { status: "finalized" })));
+      showSnack(`Batch ${batchKey} finalized (${batchItems.length} students).`);
+      fetchEnrollments();
+    } catch (err) {
+      showSnack(err.response?.data?.message || "Failed to finalize batch.", "error");
+    }
   };
 
   return (
-    <Fade in timeout={400}>
-      <Box>
+    <Box>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" fontWeight={1000}>Operational Governance & Admissions</Typography>
+        <Typography variant="caption" color="text.secondary" fontWeight={800}>ORCHESTRATE STUDENT LIFECYCLES, DOCUMENT VERIFICATION, AND ENROLLMENT COHORTS</Typography>
+      </Box>
 
-        {/* ─── Header ─── */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2, mb: 3 }}>
-            <Box>
-              <Typography variant="h4" fontWeight={1000} sx={{ letterSpacing: -1.5, fontFamily: "Outfit, sans-serif", lineHeight: 1 }}>
-                Admissions Protocol
-              </Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1.5, fontSize: "0.62rem", opacity: 0.6 }}>
-                STUDENT CANDIDATE VERIFICATION QUEUE
-              </Typography>
-            </Box>
+      <Tabs
+        value={subTab}
+        onChange={(_, v) => setSubTab(v)}
+        sx={{
+          mb: 4,
+          '& .MuiTabs-indicator': { height: 3, borderRadius: 2 },
+          '& .MuiTab-root': { fontWeight: 900, textTransform: 'none', fontSize: '0.9rem' }
+        }}
+      >
+        <Tab icon={<DocumentScanner sx={{ fontSize: 20 }} />} iconPosition="start" label="Admissions Dashboard" />
+        <Tab icon={<GroupAdd sx={{ fontSize: 20 }} />} iconPosition="start" label="Enrollment Orchestration" />
+        <Tab icon={<History sx={{ fontSize: 20 }} />} iconPosition="start" label="Clearance Archive" />
+      </Tabs>
 
-            {/* Stat pills */}
-            <Stack direction="row" spacing={1.5} flexWrap="wrap">
-              {[
-                { icon: <HourglassEmpty sx={{ fontSize: 14 }} />, val: pending, label: "Awaiting", color: "#f59e0b" },
-                { icon: <CheckCircle sx={{ fontSize: 14 }} />, val: approved, label: "Provisioned", color: "#10b981" },
-                { icon: <Cancel sx={{ fontSize: 14 }} />, val: rejected, label: "Rejected", color: "#ef4444" },
-              ].map((s) => (
-                <Box key={s.label} sx={{
-                  px: 2, py: 0.9, borderRadius: 2.5,
-                  bgcolor: alpha(s.color, 0.08),
-                  border: `1px solid ${alpha(s.color, 0.2)}`,
-                  display: "flex", alignItems: "center", gap: 1,
-                }}>
-                  <Box sx={{ color: s.color }}>{s.icon}</Box>
-                  <Typography variant="h6" fontWeight={1000} lineHeight={1} color={s.color}>{s.val}</Typography>
-                  <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.55, fontSize: "0.58rem" }}>{s.label}</Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
-
-          {/* Search + Filter */}
-          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+      {subTab === 0 && (
+        <Card sx={{ ...glassStyle, borderRadius: 5, overflow: 'hidden' }}>
+          <Box sx={{ p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" fontWeight={900}>Admissions Queue</Typography>
             <TextField
-              size="small"
-              placeholder="Search name, email, department, ref ID…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              InputProps={{ startAdornment: <InputAdornment position="start"><Search sx={{ fontSize: 17, opacity: 0.4 }} /></InputAdornment> }}
-              sx={{
-                flex: 1, minWidth: 220,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 3,
-                  bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.025)",
-                  "& fieldset": { borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" },
-                },
-              }}
-            />
-            <Stack direction="row" spacing={0.8}>
-              {FILTERS.map((f) => {
-                const cnt = f.key === "all" ? applications.length : applications.filter((a) => a.status === f.key).length;
-                const active = filter === f.key;
-                return (
-                  <Chip
-                    key={f.key}
-                    label={`${f.label} · ${cnt}`}
-                    size="small"
-                    onClick={() => setFilter(f.key)}
-                    sx={{
-                      fontWeight: 900, fontSize: "0.68rem", borderRadius: 2, cursor: "pointer",
-                      transition: "all 0.18s",
-                      bgcolor: active ? (isDark ? "rgba(255,255,255,0.92)" : "#0f172a") : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"),
-                      color: active ? (isDark ? "#0f172a" : "#fff") : "text.secondary",
-                      border: "none",
-                      "&:hover": { opacity: 0.8 },
-                    }}
-                  />
-                );
-              })}
-            </Stack>
-          </Box>
-        </Box>
-
-        {/* ─── Applications Table ─── */}
-        <TableContainer
-          component={Paper}
-          elevation={0}
-          sx={{
-            borderRadius: 4,
-            background: isDark ? "rgba(15,23,42,0.75)" : "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(24px)",
-            border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)"}`,
-            boxShadow: isDark ? "0 8px 40px rgba(0,0,0,0.35)" : "0 8px 40px rgba(0,0,0,0.06)",
-            mb: 7,
-            overflow: "hidden",
-          }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow>
-                {["#", "Candidate", "Department / Role", "Reference ID", "Submitted", "Status", "Actions"].map((h, i) => (
-                  <TableCell key={h} align={i === 6 ? "center" : "left"} sx={headCellSx}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 12, borderBottom: "none" }}>
-                    <Box>
-                      <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: alpha(theme.palette.primary.main, 0.06), display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 2 }}>
-                        <AssignmentTurnedIn sx={{ fontSize: 34, color: "primary.main", opacity: 0.3 }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={1000} color="text.secondary">Queue Clear</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.5, mt: 0.5 }}>
-                        {search ? "No results for your search." : "No applications in this queue."}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((app, idx) => {
-                  const appId = app._id || app.id;
-                  const statusCfg = getStatus(app.status);
-                  const isAwaiting = app.status === "registrar_approved";
-                  const isProvisioned = app.status === "final_approved";
-                  const isRejected = app.status === "rejected";
-
-                  return (
-                    <TableRow
-                      key={appId}
-                      sx={{
-                        transition: "background 0.2s",
-                        "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.025)" : "rgba(99,102,241,0.03)" },
-                        "& td": { borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}` },
-                        // Highlight pending rows subtly
-                        ...(isAwaiting && { bgcolor: isDark ? "rgba(245,158,11,0.025)" : "rgba(245,158,11,0.02)" }),
-                      }}
-                    >
-                      {/* # */}
-                      <TableCell sx={{ ...cellSx, width: 40 }}>
-                        <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ opacity: 0.4 }}>
-                          {idx + 1}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Candidate */}
-                      <TableCell sx={cellSx}>
-                        <Stack direction="row" spacing={1.8} alignItems="center">
-                          <Box sx={{ position: "relative", flexShrink: 0 }}>
-                            <Avatar sx={{
-                              width: 42, height: 42, borderRadius: 2.5,
-                              background: `linear-gradient(135deg, ${statusCfg.color}20, ${statusCfg.color}40)`,
-                              color: statusCfg.color, fontWeight: 1000, fontSize: "1.1rem",
-                              border: `1.5px solid ${statusCfg.color}33`,
-                            }}>
-                              {app.name?.[0]?.toUpperCase() || "?"}
-                            </Avatar>
-                            <Box sx={{
-                              position: "absolute", bottom: -3, right: -3,
-                              width: 14, height: 14, borderRadius: "50%",
-                              bgcolor: isProvisioned ? "#10b981" : isRejected ? "#ef4444" : "#f59e0b",
-                              border: `2px solid ${isDark ? "#0d1526" : "#fff"}`,
-                            }} />
-                          </Box>
-                          <Box>
-                            <Typography fontWeight={1000} variant="body2" sx={{ lineHeight: 1.3 }}>{app.name || "Unknown"}</Typography>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ opacity: 0.65 }}>
-                              {app.email || "—"}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-
-                      {/* Dept / Role */}
-                      <TableCell sx={cellSx}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.7, mb: 0.3 }}>
-                          <SchoolIcon sx={{ fontSize: 13, color: "primary.main", opacity: 0.7 }} />
-                          <Typography variant="body2" fontWeight={900} noWrap sx={{ maxWidth: 150 }}>
-                            {app.intendedMajor || app.college || app.department || "—"}
-                          </Typography>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ fontSize: "0.58rem", letterSpacing: 0.5, opacity: 0.55 }}>
-                          STUDENT CANDIDATE
-                        </Typography>
-                      </TableCell>
-
-                      {/* Ref ID */}
-                      <TableCell sx={cellSx}>
-                        <Typography variant="body2" fontWeight={900} sx={{ fontFamily: "monospace", letterSpacing: 1.5, fontSize: "0.78rem" }}>
-                          {app.referenceId?.slice(0, 12).toUpperCase() || "N/A"}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Submitted */}
-                      <TableCell sx={cellSx}>
-                        <Typography variant="caption" fontWeight={800} color="text.secondary">
-                          {new Date(app.createdAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </Typography>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell sx={cellSx}>
-                        <Box sx={{
-                          display: "inline-flex", alignItems: "center", gap: 0.7,
-                          px: 1.4, py: 0.55, borderRadius: 1.5,
-                          bgcolor: statusCfg.bg, border: `1px solid ${statusCfg.border}`,
-                        }}>
-                          <Box sx={{
-                            width: 6, height: 6, borderRadius: "50%", bgcolor: statusCfg.color, flexShrink: 0,
-                            ...(isAwaiting && { animation: "pulse 2s infinite", "@keyframes pulse": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.4 } } })
-                          }} />
-                          <Typography sx={{ fontSize: "0.6rem", fontWeight: 900, color: statusCfg.color, letterSpacing: 0.6 }}>
-                            {statusCfg.label}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell sx={{ ...cellSx, textAlign: "center" }}>
-                        {isAwaiting ? (
-                          <Stack direction="row" spacing={1} justifyContent="center">
-                            <Tooltip title="Authenticate & Provision Account">
-                              <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<ThumbUp sx={{ fontSize: 13 }} />}
-                                onClick={() => handleReviewApplication(app)}
-                                sx={{
-                                  borderRadius: 2, textTransform: "none", fontWeight: 900,
-                                  fontSize: "0.75rem", py: 0.7, px: 1.8,
-                                  background: "linear-gradient(135deg,#6366f1,#4f46e5)",
-                                  boxShadow: "0 4px 14px rgba(99,102,241,0.4)",
-                                  "&:hover": { background: "linear-gradient(135deg,#4f46e5,#3730a3)", transform: "translateY(-1px)" },
-                                  transition: "all 0.2s",
-                                }}
-                              >
-                                Authenticate
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Reject Application">
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<ThumbDown sx={{ fontSize: 13 }} />}
-                                onClick={() => handleRejectApplication(app)}
-                                sx={{
-                                  borderRadius: 2, textTransform: "none", fontWeight: 900,
-                                  fontSize: "0.75rem", py: 0.7, px: 1.5,
-                                  borderColor: alpha(theme.palette.error.main, 0.35),
-                                  color: "error.main",
-                                  "&:hover": { bgcolor: alpha(theme.palette.error.main, 0.07), borderColor: "error.main", transform: "translateY(-1px)" },
-                                  transition: "all 0.2s",
-                                }}
-                              >
-                                Reject
-                              </Button>
-                            </Tooltip>
-                          </Stack>
-                        ) : (
-                          <Box sx={{
-                            display: "inline-flex", alignItems: "center", gap: 0.6,
-                            px: 1.6, py: 0.6, borderRadius: 2,
-                            bgcolor: isProvisioned ? alpha("#10b981", 0.08) : alpha("#ef4444", 0.08),
-                            border: `1px solid ${isProvisioned ? alpha("#10b981", 0.2) : alpha("#ef4444", 0.2)}`,
-                          }}>
-                            {isProvisioned
-                              ? <><VerifiedUser sx={{ fontSize: 13, color: "#10b981" }} /><Typography variant="caption" fontWeight={900} color="#10b981" sx={{ fontSize: "0.7rem" }}>Provisioned</Typography></>
-                              : <><Cancel sx={{ fontSize: 13, color: "#ef4444" }} /><Typography variant="caption" fontWeight={900} color="#ef4444" sx={{ fontSize: "0.7rem" }}>Rejected</Typography></>
-                            }
-                          </Box>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* ─── Student Clearance Section ─── */}
-        <Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-            <Box>
-              <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5, fontFamily: "Outfit, sans-serif" }}>
-                Student Clearance Queue
-              </Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1.5, fontSize: "0.62rem", opacity: 0.6 }}>
-                DEACTIVATION PROTOCOLS
-              </Typography>
-            </Box>
-            <Chip
-              label={`${clearanceStudents.length} PENDING`}
-              size="small"
-              sx={{ fontWeight: 900, borderRadius: 1.5, bgcolor: alpha(theme.palette.error.main, 0.1), color: "error.main", border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }}
+              placeholder="Search candidates..." size="small" value={search} onChange={(e) => setSearch(e.target.value)}
+              sx={{ width: 300, '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+              InputProps={{ startAdornment: <Search sx={{ mr: 1, opacity: 0.5 }} /> }}
             />
           </Box>
-
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{
-              borderRadius: 4,
-              background: isDark ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.95)",
-              backdropFilter: "blur(20px)",
-              border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`,
-              boxShadow: isDark ? "0 6px 30px rgba(0,0,0,0.3)" : "0 6px 30px rgba(0,0,0,0.05)",
-              mb: 6,
-              overflow: "hidden",
-            }}
-          >
-            <Table>
+          <TableContainer>
+            <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  {["Student", "Department", "Status", "Action"].map((h, i) => (
-                    <TableCell key={h} align={i === 3 ? "center" : "left"} sx={headCellSx}>{h}</TableCell>
+                  {["Candidate", "Program/Major", "Documents", "Status", "Actions"].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>{h}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {clearanceStudents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 8, borderBottom: "none" }}>
-                      <VerifiedUser sx={{ fontSize: 34, color: "success.main", opacity: 0.25, mb: 1 }} />
-                      <Typography fontWeight={1000} color="text.secondary" variant="body2">ALL CLEARANCE PROTOCOLS RESOLVED</Typography>
+                {filteredApps.map((app, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>{app.name?.[0]}</Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={900}>{app.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{app.email}</Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>{app.intendedMajor || "Undeclared"}</TableCell>
+                    <TableCell>
+                      <Chip label="Verified" size="small" icon={<VerifiedUser sx={{ fontSize: 12 }} />} sx={{ fontWeight: 900, fontSize: '0.6rem', bgcolor: alpha('#10b981', 0.1), color: '#10b981' }} />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={app.status?.toUpperCase()} size="small"
+                        sx={{
+                          fontWeight: 900, fontSize: '0.6rem',
+                          bgcolor: alpha(app.status === 'registrar_approved' ? '#f59e0b' : '#10b981', 0.1),
+                          color: app.status === 'registrar_approved' ? '#f59e0b' : '#10b981'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {app.status === 'registrar_approved' ? (
+                        <Stack direction="row" spacing={1}>
+                          <Button size="small" variant="contained" onClick={() => handleReviewApplication(app)} sx={{ borderRadius: 2, fontWeight: 900 }}>Authenticate</Button>
+                          <Button size="small" variant="outlined" color="error" onClick={() => handleRejectApplication(app)} sx={{ borderRadius: 2, fontWeight: 900 }}>Reject</Button>
+                        </Stack>
+                      ) : (
+                        <Typography variant="caption" fontWeight={1000} color="text.disabled">PROVISIONED</Typography>
+                      )}
                     </TableCell>
                   </TableRow>
-                ) : (
-                  clearanceStudents.map((student, i) => (
-                    <TableRow key={i} sx={{ "&:hover": { bgcolor: isDark ? "rgba(239,68,68,0.03)" : "rgba(239,68,68,0.02)" }, "& td": { borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}` } }}>
-                      <TableCell sx={cellSx}>
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                          <Avatar sx={{ width: 38, height: 38, borderRadius: 2, bgcolor: alpha(theme.palette.error.main, 0.1), color: "error.main", fontWeight: 900 }}>
-                            {student.name?.[0]}
-                          </Avatar>
-                          <Box>
-                            <Typography fontWeight={900} variant="body2">{student.name}</Typography>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ opacity: 0.6 }}>{student.email}</Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-                      <TableCell sx={cellSx}>
-                        <Typography variant="body2" fontWeight={800}>{student.department || "N/A"}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: "0.58rem", opacity: 0.55 }}>STUDENT</Typography>
-                      </TableCell>
-                      <TableCell sx={cellSx}>
-                        <Chip label={student.status?.toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: "0.6rem", borderRadius: 1.5, color: "error.main", bgcolor: alpha(theme.palette.error.main, 0.1), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }} />
-                      </TableCell>
-                      <TableCell sx={{ ...cellSx, textAlign: "center" }}>
-                        <Button
-                          variant="contained" color="error" size="small"
-                          onClick={() => handleDeactivateStudent && handleDeactivateStudent(student)}
-                          sx={{ borderRadius: 2, textTransform: "none", fontWeight: 900, fontSize: "0.75rem", boxShadow: "0 4px 14px rgba(239,68,68,0.3)" }}
-                        >
-                          Deactivate
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </Box>
+        </Card>
+      )}
 
-        {/* ─── Security Notice ─── */}
-        <Box sx={{
-          p: 3, borderRadius: 4,
-          bgcolor: alpha(theme.palette.warning.main, 0.04),
-          border: `1px solid ${alpha(theme.palette.warning.main, 0.18)}`,
-          display: "flex", alignItems: "center", gap: 2.5,
-        }}>
-          <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: alpha(theme.palette.warning.main, 0.1), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Shield sx={{ color: "warning.main", fontSize: 22 }} />
+      {subTab === 1 && (
+        <Card sx={{ ...glassStyle, p: 4, borderRadius: 5 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+            <Box>
+              <Typography variant="h6" fontWeight={900}>Batch Enrollment Orchestrator</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Organize provisioned candidates into operational cohorts and finalize enrollment batches.</Typography>
+            </Box>
+            <Button variant="outlined" size="small" onClick={fetchEnrollments} sx={{ borderRadius: 2, fontWeight: 900, textTransform: "none" }}>Refresh</Button>
           </Box>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={1000} color="warning.main" sx={{ letterSpacing: 0.5 }}>
-              SECURITY PROTOCOL NOTICE
-            </Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>
-              Authenticating a candidate opens the provisioning dialog to create their university account. A password rotation is enforced on first login.
-            </Typography>
+          {enrollLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
+          ) : Object.keys(batches).length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 8, opacity: 0.4 }}>
+              <GroupAdd sx={{ fontSize: 48, mb: 1 }} />
+              <Typography variant="h6" fontWeight={900}>No Enrollment Batches Found</Typography>
+              <Typography variant="body2">Enrollments will appear here when students register for courses.</Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={3}>
+              {Object.entries(batches).map(([batchKey, items]) => {
+                const finalized = items.filter(e => e.status === "finalized").length;
+                return (
+                  <Grid item xs={12} md={4} key={batchKey}>
+                    <Card sx={{ bgcolor: "rgba(255,255,255,0.02)", p: 3, borderRadius: 4, border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <Typography variant="subtitle2" fontWeight={1000} color="primary.main" noWrap>{batchKey.toUpperCase()}</Typography>
+                      <Stack spacing={2} sx={{ mt: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between" }}><Typography variant="caption" fontWeight={800}>Total Students</Typography><Typography variant="caption" fontWeight={1000}>{items.length}</Typography></Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between" }}><Typography variant="caption" fontWeight={800}>Finalized</Typography><Typography variant="caption" fontWeight={1000} color="success.main">{finalized}</Typography></Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between" }}><Typography variant="caption" fontWeight={800}>Pending</Typography><Typography variant="caption" fontWeight={1000} color="warning.main">{items.length - finalized}</Typography></Box>
+                        <Divider sx={{ opacity: 0.1 }} />
+                        <Button fullWidth variant="outlined" sx={{ borderRadius: 2, fontWeight: 900 }} onClick={() => handleFinalizeEnrollment(batchKey)} disabled={finalized === items.length}>
+                          {finalized === items.length ? "Batch Finalized" : "Finalize Enrollment"}
+                        </Button>
+                      </Stack>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
+        </Card>
+      )}
+
+      {subTab === 2 && (
+        <Card sx={{ ...glassStyle, p: 4, borderRadius: 5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+            <Typography variant="h6" fontWeight={900}>Student Clearance & Archive</Typography>
+            <Chip label={`${clearanceStudents.length} PENDING DEACTIVATION`} color="error" sx={{ fontWeight: 900 }} />
           </Box>
-        </Box>
-      </Box>
-    </Fade>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {["Student Entity", "Clearance Status", "Protocol"].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 1000, color: 'text.secondary', fontSize: '0.7rem' }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {clearanceStudents.map((student, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }}>{student.name?.[0]}</Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={900}>{student.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{student.email}</Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={student.status?.toUpperCase()} size="small" sx={{ fontWeight: 900, fontSize: '0.6rem', bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }} />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="contained" color="error" size="small" onClick={() => handleDeactivateStudent(student)} sx={{ borderRadius: 2, fontWeight: 900 }}>Deactivate Account</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+    </Box>
   );
 };
 
 export default ApplicationsTab;
+

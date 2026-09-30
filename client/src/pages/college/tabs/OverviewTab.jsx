@@ -22,7 +22,7 @@ const GRADIENTS = {
     violet: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
 };
 
-export default function OverviewTab({ college, departments, students, faculty, researchProjects, events, pendingCourses }) {
+export default function OverviewTab({ college, departments, students, faculty, researchProjects, events, pendingCourses, budget, deptPerf }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const collegeColor = college?.color || "#6366f1";
@@ -43,24 +43,25 @@ export default function OverviewTab({ college, departments, students, faculty, r
     ];
 
     const enrollmentTrend = useMemo(() => [
-        { sem: "S1 2024", students: Math.round((students || 400) * 0.72) },
-        { sem: "S2 2024", students: Math.round((students || 400) * 0.80) },
-        { sem: "S1 2025", students: Math.round((students || 400) * 0.87) },
-        { sem: "S2 2025", students: Math.round((students || 400) * 0.93) },
-        { sem: "S1 2026", students: students || 400 },
+        { sem: "S1 2024", students: Math.round((students || 0) * 0.72) },
+        { sem: "S2 2024", students: Math.round((students || 0) * 0.80) },
+        { sem: "S1 2025", students: Math.round((students || 0) * 0.87) },
+        { sem: "S2 2025", students: Math.round((students || 0) * 0.93) },
+        { sem: "S1 2026", students: students || 0 },
     ], [students]);
 
-    const deptPerf = (departments || []).slice(0, 6).map((d, i) => ({
+    const performanceData = deptPerf || (departments || []).map((d) => ({
         name: d.code || d.name?.slice(0, 8),
-        students: d.studentCount || Math.floor(Math.random() * 200 + 60),
+        students: d.studentCount || 0,
         color: d.color || "#6366f1",
     }));
 
     const approvalItems = [
         { label: "Pending Course Approvals", count: pendingCourses?.length || 0, color: "#f59e0b", urgent: (pendingCourses?.length || 0) > 5 },
-        { label: "Faculty Leave Requests", count: 3, color: "#6366f1", urgent: false },
-        { label: "Budget Requests", count: 2, color: "#10b981", urgent: false },
-        { label: "Program Proposals", count: 1, color: "#8b5cf6", urgent: false },
+        // Future extensions:
+        // { label: "Faculty Leave Requests", count: 0, color: "#6366f1", urgent: false },
+        // { label: "Budget Requests", count: 0, color: "#10b981", urgent: false },
+        // { label: "Program Proposals", count: 0, color: "#8b5cf6", urgent: false },
     ];
 
     const quickStats = [
@@ -162,7 +163,7 @@ export default function OverviewTab({ college, departments, students, faculty, r
                             <Typography variant="h6" fontWeight={900} gutterBottom>Students by Department</Typography>
                             <Box sx={{ height: 240 }}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={deptPerf}>
+                                    <BarChart data={performanceData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={alpha("#94a3b8", 0.1)} />
                                         <XAxis dataKey="name" tick={{ fontWeight: 700, fontSize: 11 }} axisLine={false} tickLine={false} />
                                         <YAxis tick={{ fontWeight: 700, fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -184,12 +185,7 @@ export default function OverviewTab({ college, departments, students, faculty, r
                                 <Typography variant="h6" fontWeight={900}>Upcoming Events</Typography>
                             </Box>
                             <Stack spacing={1.5}>
-                                {(events?.length > 0 ? events.slice(0, 4) : [
-                                    { title: "Faculty Research Seminar", date: "2026-06-15", type: "Research" },
-                                    { title: "Department Head Meeting", date: "2026-06-18", type: "Administrative" },
-                                    { title: "Semester End Review", date: "2026-06-25", type: "Academic" },
-                                    { title: "College Open Day", date: "2026-07-01", type: "Event" },
-                                ]).map((ev, i) => (
+                                {(events?.length > 0 ? events.slice(0, 4) : []).map((ev, i) => (
                                     <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 2, p: 1.5, borderRadius: 2, bgcolor: alpha(collegeColor, 0.04), border: `1px solid ${alpha(collegeColor, 0.08)}` }}>
                                         <Box sx={{ px: 1.5, py: 1, borderRadius: 1.5, bgcolor: alpha(collegeColor, 0.12), textAlign: "center", minWidth: 52 }}>
                                             <Typography variant="caption" fontWeight={900} color={collegeColor} sx={{ fontSize: "0.65rem", display: "block" }}>

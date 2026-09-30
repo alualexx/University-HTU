@@ -1,6 +1,12 @@
-import { DashboardTab, AccountManagementTab } from './tabs';
-
-export {
-    DashboardTab,
-    AccountManagementTab
-};
+export { default as DashboardTab } from './DashboardTab';
+export { default as AccountManagementTab } from './AccountManagementTab';
+export { default as FeeManagementTab } from './FeeManagementTab';
+export { default as InvoicingTab } from './InvoicingTab';
+export { default as PaymentProcessingTab } from './PaymentProcessingTab';
+export { default as StudentRecordsTab } from './StudentRecordsTab';
+export { default as ScholarshipTab } from './ScholarshipTab';
+export { default as PayrollProcessingTab } from './PayrollProcessingTab';
+export { default as BudgetExpenditureTab } from './BudgetExpenditureTab';
+export { default as AccountingLedgerTab } from './AccountingLedgerTab';
+export { default as ReportsAnalyticsTab } from './ReportsAnalyticsTab';
+export { default as SettingsSetupTab } from './SettingsSetupTab';

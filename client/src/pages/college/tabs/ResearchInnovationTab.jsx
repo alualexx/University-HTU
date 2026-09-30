@@ -22,17 +22,9 @@ export default function ResearchInnovationTab({ researchProjects }) {
         borderRadius: 3,
     };
 
-    const projects = researchProjects || [
-        { title: "AI in Predictive Healthcare", pi: "Dr. Ahmad Khalil", funding: 150000, status: "active", progress: 65, agency: "National Science Foundation" },
-        { title: "Sustainable Concrete Formulas", pi: "Dr. Sara Hassan", funding: 85000, status: "pending", progress: 0, agency: "Ministry of Infrastructure" },
-        { title: "Fintech Regulatory Frameworks", pi: "Prof. Mohammed Ali", funding: 40000, status: "active", progress: 90, agency: "Central Bank" },
-    ];
+    const projects = researchProjects || [];
 
-    const pubData = [
-        { year: "2022", pubs: 145 }, { year: "2023", pubs: 178 },
-        { year: "2024", pubs: 210 }, { year: "2025", pubs: 256 },
-        { year: "2026", pubs: 115 }, // Partial year
-    ];
+    const pubData = [];
 
     return (
         <Box>
@@ -118,7 +110,7 @@ export default function ResearchInnovationTab({ researchProjects }) {
                                     <Avatar sx={{ bgcolor: alpha("#8b5cf6", 0.1), width: 56, height: 56, color: "#8b5cf6" }}><AutoStories /></Avatar>
                                     <Box>
                                         <Typography variant="caption" color="text.secondary" fontWeight={800}>Total Publications</Typography>
-                                        <Typography variant="h4" fontWeight={1000}>904</Typography>
+                                        <Typography variant="h4" fontWeight={1000}>{projects.length}</Typography>
                                     </Box>
                                 </CardContent>
                             </Card>
@@ -139,11 +131,7 @@ export default function ResearchInnovationTab({ researchProjects }) {
             {/* Research Centers */}
             {subTab === 3 && (
                 <Grid container spacing={3}>
-                    {[
-                        { name: "Center for Artificial Intelligence", labs: 4, researchers: 45 },
-                        { name: "Sustainable Engineering Institute", labs: 6, researchers: 60 },
-                        { name: "Global Finance Observatory", labs: 2, researchers: 25 },
-                    ].map((c, i) => (
+                    {[].map((c, i) => (
                         <Grid item xs={12} md={4} key={i}>
                             <Card sx={{ ...glass }}>
                                 <CardContent sx={{ p: 4, textAlign: "center" }}>

@@ -1,159 +1,226 @@
 import React, { useState } from "react";
 import {
-    Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-    Typography, Avatar, Chip, Divider, Button, IconButton, Badge,
-    useTheme, useMediaQuery
+  Box,
+  Typography,
+  Button,
+  Avatar,
+  IconButton,
+  List,
+  ListItem,
+  Tooltip,
+  Container,
 } from "@mui/material";
 import {
-    Dashboard, AccountBox, Payments, Receipt, AccountBalance,
-    LocalAtm, CreditCard, PieChart, Settings, Description,
-    LightMode, DarkMode, Menu as MenuIcon, Notifications
+  Dashboard as DashboardIcon,
+  Receipt,
+  Payments,
+  TrendingUp,
+  AccountBalance,
+  LocalAtm,
+  Sync,
+  Lock,
+  FormatListBulleted,
+  Logout,
+  Menu as MenuIcon,
+  ChevronLeft,
+  Church,
 } from "@mui/icons-material";
-import { DashboardTab, AccountManagementTab } from './tabs';
 import { useAuth } from "../../context/AuthContext";
-import { useColorMode } from "../../context/ThemeContext";
+import {
+  DashboardTab,
+  InvoicingTab,
+  PaymentProcessingTab,
+  ReportsAnalyticsTab,
+  ScholarshipTab,
+  PayrollProcessingTab,
+  FeeManagementTab,
+  SettingsSetupTab,
+} from "./tabs";
 
-const SIDEBAR_WIDTH = 280;
+const HTTU_COLORS = {
+  navy: "#0E2033",
+  gold: "#D9A621",
+  teal: "#12808C",
+  canvas: "#F4F6F8",
+  border: "#E2E8F0",
+  textPrimary: "#1A202C",
+  textSecondary: "#4A5568",
+};
 
-const NAV_ITEMS = [
-    { label: "Overview Dashboard", icon: <Dashboard /> },
-    { label: "Account Management", icon: <AccountBox /> },
-    { label: "Fee Management", icon: <Payments /> },
-    { label: "Invoicing & Billing", icon: <Receipt /> },
-    { label: "Payment Processing", icon: <CreditCard /> },
-    { label: "Student Records", icon: <Description /> },
-    { label: "Scholarship & Aid", icon: <AccountBalance /> },
-    { label: "Payroll Processing", icon: <LocalAtm /> },
-    { label: "Budget & Expenditure", icon: <PieChart /> },
-    { label: "Accounting & Ledger", icon: <Description /> },
-    { label: "Reports & Analytics", icon: <PieChart /> },
-    { label: "Settings & Setup", icon: <Settings /> }
-];
-
-const gradients = [
-    "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-    "linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)",
-    "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
-    "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
+const FINANCE_NAV = [
+  { label: "Dashboard", icon: <DashboardIcon />, tab: 0 },
+  { label: "Invoices", icon: <Receipt />, tab: 1 },
+  { label: "Payments", icon: <Payments />, tab: 2 },
+  { label: "Revenue & Reports", icon: <TrendingUp />, tab: 3 },
+  { label: "Scholarships & Waivers", icon: <AccountBalance />, tab: 4 },
+  { label: "Payroll & Disbursements", icon: <LocalAtm />, tab: 5 },
+  { label: "Reconciliation", icon: <Sync />, tab: 6 },
+  { label: "Finance Holds", icon: <Lock />, tab: 7 },
+  { label: "Fee Structure", icon: <FormatListBulleted />, tab: 8 },
 ];
 
 export default function FinanceDashboard() {
-    const { user, logout } = useAuth();
-    const { mode, toggleColorMode } = useColorMode();
-    const isDark = mode === 'dark';
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    const [activeTab, setActiveTab] = useState(0);
-    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const displayName = user?.name || user?.full_name || "Mahlet Yohannes";
+  const displayRole = "Finance Officer";
 
-    const cardSx = {
-        background: isDark ? "rgba(15,23,42,0.6)" : "#fff",
-        backdropFilter: "blur(20px)",
-        border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-        boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.03)"
-    };
-
-    const sidebarContent = (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', background: isDark ? 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' : 'linear-gradient(180deg, #065f46 0%, #047857 100%)' }}>
-            <Box sx={{ p: 3, pt: 4, textAlign: 'center' }}>
-                <Avatar sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: 'white', color: '#047857', fontWeight: 900, fontSize: '1.8rem', border: '3px solid rgba(255,255,255,0.25)' }}>
-                    {(user?.name || "F")[0].toUpperCase()}
-                </Avatar>
-                <Typography variant="subtitle1" fontWeight={900} color="white" sx={{ lineHeight: 1.2 }}>{user?.name || "Finance Admin"}</Typography>
-                <Typography variant="caption" color="rgba(255,255,255,0.6)" fontWeight={700}>Financial Operation Hub</Typography>
-            </Box>
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
-            <List sx={{ px: 1.5, py: 2, flex: 1, overflowY: 'auto' }}>
-                {NAV_ITEMS.map((item, i) => (
-                    <ListItemButton
-                        key={i}
-                        selected={activeTab === i}
-                        onClick={() => { setActiveTab(i); setMobileNavOpen(false); }}
-                        sx={{
-                            borderRadius: 3, mb: 0.5, py: 1.3, px: 2,
-                            color: activeTab === i ? 'white' : 'rgba(255,255,255,0.6)',
-                            bgcolor: activeTab === i ? 'rgba(255,255,255,0.15)' : 'transparent',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
-                            transition: '0.2s',
-                        }}
-                    >
-                        <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>{item.icon}</ListItemIcon>
-                        <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: activeTab === i ? 900 : 700, fontSize: '0.85rem' }} />
-                    </ListItemButton>
-                ))}
-            </List>
-            <Box sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <Button fullWidth onClick={toggleColorMode} startIcon={isDark ? <LightMode /> : <DarkMode />} sx={{ color: 'rgba(255,255,255,0.7)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
-                    {isDark ? "Light Mode" : "Dark Mode"}
-                </Button>
-                <Button fullWidth onClick={logout} sx={{ color: 'rgba(255,200,200,0.8)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 800, borderRadius: 2.5, py: 1, mt: 0.5, '&:hover': { bgcolor: 'rgba(255,0,0,0.1)', color: '#fca5a5' } }}>
-                    Sign Out
-                </Button>
-            </Box>
-        </Box>
-    );
-
-    return (
-        <Box sx={{ display: 'flex', bgcolor: "background.default", minHeight: "100vh", color: "text.primary" }}>
-            {/* Mobile Drawer */}
-            <Drawer
-                variant="temporary"
-                open={mobileNavOpen}
-                onClose={() => setMobileNavOpen(false)}
-                ModalProps={{ keepMounted: true }}
+  return (
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: HTTU_COLORS.canvas }}>
+      {/* ── HTTU Master Navy Sidebar ── */}
+      <Box
+        sx={{
+          width: sidebarOpen ? 260 : 78,
+          height: "100vh",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bgcolor: HTTU_COLORS.navy,
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          transition: "width 0.3s ease",
+          zIndex: 1200,
+          boxShadow: "4px 0 20px rgba(0,0,0,0.15)",
+        }}
+      >
+        <Box
+          sx={{
+            p: 2.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: sidebarOpen ? "space-between" : "center",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {sidebarOpen && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
                 sx={{
-                    display: { xs: 'block', md: 'none' },
-                    '& .MuiDrawer-paper': { width: SIDEBAR_WIDTH, boxSizing: 'border-box', border: 'none' }
+                  width: 38,
+                  height: 38,
+                  borderRadius: "10px",
+                  border: `2px solid ${HTTU_COLORS.gold}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "rgba(217, 166, 33, 0.12)",
                 }}
-            >
-                {sidebarContent}
-            </Drawer>
-
-            {/* Desktop Sidebar */}
-            <Box sx={{
-                width: SIDEBAR_WIDTH, flexShrink: 0, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 1200,
-                display: { xs: 'none', md: 'flex' }, flexDirection: 'column',
-                borderRight: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                boxShadow: '4px 0 24px rgba(0,0,0,0.1)',
-            }}>
-                {sidebarContent}
+              >
+                <Church sx={{ color: HTTU_COLORS.gold, fontSize: 22 }} />
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: HTTU_COLORS.gold, letterSpacing: 0.5, display: "block", lineHeight: 1.1 }}>
+                  HOLY TRINITY
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 700, fontSize: "0.68rem" }}>
+                  THEOLOGY UNIVERSITY
+                </Typography>
+                <Typography variant="caption" sx={{ color: HTTU_COLORS.gold, fontWeight: 700, fontSize: "0.62rem", display: "block" }}>
+                  FINANCE OFFICE
+                </Typography>
+              </Box>
             </Box>
-
-            {/* Main Content Area */}
-            <Box sx={{ ml: { xs: 0, md: `${SIDEBAR_WIDTH}px` }, flex: 1, minHeight: '100vh', minWidth: 0, pb: 10 }}>
-                {isMobile && (
-                    <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? '#0f172a' : '#047857', color: 'white' }}>
-                        <IconButton onClick={() => setMobileNavOpen(true)} sx={{ color: 'white' }}><MenuIcon /></IconButton>
-                        <Typography variant="subtitle1" fontWeight={900}>{NAV_ITEMS[activeTab]?.label}</Typography>
-                        <IconButton sx={{ color: 'white' }}><Badge color="error"><Notifications /></Badge></IconButton>
-                    </Box>
-                )}
-
-                {/* Desktop Top Bar */}
-                <Box sx={{ px: { xs: 2, md: 5 }, py: 2.5, display: { xs: 'none', md: 'flex' }, justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Box>
-                        <Typography variant="h5" fontWeight={900}>{NAV_ITEMS[activeTab]?.label}</Typography>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>Financial Operations · Command Center</Typography>
-                    </Box>
-                    <IconButton sx={{ border: '1px solid', borderColor: 'divider', p: 1.2 }}>
-                        <Badge color="error"><Notifications /></Badge>
-                    </IconButton>
-                </Box>
-
-                {/* Dynamic Tab Content */}
-                <Box sx={{ p: { xs: 2, md: 5 } }}>
-                    {activeTab === 0 && <DashboardTab user={user} isDark={isDark} cardSx={cardSx} gradients={gradients} />}
-                    {activeTab === 1 && <AccountManagementTab isDark={isDark} cardSx={cardSx} gradients={gradients} />}
-                    {/* Placeholders for subsequent tabs */}
-                    {activeTab > 1 && (
-                        <Box sx={{ textAlign: 'center', py: 10, opacity: 0.5 }}>
-                            <Typography variant="h6" fontWeight={900}>Module Under Construction</Typography>
-                            <Typography variant="body2">This module is planned in the Financial Portal Roadmap.</Typography>
-                        </Box>
-                    )}
-                </Box>
-            </Box>
+          )}
+          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ color: "rgba(255,255,255,0.7)" }}>
+            {sidebarOpen ? <ChevronLeft /> : <MenuIcon />}
+          </IconButton>
         </Box>
-    );
+
+        <List sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: "auto" }}>
+          {FINANCE_NAV.map((item) => {
+            const isSelected = activeTab === item.tab;
+            return (
+              <ListItem key={item.label} disablePadding sx={{ mb: 0.5 }}>
+                <Tooltip title={!sidebarOpen ? item.label : ""} placement="right">
+                  <Button
+                    fullWidth
+                    onClick={() => setActiveTab(item.tab)}
+                    startIcon={<Box sx={{ color: isSelected ? HTTU_COLORS.navy : "rgba(255,255,255,0.7)", display: "flex" }}>{item.icon}</Box>}
+                    sx={{
+                      justifyContent: sidebarOpen ? "flex-start" : "center",
+                      px: sidebarOpen ? 2 : 0,
+                      py: 1.2,
+                      borderRadius: 2.5,
+                      textTransform: "none",
+                      fontWeight: isSelected ? 800 : 500,
+                      fontSize: "0.85rem",
+                      bgcolor: isSelected ? HTTU_COLORS.gold : "transparent",
+                      color: isSelected ? HTTU_COLORS.navy : "rgba(255,255,255,0.8)",
+                      "&:hover": {
+                        bgcolor: isSelected ? HTTU_COLORS.gold : "rgba(255,255,255,0.06)",
+                      },
+                    }}
+                  >
+                    {sidebarOpen && item.label}
+                  </Button>
+                </Tooltip>
+              </ListItem>
+            );
+          })}
+        </List>
+
+        <Box
+          sx={{
+            p: 2,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: sidebarOpen ? "space-between" : "center",
+          }}
+        >
+          {sidebarOpen ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: HTTU_COLORS.gold, color: HTTU_COLORS.navy, fontWeight: 800, fontSize: "0.85rem" }}>
+                MY
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700} noWrap sx={{ color: "white", fontSize: "0.82rem" }}>
+                  {displayName}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", fontSize: "0.7rem", display: "block" }}>
+                  {displayRole}
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Avatar sx={{ width: 34, height: 34, bgcolor: HTTU_COLORS.gold, color: HTTU_COLORS.navy, fontWeight: 800 }}>
+              MY
+            </Avatar>
+          )}
+          {sidebarOpen && (
+            <IconButton onClick={logout} size="small" sx={{ color: "rgba(255,255,255,0.6)" }}>
+              <Logout fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+
+      {/* ── Main Content Area ── */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          ml: `${sidebarOpen ? 260 : 78}px`,
+          p: { xs: 2.5, md: 4 },
+          transition: "margin-left 0.3s ease",
+          minHeight: "100vh",
+        }}
+      >
+        <Container maxWidth="xl" disableGutters>
+          {activeTab === 0 && <DashboardTab />}
+          {activeTab === 1 && <InvoicingTab />}
+          {activeTab === 2 && <PaymentProcessingTab />}
+          {activeTab === 3 && <ReportsAnalyticsTab />}
+          {activeTab === 4 && <ScholarshipTab />}
+          {activeTab === 5 && <PayrollProcessingTab />}
+          {activeTab === 6 && <DashboardTab />}
+          {activeTab === 7 && <DashboardTab />}
+          {activeTab === 8 && <FeeManagementTab />}
+        </Container>
+      </Box>
+    </Box>
+  );
 }

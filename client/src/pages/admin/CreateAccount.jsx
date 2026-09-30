@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Card, Typography, Button, CircularProgress, Alert, Container, Grid, Avatar, Chip } from "@mui/material";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../../services/Firebase";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { PersonAdd, ArrowBack, VpnKey, Email, Badge } from "@mui/icons-material";
+import { applicationsAPI } from "../../services/api";
 
 const CreateAccount = () => {
     const { applicationId } = useParams();
@@ -20,11 +19,9 @@ const CreateAccount = () => {
     useEffect(() => {
         const fetchApplication = async () => {
             try {
-                const docRef = doc(db, "applications", applicationId);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    setApplication({ id: docSnap.id, ...docSnap.data() });
+                const res = await applicationsAPI.getById(applicationId);
+                if (res.data) {
+                    setApplication({ id: res.data._id || res.data.id, ...res.data });
                 } else {
                     setError("Application not found.");
                 }
@@ -63,7 +60,7 @@ const CreateAccount = () => {
 
         if (result.success) {
             try {
-                await updateDoc(doc(db, "applications", applicationId), {
+                await applicationsAPI.patch(applicationId, {
                     status: "enrolled"
                 });
                 setCredentials({

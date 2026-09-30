@@ -114,11 +114,13 @@ const Navbar = () => {
   };
 
   const publicMenuItems = [
-    { label: t("home"), path: "/" },
-    { label: t("departments"), path: "/departments" },
-    { label: t("aboutUs"), path: "/about" },
-    { label: t("admissions"), path: "/apply" },
-    { label: t("trackApplication"), path: "/track" },
+    { label: "Home", path: "/" },
+    { label: "Admissions", path: "/apply" },
+    { label: "Departments", path: "/departments" },
+    { label: "Courses", path: "/courses" },
+    { label: "Faculty", path: "/faculty" },
+    { label: "News & Notices", path: "/news" },
+    { label: "About HTTU", path: "/about" },
   ];
 
   const portalMenuItems = [
@@ -131,6 +133,7 @@ const Navbar = () => {
 
   const isHomePage = location.pathname === "/";
   const shouldShowGlass = !isHomePage || scrolled;
+  const isDark = theme.palette.mode === "dark";
 
   /* ── Mobile Drawer ── */
   const drawer = (
@@ -247,18 +250,14 @@ const Navbar = () => {
         elevation={0}
         sx={{
           background: shouldShowGlass
-            ? theme.palette.mode === "dark"
-              ? alpha("#0f172a", 0.96)
-              : alpha("#ffffff", 0.92)
+            ? (isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.8)")
             : "transparent",
-          backdropFilter: shouldShowGlass ? "blur(24px) saturate(180%)" : "none",
+          backdropFilter: shouldShowGlass ? "blur(30px) saturate(200%)" : "none",
           borderBottom: shouldShowGlass
-            ? `1px solid ${alpha(theme.palette.divider, 0.08)}`
+            ? `1px solid ${isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"}`
             : "none",
-          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-          color: shouldShowGlass
-            ? (theme.palette.mode === "dark" ? "#f8fafc" : "#1e293b")
-            : "white",
+          transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          color: isDark ? "#ffffff" : "text.primary",
           zIndex: theme.zIndex.drawer + 1,
         }}
       >
@@ -284,7 +283,7 @@ const Navbar = () => {
               <Box sx={{
                 width: 40, height: 40, overflow: "hidden", borderRadius: "10px",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                bgcolor: "white", boxShadow: shouldShowGlass ? "0 4px 12px rgba(0,0,0,0.08)" : "0 4px 12px rgba(0,0,0,0.15)",
+                bgcolor: "white", boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.15)" : "0 4px 12px rgba(0,0,0,0.05)",
                 mr: 1.5, transition: "all 0.3s ease"
               }}>
                 <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -294,15 +293,15 @@ const Navbar = () => {
                   fontWeight: 900, letterSpacing: "-1px", lineHeight: 1,
                   background: shouldShowGlass
                     ? `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
-                    : "white",
+                    : (isDark ? "white" : theme.palette.primary.main),
                   WebkitBackgroundClip: shouldShowGlass ? "text" : "none",
-                  WebkitTextFillColor: shouldShowGlass ? "transparent" : "white",
+                  WebkitTextFillColor: shouldShowGlass ? "transparent" : (isDark ? "white" : theme.palette.primary.main),
                 }}>
                   {t("universityName")}
                 </Typography>
                 <Typography variant="caption" sx={{
-                  letterSpacing: 1.5, fontWeight: 600, fontSize: "0.6rem",
-                  color: shouldShowGlass ? "text.secondary" : "rgba(255,255,255,0.7)",
+                  letterSpacing: 2, fontWeight: 900, fontSize: "0.6rem",
+                  color: isDark ? "rgba(255,255,255,0.6)" : "text.secondary",
                   display: "block",
                 }}>
                   PORTAL SYSTEM
@@ -312,20 +311,20 @@ const Navbar = () => {
 
             {/* Desktop nav links */}
             {!isMobile && (
-              <Box sx={{ flexGrow: 1, display: "flex", gap: 0.5 }}>
+              <Box sx={{ flexGrow: 1, display: "flex", gap: 1, ml: 2 }}>
                 {menuItems.map((item) => (
                   <Button
                     key={item.label}
                     component={RouterLink}
                     to={item.path}
                     endIcon={item.label === "Admissions" ? (
-                      <Chip label="Open" size="small" sx={{ bgcolor: shouldShowGlass ? "#fff7ed" : "rgba(255,255,255,0.15)", color: shouldShowGlass ? "#ea580c" : "white", fontWeight: 700, fontSize: "0.6rem", height: 18, cursor: "pointer" }} />
+                      <Chip label="Open" size="small" sx={{ bgcolor: isDark ? "rgba(255,255,255,0.1)" : "#fff7ed", color: isDark ? "white" : "#ea580c", fontWeight: 700, fontSize: "0.6rem", height: 18, cursor: "pointer" }} />
                     ) : undefined}
                     sx={{
                       color: isActive(item.path)
-                        ? (shouldShowGlass ? "primary.main" : "white")
-                        : (shouldShowGlass ? "text.secondary" : "rgba(255,255,255,0.82)"),
-                      fontWeight: isActive(item.path) ? 800 : 500,
+                        ? (isDark ? "white" : "text.primary")
+                        : (isDark ? "rgba(255,255,255,0.7)" : "text.secondary"),
+                      fontWeight: isActive(item.path) ? 900 : 600,
                       px: 2.5,
                       textTransform: "none",
                       fontSize: "0.94rem",
@@ -350,7 +349,7 @@ const Navbar = () => {
                           0.08
                         ),
                         color: item.label === "Admissions"
-                          ? (shouldShowGlass ? "#ea580c" : "white")
+                          ? (isDark ? "#ea580c" : "#ea580c")
                           : "primary.main",
                         "&:after": { width: "20px" }
                       }
@@ -365,15 +364,15 @@ const Navbar = () => {
             {/* Right side: notifications + auth */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               {!isMobile && <LanguageSwitcher variant="icon" />}
-              
+
               {/* Dark Mode Toggle */}
               <Tooltip title={theme.palette.mode === "dark" ? "Light Mode" : "Dark Mode"}>
                 <IconButton
                   onClick={toggleColorMode}
                   color="inherit" size="small"
                   sx={{
-                    bgcolor: shouldShowGlass ? alpha(theme.palette.primary.main, 0.08) : "rgba(255,255,255,0.1)",
-                    "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.18) },
+                    bgcolor: isDark ? "rgba(255,255,255,0.05)" : alpha(theme.palette.primary.main, 0.08),
+                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.15)" : alpha(theme.palette.primary.main, 0.18) },
                     transition: "all 0.2s ease",
                   }}
                 >
@@ -388,7 +387,7 @@ const Navbar = () => {
                       onClick={handleMenu}
                       sx={{
                         p: 0.3,
-                        border: `2px solid ${shouldShowGlass ? alpha(theme.palette.primary.main, 0.25) : "rgba(255,255,255,0.25)"}`,
+                        border: `2px solid ${isDark ? "rgba(255,255,255,0.15)" : alpha(theme.palette.primary.main, 0.25)}`,
                         transition: "all 0.3s ease",
                         "&:hover": { borderColor: theme.palette.primary.main }
                       }}
@@ -453,32 +452,32 @@ const Navbar = () => {
                     <Button
                       component={RouterLink} to="/login"
                       sx={{
-                        color: shouldShowGlass ? "text.primary" : "white",
-                        textTransform: "none", fontWeight: 700, px: 2.5, borderRadius: "10px",
-                        "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.06) }
+                        color: isDark ? "white" : "#0E2033",
+                        textTransform: "none", fontWeight: 800, px: 2.5, borderRadius: "8px",
+                        border: `1px solid ${isDark ? "rgba(255,255,255,0.2)" : "#CBD5E1"}`,
+                        "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9" },
+                        transition: "all 0.2s ease"
                       }}
                     >
-                      {t("portalLogin")}
+                      Login
                     </Button>
                     <Button
                       component={RouterLink} to="/apply"
                       variant="contained"
-                      startIcon={<AssignmentInd />}
                       sx={{
-                        borderRadius: "12px", px: 3, py: 1,
-                        textTransform: "none", fontWeight: 800,
-                        background: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
-                        color: "white",
-                        boxShadow: "0 6px 20px rgba(234,88,12,0.35)",
+                        borderRadius: "8px", px: 2.5, py: 0.8,
+                        textTransform: "none", fontWeight: 900,
+                        bgcolor: "#D9A621",
+                        color: "#0E2033",
+                        boxShadow: "none",
                         "&:hover": {
-                          background: "linear-gradient(135deg, #c2410c 0%, #ea580c 100%)",
-                          transform: "translateY(-2px)",
-                          boxShadow: "0 10px 28px rgba(234,88,12,0.45)"
+                          bgcolor: "#C59318",
+                          boxShadow: "0 4px 12px rgba(217,166,33,0.3)"
                         },
-                        transition: "all 0.25s ease",
+                        transition: "all 0.2s ease",
                       }}
                     >
-                      {t("applyNow")}
+                      Apply now
                     </Button>
                   </Box>
                 )

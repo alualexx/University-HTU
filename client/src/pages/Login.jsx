@@ -1,331 +1,451 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  useTheme, Fade, Stack, Grid, Chip, Paper, Dialog, DialogTitle,
-  DialogContent, DialogActions, Box, Typography, TextField, Button,
-  IconButton, InputAdornment, Alert, CircularProgress, MenuItem
+  Box, Container, Typography, TextField, Button, Checkbox, FormControlLabel,
+  InputAdornment, IconButton, Alert, CircularProgress, Divider, Paper, Chip, Stack
 } from "@mui/material";
 import {
-  Visibility, VisibilityOff, Email, Lock, School,
-  ArrowForward, CheckCircle, ErrorOutline, LightMode, DarkMode,
+  Visibility, VisibilityOff, PersonOutline, LockOutlined, Security,
+  AccountBalance, Church
 } from "@mui/icons-material";
-import { useAuth } from "../context/AuthContext";
-import { useColorMode } from "../context/ThemeContext";
-import { alpha } from "@mui/material/styles";
+import { useAuth, ROLE_DASHBOARD_ROUTES } from "../context/AuthContext";
+import { HTTU_COLORS } from "../theme";
 
-const FEATURES = [
-  { text: "Real-time Grade Tracking", color: "#60a5fa" },
-  { text: "Seamless Resource Access", color: "#34d399" },
-  { text: "Advanced Faculty Tools", color: "#fbbf24" },
+const DEMO_ACCOUNTS = [
+  { label: "Student", user: "john.doe", pass: "password123", role: "student" },
+  { label: "Faculty", user: "dr.abebe", pass: "password123", role: "faculty" },
+  { label: "Dept Head", user: "fr.yohannes", pass: "password123", role: "department_head" },
+  { label: "Dean", user: "dean", pass: "password123", role: "dean" },
+  { label: "Registrar", user: "registrar", pass: "password123", role: "registrar" },
+  { label: "Finance", user: "finance", pass: "password123", role: "finance" },
+  { label: "HR Manager", user: "hr", pass: "password123", role: "hr" },
+  { label: "Librarian", user: "librarian", pass: "password123", role: "librarian" },
+  { label: "Admin", user: "admin", pass: "admin123", role: "admin" },
 ];
 
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
-  const { login, loading, error, logSecurityEvent, requestPasswordReset } = useAuth();
-  const { toggleColorMode } = useColorMode();
+  const { login } = useAuth();
 
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [username, setUsername] = useState("daniel.g@httu.edu.et");
+  const [password, setPassword] = useState("••••••••••");
   const [showPassword, setShowPassword] = useState(false);
-  const [localError, setLocalError] = useState("");
-  const [validation, setValidation] = useState({
-    email: { error: false, message: "" },
-    password: { error: false, message: "" }
-  });
-
-  // Password Reset State
-  const [showResetDialog, setShowResetDialog] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState("");
-  const [resetError, setResetError] = useState("");
-
-  const validateEmail = (e) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!e) return { error: true, message: "Email is required" };
-    if (!re.test(e)) return { error: true, message: "Please enter a valid email" };
-    return { error: false, message: "" };
-  };
-
-  const validatePassword = (p) => {
-    if (!p) return { error: true, message: "Password is required" };
-    if (p.length < 6) return { error: true, message: "Minimum 6 characters" };
-    return { error: false, message: "" };
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setLocalError("");
-    if (name === "email") setValidation(prev => ({ ...prev, email: validateEmail(value) }));
-    else if (name === "password") setValidation(prev => ({ ...prev, password: validatePassword(value) }));
-  };
+  const [rememberMe, setRememberMe] = useState(true);
+  const [language, setLanguage] = useState("en"); // en, am, gez
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLocalError("");
-    const emailVal = validateEmail(formData.email);
-    const passVal = validatePassword(formData.password);
-    setValidation({ email: emailVal, password: passVal });
-    if (emailVal.error || passVal.error) return;
-    const result = await login(formData.email, formData.password);
-    if (result.success) {
-      logSecurityEvent("Identity Management", `Login Successful: ${formData.email}`, "success");
-      navigate(result.redirectTo);
-    } else {
-      logSecurityEvent("Security Protocol", `Failed login attempt: ${formData.email}`, "warning");
-      setLocalError(result.error);
+    if (e) e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      // Map placeholder password to real password if needed
+      const realPassword = password === "••••••••••" ? "password123" : password;
+      const res = await login(username, realPassword);
+      if (res?.success) {
+        const dest = ROLE_DASHBOARD_ROUTES[res.user?.role] || "/dashboard";
+        navigate(dest);
+      } else {
+        setError(res?.error || "Invalid username or password");
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message || "Failed to sign in");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fillDemo = (email) => {
-    setFormData({ email, password: "password123" });
-    setValidation({ email: { error: false, message: "" }, password: { error: false, message: "" } });
-    setLocalError("");
+  const handleSelectDemo = (account) => {
+    setUsername(account.user);
+    setPassword(account.pass);
+    setError("");
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: isDark ? "#0f172a" : "#f8fafc" }}>
-      {/* Left Panel */}
-      <Box sx={{
-        display: { xs: "none", md: "flex" },
-        flex: 1.1,
-        background: isDark
-          ? "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-          : "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        p: 8,
-        position: "relative",
-        overflow: "hidden",
-        borderRight: isDark ? "1px solid rgba(255,255,255,0.05)" : "none",
-      }}>
-        {/* Blobs */}
-        <Box sx={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", top: -100, right: -100, background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)", filter: "blur(60px)" }} />
-        <Box sx={{ position: "absolute", width: 300, height: 300, borderRadius: "50%", bottom: -50, left: -50, background: "radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)", filter: "blur(50px)" }} />
-
-        <Box sx={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 440 }}>
-          {/* Logo */}
-          <Box sx={{ 
-            display: "inline-flex", p: 1, borderRadius: 4, bgcolor: "white", 
-            border: "1px solid rgba(255,255,255,0.15)", mb: 5,
-            width: 120, height: 120, overflow: "hidden",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
-          }}>
-            <Box component="img" src="/logo.png" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-          </Box>
-
-          <Typography variant="h2" fontWeight={1000} color="white" sx={{ fontFamily: "Outfit, sans-serif", letterSpacing: "-0.04em", mb: 2, lineHeight: 1.1 }}>
-            University<br />Resource Center
-          </Typography>
-          <Typography variant="body1" color="rgba(255,255,255,0.6)" sx={{ mb: 6, lineHeight: 1.8 }}>
-            A smarter way to manage your academic journey through our unified portal.
-          </Typography>
-
-          <Stack spacing={2}>
-            {FEATURES.map((f, i) => (
-              <Box key={i} sx={{
-                display: "flex", alignItems: "center", gap: 2, p: 2.5,
-                bgcolor: "rgba(255,255,255,0.05)", borderRadius: 3,
-                border: "1px solid rgba(255,255,255,0.08)",
-                transition: "all 0.3s ease",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.09)" }
-              }}>
-                <CheckCircle sx={{ color: f.color, flexShrink: 0 }} />
-                <Typography color="white" fontWeight={600} variant="body2">{f.text}</Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
-      </Box>
-
-      {/* Right Panel */}
-      <Box sx={{
-        flex: { xs: 1, md: "0 0 560px" },
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#09131F",
         display: "flex",
-        flexDirection: "column",
+        alignItems: "center",
         justifyContent: "center",
-        px: { xs: 4, sm: 8, md: 10 },
-        py: 8,
-        bgcolor: isDark ? "#0f172a" : "white",
-        boxShadow: isDark ? "none" : "-10px 0 40px rgba(0,0,0,0.04)",
-        position: "relative",
-      }}>
-        {/* Top right: dark mode toggle */}
-        <Box sx={{ position: "absolute", top: 24, right: 24 }}>
-          <IconButton onClick={toggleColorMode} sx={{ bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)" } }}>
-            {isDark ? <LightMode sx={{ color: "#fbbf24" }} /> : <DarkMode sx={{ color: "#6366f1" }} />}
-          </IconButton>
-        </Box>
+        p: { xs: 2, md: 4 },
+        background: "radial-gradient(circle at 50% 50%, #10243E 0%, #07111D 100%)",
+      }}
+    >
+      <Paper
+        elevation={24}
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          width: "100%",
+          maxWidth: 1040,
+          borderRadius: 6,
+          overflow: "hidden",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        {/* ── Left Branding Panel ── */}
+        <Box
+          sx={{
+            flex: { xs: "none", md: "0 0 46%" },
+            bgcolor: HTTU_COLORS.navy,
+            p: { xs: 5, md: 7 },
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          {/* Decorative Gold Triangle in Corner */}
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: -60,
+              left: -60,
+              width: 180,
+              height: 180,
+              bgcolor: HTTU_COLORS.gold,
+              transform: "rotate(45deg)",
+              opacity: 0.9,
+              zIndex: 0,
+            }}
+          />
 
-        {/* Mobile logo */}
-        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 1.5, mb: 6 }}>
-          <School sx={{ color: "primary.main", fontSize: 38 }} />
-          <Typography variant="h5" fontWeight={900} color="primary.main" sx={{ letterSpacing: "-0.03em" }}>Alex Portal</Typography>
-        </Box>
+          <Box sx={{ position: "relative", zIndex: 1 }}>
+            {/* University Gold Emblem */}
+            <Box
+              sx={{
+                width: 104,
+                height: 104,
+                borderRadius: "28px",
+                border: `3px solid ${HTTU_COLORS.gold}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mx: "auto",
+                mb: 4,
+                bgcolor: "rgba(217, 166, 33, 0.08)",
+                boxShadow: "0 0 30px rgba(217, 166, 33, 0.2)",
+              }}
+            >
+              <Church sx={{ fontSize: 56, color: HTTU_COLORS.gold }} />
+            </Box>
 
-        <Fade in timeout={600}>
-          <Box>
-            <Chip
-              label="Secure Access"
-              size="small"
-              sx={{ mb: 3, bgcolor: alpha("#1976d2", 0.08), color: "primary.main", fontWeight: 800, border: "1px solid", borderColor: alpha("#1976d2", 0.2) }}
+            <Typography
+              variant="h4"
+              fontWeight={900}
+              color="white"
+              sx={{
+                fontFamily: "'Outfit', sans-serif",
+                lineHeight: 1.2,
+                mb: 2,
+                fontSize: { xs: "1.75rem", md: "2.1rem" },
+              }}
+            >
+              Ethiopia Holy Trinity Theology University
+            </Typography>
+
+            {/* Gold Divider Line */}
+            <Box
+              sx={{
+                width: 60,
+                height: 4,
+                bgcolor: HTTU_COLORS.gold,
+                borderRadius: 2,
+                mx: "auto",
+                mb: 2.5,
+              }}
             />
-            <Typography variant="h3" fontWeight={1000} gutterBottom sx={{ letterSpacing: "-0.03em", mb: 0.5, fontFamily: "Outfit, sans-serif" }}>
-              Welcome Back
+
+            <Typography
+              variant="body1"
+              sx={{
+                color: "rgba(255, 255, 255, 0.75)",
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              University Management System
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 5, fontSize: "1rem" }}>
-              Enter your credentials to access your portal.
-            </Typography>
+          </Box>
+        </Box>
 
-            {(localError || error) && (
-              <Fade in>
-                <Alert severity="error" icon={<ErrorOutline />}
-                  sx={{ mb: 4, borderRadius: 3, fontWeight: 600, border: "1px solid", borderColor: "error.light" }}>
-                  {localError || error}
-                </Alert>
-              </Fade>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={2.5}>
-                <TextField
-                  fullWidth label="Email Address" name="email" type="email"
-                  value={formData.email} onChange={handleChange}
-                  error={validation.email.error} helperText={validation.email.message}
-                  required placeholder="name@university.edu"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 3, height: 60,
-                      bgcolor: isDark ? "rgba(255,255,255,0.04)" : "#f1f5f9",
-                      "& fieldset": { border: isDark ? "1px solid rgba(255,255,255,0.08)" : "none" },
-                      "&:hover fieldset": { borderColor: "primary.main" },
-                      "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 },
-                    }
-                  }}
-                  InputProps={{ startAdornment: <InputAdornment position="start"><Email sx={{ color: validation.email.error ? "error.main" : "text.secondary" }} /></InputAdornment> }}
-                />
-
-                <TextField
-                  fullWidth label="Password" name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password} onChange={handleChange}
-                  error={validation.password.error} helperText={validation.password.message}
-                  required
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 3, height: 60,
-                      bgcolor: isDark ? "rgba(255,255,255,0.04)" : "#f1f5f9",
-                      "& fieldset": { border: isDark ? "1px solid rgba(255,255,255,0.08)" : "none" },
-                      "&:hover fieldset": { borderColor: "primary.main" },
-                      "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 },
-                    }
-                  }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Lock sx={{ color: validation.password.error ? "error.main" : "text.secondary" }} /></InputAdornment>,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(p => !p)} edge="end">
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: -1 }}>
-                  <Button
-                    variant="text" size="small"
-                    onClick={() => setShowResetDialog(true)}
-                    sx={{ fontWeight: 700, textTransform: "none", color: "primary.main" }}
-                  >
-                    Forgot Password?
-                  </Button>
-                </Box>
-
+        {/* ── Right Form Panel ── */}
+        <Box
+          sx={{
+            flex: 1,
+            bgcolor: "#FFFFFF",
+            p: { xs: 4, md: 6 },
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          {/* Top Language Toggle */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
+            <Stack direction="row" spacing={0.5} sx={{ bgcolor: "#F1F5F9", p: 0.5, borderRadius: 2 }}>
+              {[
+                { code: "en", label: "English" },
+                { code: "am", label: "Amharic" },
+                { code: "gez", label: "Geez" },
+              ].map((lang) => (
                 <Button
-                  type="submit" fullWidth variant="contained" disabled={loading}
+                  key={lang.code}
+                  size="small"
+                  onClick={() => setLanguage(lang.code)}
                   sx={{
-                    mt: 1, py: 2, borderRadius: 3,
-                    fontSize: "1rem", textTransform: "none", fontWeight: 800,
-                    background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
-                    boxShadow: "0 8px 24px rgba(59,130,246,0.35)",
-                    "&:hover": { background: "linear-gradient(135deg, #1e40af 0%, #2563eb 100%)", boxShadow: "0 12px 32px rgba(59,130,246,0.45)", transform: "translateY(-1px)" },
-                    transition: "all 0.25s ease"
+                    px: 1.5,
+                    py: 0.3,
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    borderRadius: 1.5,
+                    color: language === lang.code ? "#FFFFFF" : "#64748B",
+                    bgcolor: language === lang.code ? HTTU_COLORS.navy : "transparent",
+                    "&:hover": {
+                      bgcolor: language === lang.code ? HTTU_COLORS.navy : "rgba(0,0,0,0.05)",
+                    },
                   }}
                 >
-                  {loading ? <CircularProgress size={24} color="inherit" /> : <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>Sign In <ArrowForward /></Box>}
+                  {lang.label}
                 </Button>
-              </Stack>
-            </form>
-
-
+              ))}
+            </Stack>
           </Box>
-        </Fade>
 
-        {/* Password Reset Dialog */}
-        <Dialog
-          open={showResetDialog}
-          onClose={() => !resetLoading && setShowResetDialog(false)}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
-        >
-          <DialogTitle sx={{ fontWeight: 800 }}>Account Recovery</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Enter your registered email address to request a password reset from the administrator.
-            </Typography>
-
-            {resetSuccess && (
-              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{resetSuccess}</Alert>
-            )}
-            {resetError && (
-              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{resetError}</Alert>
-            )}
-
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              disabled={resetLoading}
-              placeholder="name@university.edu"
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><Email /></InputAdornment> }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={() => setShowResetDialog(false)} disabled={resetLoading}>Cancel</Button>
-            <Button
-              variant="contained"
-              disabled={resetLoading || !resetEmail}
-              onClick={async () => {
-                setResetLoading(true);
-                setResetSuccess("");
-                setResetError("");
-                const result = await requestPasswordReset(resetEmail);
-                if (result.success) {
-                  setResetSuccess("Request sent! An administrator will review your request.");
-                  setResetEmail("");
-                  setTimeout(() => setShowResetDialog(false), 3000);
-                } else {
-                  setResetError(result.error);
-                }
-                setResetLoading(false);
+          {/* Form Header */}
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: 2,
+                bgcolor: "rgba(217, 166, 33, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 1.5,
               }}
-              sx={{ borderRadius: 2.5, px: 3, fontWeight: 700, background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)" }}
             >
-              {resetLoading ? <CircularProgress size={24} color="inherit" /> : "Send Request"}
+              <LockOutlined sx={{ color: HTTU_COLORS.gold, fontSize: 20 }} />
+            </Box>
+            <Typography variant="h4" fontWeight={900} color={HTTU_COLORS.navy} sx={{ fontFamily: "'Outfit', sans-serif" }}>
+              Welcome back
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Sign in to access the University Management System
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Login Fields */}
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Box sx={{ mb: 2.5 }}>
+              <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: "block", mb: 0.8 }}>
+                Email or Username
+              </Typography>
+              <TextField
+                fullWidth
+                variant="outlined"
+                size="small"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="daniel.g@httu.edu.et"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonOutline sx={{ color: "#94A3B8", fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2.5,
+                    bgcolor: "#F8FAFC",
+                    "& fieldset": { borderColor: "#E2E8F0" },
+                    "&:hover fieldset": { borderColor: HTTU_COLORS.gold },
+                    "&.Mui-focused fieldset": { borderColor: HTTU_COLORS.navy, borderWidth: 1.5 },
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: "block", mb: 0.8 }}>
+                Password
+              </Typography>
+              <TextField
+                fullWidth
+                variant="outlined"
+                size="small"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockOutlined sx={{ color: "#94A3B8", fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setShowPassword(!showPassword)} edge="end">
+                        {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2.5,
+                    bgcolor: "#F8FAFC",
+                    "& fieldset": { borderColor: "#E2E8F0" },
+                    "&:hover fieldset": { borderColor: HTTU_COLORS.gold },
+                    "&.Mui-focused fieldset": { borderColor: HTTU_COLORS.navy, borderWidth: 1.5 },
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    size="small"
+                    sx={{
+                      color: "#94A3B8",
+                      "&.Mui-checked": { color: HTTU_COLORS.teal },
+                    }}
+                  />
+                }
+                label={<Typography variant="body2" color="text.secondary" fontWeight={500}>Remember me</Typography>}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: HTTU_COLORS.teal,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  "&:hover": { textDecoration: "underline" },
+                }}
+              >
+                Forgot password?
+              </Typography>
+            </Box>
+
+            {/* Primary Action Button */}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                bgcolor: HTTU_COLORS.gold,
+                color: "#0E2033",
+                fontWeight: 800,
+                py: 1.2,
+                borderRadius: 2.5,
+                fontSize: "0.95rem",
+                "&:hover": {
+                  bgcolor: HTTU_COLORS.goldLight,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={24} sx={{ color: "#0E2033" }} /> : "Sign in"}
             </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", my: 2.5 }}>
+              <Divider sx={{ flex: 1 }} />
+              <Typography variant="caption" sx={{ px: 2, color: "#94A3B8", fontWeight: 700 }}>
+                OR
+              </Typography>
+              <Divider sx={{ flex: 1 }} />
+            </Box>
+
+            {/* University SSO Button */}
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AccountBalance sx={{ color: HTTU_COLORS.navy }} />}
+              sx={{
+                borderColor: "#CBD5E1",
+                color: HTTU_COLORS.navy,
+                fontWeight: 700,
+                py: 1.1,
+                borderRadius: 2.5,
+                "&:hover": {
+                  borderColor: HTTU_COLORS.navy,
+                  bgcolor: "rgba(14, 32, 51, 0.04)",
+                },
+              }}
+            >
+              Use university SSO
+            </Button>
+
+            {/* Security Notice Box */}
+            <Box
+              sx={{
+                mt: 3,
+                p: 1.8,
+                borderRadius: 2.5,
+                bgcolor: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1.5,
+              }}
+            >
+              <Security sx={{ color: HTTU_COLORS.teal, fontSize: 20, mt: 0.2 }} />
+              <Box>
+                <Typography variant="caption" fontWeight={800} color={HTTU_COLORS.navy} sx={{ display: "block" }}>
+                  Your data is safe and secure
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4, display: "block" }}>
+                  This system is protected with enterprise-grade security to keep your university data confidential.
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Demo Quick-Selection Bar */}
+            <Box sx={{ mt: 3, pt: 2, borderTop: "1px dashed #E2E8F0" }}>
+              <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ display: "block", mb: 1, textTransform: "uppercase", letterSpacing: 1 }}>
+                Quick Demo Sign-In
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <Chip
+                    key={acc.label}
+                    label={acc.label}
+                    size="small"
+                    onClick={() => handleSelectDemo(acc)}
+                    sx={{
+                      cursor: "pointer",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      bgcolor: username === acc.user ? HTTU_COLORS.navy : "#F1F5F9",
+                      color: username === acc.user ? "#FFFFFF" : "#334155",
+                      "&:hover": { bgcolor: HTTU_COLORS.gold, color: "#0E2033" },
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
     </Box>
   );
-};
-
-export default Login;
+}

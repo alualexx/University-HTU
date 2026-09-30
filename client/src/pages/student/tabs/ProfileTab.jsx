@@ -1,196 +1,455 @@
 import React, { useState } from 'react';
 import {
-    Box, Typography, Card, CardContent, Grid, Avatar, Button, TextField, Stack,
-    Chip, Divider, IconButton, alpha, Switch, FormControlLabel, LinearProgress,
-    Dialog, DialogTitle, DialogContent, DialogActions
+  Box, Grid, Card, Typography, Avatar, Button, Chip, 
+  LinearProgress, Stack, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Dialog, DialogTitle, 
+  DialogContent, DialogActions, TextField, Divider
 } from '@mui/material';
-import { usersAPI, authAPI } from '../../../services/api';
 import {
-    Person, Edit, Save, CameraAlt, Email, Phone, Badge, School,
-    CalendarMonth, LocationOn, Lock, Visibility, VisibilityOff, Shield
+  CheckCircle, Description, UploadFile, Edit, 
+  School, Phone, Email, LocationOn, Person, ArrowForward
 } from '@mui/icons-material';
 
-export default function ProfileTab({ user, isDark, glassStyle, gradients }) {
-    const [editing, setEditing] = useState(false);
-    const [showPass, setShowPass] = useState(false);
-    const [formData, setFormData] = useState({
-        phone: user?.phone || '',
-        address: user?.address || '',
-        emergencyContact: user?.emergencyContact || '',
-    });
-    const [passDialogOpen, setPassDialogOpen] = useState(false);
-    const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+export default function ProfileTab({ setActiveTab }) {
+  const [subTab, setSubTab] = useState('Overview');
+  const [editContactOpen, setEditContactOpen] = useState(false);
+  const [uploadDocOpen, setUploadDocOpen] = useState(false);
 
-    const handleSaveProfile = async () => {
-        try {
-            await usersAPI.updateProfile(formData);
-            setEditing(false);
-            alert('Profile updated successfully');
-        } catch (e) {
-            alert('Error updating profile');
-        }
-    };
+  const subTabs = ['Overview', 'Contacts', 'Addresses', 'Documents', 'Enrollment History', 'Emergency Contact'];
 
-    const handlePhotoUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                try {
-                    await usersAPI.updateProfile({ photoURL: reader.result });
-                    alert('Photo updated successfully! (Refresh to see globally)');
-                } catch (err) {
-                    alert('Error uploading photo');
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+  return (
+    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+      {/* Breadcrumb */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+          Student Portal / My Profile
+        </Typography>
+      </Box>
 
-    const handlePasswordChange = async () => {
-        if (passForm.newPassword !== passForm.confirmPassword) {
-            alert('Passwords do not match');
-            return;
-        }
-        try {
-            await authAPI.changePassword({ oldPassword: passForm.oldPassword, newPassword: passForm.newPassword });
-            setPassDialogOpen(false);
-            setPassForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
-            alert('Password changed successfully');
-        } catch (e) {
-            alert('Error changing password');
-        }
-    };
+      {/* Top Profile Banner Card */}
+      <Card sx={{ p: 3, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff', mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+            <Avatar sx={{ width: 68, height: 68, bgcolor: '#0E2033', color: '#fff', fontSize: '1.4rem', fontWeight: 900 }}>
+              DG
+            </Avatar>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#0E2033' }}>
+                  Daniel Gebremariam
+                </Typography>
+                <Typography variant="subtitle1" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  ዳንኤል ገብረማርያም
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: '#64748B', mt: 0.3, mb: 1 }}>
+                B.A. in Theology · Year 3 · Student ID HTTU-2026-0001 (HTTU24158)
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Chip label="• Active" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                <Chip label="Good Standing" size="small" sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                <Chip label="Dean's List · Fall 2024" size="small" sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+              </Stack>
+            </Box>
+          </Box>
 
-    const profileCompletion = [user?.name, user?.email, formData.phone, formData.address].filter(Boolean).length / 4 * 100;
-
-    const infoRows = [
-        { icon: <Badge />, label: 'Student ID', value: user?.studentId || user?._id?.slice(-8)?.toUpperCase() || '—', color: '#6366f1' },
-        { icon: <Email />, label: 'Email', value: user?.email || '—', color: '#3b82f6' },
-        { icon: <School />, label: 'Department', value: user?.department || '—', color: '#8b5cf6' },
-        { icon: <CalendarMonth />, label: 'Year / Semester', value: `Year ${user?.year || '—'} · Semester ${user?.semester || '—'}`, color: '#10b981' },
-        { icon: <Person />, label: 'Role', value: user?.role?.toUpperCase() || 'STUDENT', color: '#f59e0b' },
-    ];
-
-    return (
-        <Box>
-            <Typography variant="h5" fontWeight={1000} sx={{ letterSpacing: -0.5, mb: 0.5 }}>Profile & Account</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ letterSpacing: 1.5 }}>MANAGE YOUR INFORMATION</Typography>
-
-            <Grid container spacing={4} sx={{ mt: 2 }}>
-                {/* Left: Avatar + Quick Info */}
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4, overflow: 'visible', position: 'relative' }}>
-                        <Box sx={{ height: 100, background: gradients[0], borderRadius: '16px 16px 0 0' }} />
-                        <CardContent sx={{ textAlign: 'center', mt: -6, pb: 4 }}>
-                            <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                                <Avatar
-                                    src={user?.photoURL}
-                                    sx={{ width: 100, height: 100, mx: 'auto', border: `4px solid ${isDark ? '#1e1e2f' : '#fff'}`, fontSize: 36, fontWeight: 900, background: gradients[1] }}
-                                >
-                                    {user?.name?.[0] || 'S'}
-                                </Avatar>
-                                <IconButton component="label" size="small" sx={{ position: 'absolute', bottom: 0, right: -4, bgcolor: 'primary.main', color: 'white', width: 30, height: 30, '&:hover': { bgcolor: 'primary.dark' } }}>
-                                    <CameraAlt sx={{ fontSize: 16 }} />
-                                    <input type="file" hidden accept="image/*" onChange={handlePhotoUpload} />
-                                </IconButton>
-                            </Box>
-                            <Typography variant="h6" fontWeight={900} sx={{ mt: 2 }}>{user?.name || 'Student'}</Typography>
-                            <Chip label={user?.role?.toUpperCase() || 'STUDENT'} size="small" sx={{ mt: 0.5, fontWeight: 900, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} />
-
-                            <Box sx={{ mt: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                    <Typography variant="caption" fontWeight={800} color="text.secondary">Profile Completion</Typography>
-                                    <Typography variant="caption" fontWeight={900} color="primary.main">{profileCompletion}%</Typography>
-                                </Box>
-                                <LinearProgress variant="determinate" value={profileCompletion} sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', '& .MuiLinearProgress-bar': { background: gradients[0], borderRadius: 3 } }} />
-                            </Box>
-
-                            <Divider sx={{ my: 3 }} />
-                            <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="caption" fontWeight={900} color="text.secondary" sx={{ letterSpacing: 1.5 }}>ACADEMIC STANDING</Typography>
-                                <Box sx={{ mt: 1.5, p: 2, borderRadius: 3, bgcolor: alpha('#10b981', 0.08), border: `1px solid ${alpha('#10b981', 0.15)}` }}>
-                                    <Typography variant="subtitle2" fontWeight={900} color="success.main">Good Standing</Typography>
-                                    <Typography variant="caption" color="text.secondary">No academic warnings on record</Typography>
-                                </Box>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Right: Detailed Info */}
-                <Grid item xs={12} md={8}>
-                    <Card sx={{ ...glassStyle, borderRadius: 4, mb: 3 }}>
-                        <CardContent sx={{ p: 4 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                <Typography variant="h6" fontWeight={900}>Personal Information</Typography>
-                                <Button startIcon={editing ? <Save /> : <Edit />} variant={editing ? 'contained' : 'outlined'} size="small" onClick={() => editing ? handleSaveProfile() : setEditing(true)} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>
-                                    {editing ? 'Save Changes' : 'Edit Profile'}
-                                </Button>
-                            </Box>
-                            <Stack spacing={2.5}>
-                                {infoRows.map((row, i) => (
-                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2.5, p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)', transition: '0.2s', '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
-                                        <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: alpha(row.color, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', color: row.color }}>
-                                            {React.cloneElement(row.icon, { sx: { fontSize: 20 } })}
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ letterSpacing: 1 }}>{row.label.toUpperCase()}</Typography>
-                                            <Typography variant="body2" fontWeight={900}>{row.value}</Typography>
-                                        </Box>
-                                    </Box>
-                                ))}
-                                {/* Editable fields */}
-                                {editing && (
-                                    <>
-                                        <Divider sx={{ my: 1 }} />
-                                        <TextField label="Phone Number" size="small" fullWidth value={formData.phone} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} InputProps={{ startAdornment: <Phone sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }} />
-                                        <TextField label="Address" size="small" fullWidth value={formData.address} onChange={e => setFormData(p => ({ ...p, address: e.target.value }))} InputProps={{ startAdornment: <LocationOn sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }} />
-                                        <TextField label="Emergency Contact" size="small" fullWidth value={formData.emergencyContact} onChange={e => setFormData(p => ({ ...p, emergencyContact: e.target.value }))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }} />
-                                    </>
-                                )}
-                            </Stack>
-                        </CardContent>
-                    </Card>
-
-                    {/* Security */}
-                    <Card sx={{ ...glassStyle, borderRadius: 4 }}>
-                        <CardContent sx={{ p: 4 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                                <Shield sx={{ color: '#6366f1' }} />
-                                <Typography variant="h6" fontWeight={900}>Security Settings</Typography>
-                            </Box>
-                            <Stack spacing={2}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)' }}>
-                                    <Lock sx={{ color: 'text.secondary' }} />
-                                    <Box sx={{ flex: 1 }}>
-                                        <Typography variant="subtitle2" fontWeight={900}>Password</Typography>
-                                        <Typography variant="caption" color="text.secondary">Last changed: Unknown</Typography>
-                                    </Box>
-                                    <Button size="small" variant="outlined" onClick={() => setPassDialogOpen(true)} sx={{ borderRadius: 3, fontWeight: 800, textTransform: 'none' }}>Change</Button>
-                                </Box>
-                                <FormControlLabel control={<Switch defaultChecked color="primary" />} label={<Box><Typography variant="subtitle2" fontWeight={800}>Email Notifications</Typography><Typography variant="caption" color="text.secondary">Receive updates about grades and registration</Typography></Box>} sx={{ ml: 0, p: 2, borderRadius: 3, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)', width: '100%' }} />
-                            </Stack>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Change Password Dialog */}
-            <Dialog open={passDialogOpen} onClose={() => setPassDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
-                <DialogTitle sx={{ p: 3, pb: 1 }}><Typography variant="h6" fontWeight={900}>Change Password</Typography></DialogTitle>
-                <DialogContent sx={{ px: 3, py: 2 }}>
-                    <Stack spacing={2} sx={{ mt: 1 }}>
-                        <TextField label="Current Password" type="password" size="small" fullWidth value={passForm.oldPassword} onChange={e => setPassForm(p => ({ ...p, oldPassword: e.target.value }))} InputProps={{ sx: { borderRadius: 3 } }} />
-                        <TextField label="New Password" type="password" size="small" fullWidth value={passForm.newPassword} onChange={e => setPassForm(p => ({ ...p, newPassword: e.target.value }))} InputProps={{ sx: { borderRadius: 3 } }} />
-                        <TextField label="Confirm New Password" type="password" size="small" fullWidth value={passForm.confirmPassword} onChange={e => setPassForm(p => ({ ...p, confirmPassword: e.target.value }))} InputProps={{ sx: { borderRadius: 3 } }} />
-                    </Stack>
-                </DialogContent>
-                <DialogActions sx={{ p: 3, pt: 1 }}>
-                    <Button onClick={() => setPassDialogOpen(false)} sx={{ fontWeight: 800, textTransform: 'none' }}>Cancel</Button>
-                    <Button variant="contained" onClick={handlePasswordChange} disabled={!passForm.oldPassword || !passForm.newPassword || !passForm.confirmPassword} sx={{ borderRadius: 3, fontWeight: 900, textTransform: 'none' }}>Update Password</Button>
-                </DialogActions>
-            </Dialog>
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              onClick={() => setEditContactOpen(true)}
+              sx={{ borderColor: '#CBD5E1', color: '#0E2033', fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
+            >
+              Update contacts
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => setActiveTab ? setActiveTab('grades') : null}
+              sx={{ bgcolor: '#D9A621', color: '#0E2033', fontWeight: 800, textTransform: 'none', borderRadius: '8px', '&:hover': { bgcolor: '#C59318' } }}
+            >
+              Request transcript
+            </Button>
+          </Stack>
         </Box>
-    );
+      </Card>
+
+      {/* Internal Navigation Sub-tabs */}
+      <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 3 }}>
+        <Stack direction="row" spacing={3} sx={{ overflowX: 'auto' }}>
+          {subTabs.map((tab) => (
+            <Typography
+              key={tab}
+              onClick={() => setSubTab(tab)}
+              sx={{
+                pb: 1.5,
+                fontSize: '0.88rem',
+                fontWeight: subTab === tab ? 800 : 600,
+                color: subTab === tab ? '#0E2033' : '#64748B',
+                borderBottom: subTab === tab ? '2px solid #D9A621' : '2px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {tab}
+            </Typography>
+          ))}
+        </Stack>
+      </Box>
+
+      {/* 2-Column Grid */}
+      <Grid container spacing={3}>
+        {/* Left Column (8 cols): Personal Info, Academic Summary, My Documents */}
+        <Grid item xs={12} lg={8}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Card 1: Personal Information */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033' }}>
+                  Personal Information
+                </Typography>
+                <Chip label="Verified by Registrar" size="small" sx={{ bgcolor: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0', fontSize: '0.72rem', height: 22 }} />
+              </Box>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Date of Birth</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Mar 14, 2001</Typography>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Gender</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Male</Typography>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Nationality</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Ethiopian</Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Baptism Name</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Abba Daniel</Typography>
+                </Grid>
+                <Grid item xs={12} sm={8}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Church Parish</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>St. Maryam Parish, Addis Ababa</Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Languages</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Amharic, English, Geez (basic)</Typography>
+                </Grid>
+              </Grid>
+            </Card>
+
+            {/* Card 2: Academic Summary */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033' }}>
+                  Academic Summary
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  onClick={() => setActiveTab ? setActiveTab('grades') : null}
+                  sx={{ color: '#12808C', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5 }}
+                >
+                  Degree audit →
+                </Typography>
+              </Box>
+
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Program</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>B.A. in Theology (160 credits)</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Admission Year</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>2023/2024 · Fall intake</Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Current Term</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Spring Semester 2025 · Week 8 of 16</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Credits Earned</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>99 / 160 · 62%</Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Cumulative GPA</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#0E2033', mt: 0.3 }}>3.42 · Good Standing</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>Academic Advisor</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.3 }}>Dr. Tesfaye Melaku</Typography>
+                </Grid>
+              </Grid>
+
+              <Box sx={{ mt: 1 }}>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={62} 
+                  sx={{ height: 6, borderRadius: 3, bgcolor: '#F1F5F9', '& .MuiLinearProgress-bar': { bgcolor: '#12808C' } }} 
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.8 }}>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>62% of program completed</Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>61 credits remaining</Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            {/* Card 3: My Documents */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033' }}>
+                  My Documents
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setUploadDocOpen(true)}
+                  startIcon={<UploadFile />}
+                  sx={{ borderColor: '#CBD5E1', color: '#0E2033', fontWeight: 700, fontSize: '0.78rem', textTransform: 'none' }}
+                >
+                  Upload
+                </Button>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5, borderBottom: '1px solid #F1F5F9' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>High School Transcript</Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>Uploaded Sep 12, 2023 · PDF · 2 pages</Typography>
+                  </Box>
+                  <Chip label="• Verified" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5, borderBottom: '1px solid #F1F5F9' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>Baptism Certificate</Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>Uploaded Sep 12, 2023 · PDF · 1 page</Typography>
+                  </Box>
+                  <Chip label="• Verified" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5, borderBottom: '1px solid #F1F5F9' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>National ID (Fayda)</Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>Uploaded Sep 14, 2023 · JPG</Typography>
+                  </Box>
+                  <Chip label="• Verified" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>Recommendation Letter — Parish Priest</Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>Uploaded Sep 15, 2023 · PDF</Typography>
+                  </Box>
+                  <Chip label="• Awaiting review" size="small" sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 700, fontSize: '0.72rem', height: 22 }} />
+                </Box>
+              </Box>
+            </Card>
+          </Box>
+        </Grid>
+
+        {/* Right Column (4 cols): Student ID Card, Contact Details, Enrollment History, Emergency Contact */}
+        <Grid item xs={12} lg={4}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Widget 1: STUDENT ID CARD */}
+            <Card sx={{
+              p: 3,
+              borderRadius: '16px',
+              bgcolor: '#0E2033',
+              color: '#fff',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 24px rgba(14, 32, 51, 0.25)',
+              border: '1px solid rgba(217, 166, 33, 0.3)'
+            }}>
+              {/* Gold watermark cross background */}
+              <Box sx={{
+                position: 'absolute',
+                right: -15,
+                top: -15,
+                width: 130,
+                height: 130,
+                borderRadius: '50%',
+                border: '2px solid rgba(217, 166, 33, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'rgba(217, 166, 33, 0.15)',
+                fontSize: '80px',
+                fontWeight: 'bold',
+                pointerEvents: 'none'
+              }}>
+                ✝
+              </Box>
+
+              <Typography variant="caption" sx={{ color: '#D9A621', fontWeight: 800, letterSpacing: 2, fontSize: '0.7rem', display: 'block', textTransform: 'uppercase', mb: 1.5 }}>
+                STUDENT ID CARD
+              </Typography>
+
+              <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', lineHeight: 1.2, mb: 0.5 }}>
+                Daniel Gebremariam · ዳንኤል
+              </Typography>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3, pt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', display: 'block' }}>ID NUMBER</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>HTTU24158</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', display: 'block' }}>PROGRAM</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>B.A. Theology</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', display: 'block' }}>VALID THRU</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#D9A621' }}>Jul 2027</Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            {/* Widget 2: Contact Details */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033' }}>
+                  Contact Details
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setEditContactOpen(true)}
+                  sx={{ borderColor: '#CBD5E1', color: '#0E2033', fontWeight: 700, fontSize: '0.75rem', textTransform: 'none' }}
+                >
+                  Edit
+                </Button>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Email</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>daniel.g@httu.edu.et</Typography>
+                    <Chip label="• Verified" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontSize: '0.68rem', height: 18 }} />
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Phone</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>+251 914 552 118</Typography>
+                    <Chip label="Primary" size="small" sx={{ bgcolor: '#F1F5F9', color: '#475569', fontSize: '0.68rem', height: 18 }} />
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Alt. Phone</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.2 }}>+251 11 667 4402</Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Address</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033', mt: 0.2 }}>Bole Sub-city, Woreda 03, Addis Ababa</Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            {/* Widget 3: Enrollment History */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033', mb: 1.5 }}>
+                Enrollment History
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { borderBottom: '1px solid #E2E8F0', py: 0.8, color: '#64748B', fontWeight: 800, fontSize: '0.68rem' } }}>
+                      <TableCell>TERM</TableCell>
+                      <TableCell align="center">CREDITS</TableCell>
+                      <TableCell align="right">GPA</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow sx={{ '& td': { py: 0.8, borderBottom: '1px solid #F1F5F9', fontSize: '0.8rem' } }}>
+                      <TableCell sx={{ fontWeight: 700, color: '#0E2033' }}>Spring 2025 <span style={{ color: '#64748B', fontWeight: 400 }}>in progress</span></TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>15</TableCell>
+                      <TableCell align="right" sx={{ color: '#64748B' }}>—</TableCell>
+                    </TableRow>
+                    <TableRow sx={{ '& td': { py: 0.8, borderBottom: '1px solid #F1F5F9', fontSize: '0.8rem' } }}>
+                      <TableCell sx={{ fontWeight: 700, color: '#0E2033' }}>Fall 2024</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>18</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, color: '#059669' }}>3.65</TableCell>
+                    </TableRow>
+                    <TableRow sx={{ '& td': { py: 0.8, borderBottom: '1px solid #F1F5F9', fontSize: '0.8rem' } }}>
+                      <TableCell sx={{ fontWeight: 700, color: '#0E2033' }}>Spring 2024</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>17</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, color: '#0E2033' }}>3.41</TableCell>
+                    </TableRow>
+                    <TableRow sx={{ '& td': { py: 0.8, borderBottom: 'none', fontSize: '0.8rem' } }}>
+                      <TableCell sx={{ fontWeight: 700, color: '#0E2033' }}>Fall 2023</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>16</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, color: '#0E2033' }}>3.28</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Card>
+
+            {/* Widget 4: Emergency Contact */}
+            <Card sx={{ p: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: 'none', bgcolor: '#fff' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0E2033', mb: 1.5 }}>
+                Emergency Contact
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Name</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>Marta Gebremariam</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Relationship</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>Mother</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Phone</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0E2033' }}>+251 911 208 774</Typography>
+                </Box>
+              </Box>
+            </Card>
+          </Box>
+        </Grid>
+      </Grid>
+
+      {/* Edit Contact Dialog */}
+      <Dialog open={editContactOpen} onClose={() => setEditContactOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#0E2033', color: '#fff', fontWeight: 800 }}>Update Contact Details</DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Primary Phone" defaultValue="+251 914 552 118" size="small" fullWidth />
+            <TextField label="Alt Phone" defaultValue="+251 11 667 4402" size="small" fullWidth />
+            <TextField label="Residential Address" defaultValue="Bole Sub-city, Woreda 03, Addis Ababa" size="small" fullWidth multiline rows={2} />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setEditContactOpen(false)} sx={{ color: '#64748B' }}>Cancel</Button>
+          <Button variant="contained" onClick={() => setEditContactOpen(false)} sx={{ bgcolor: '#12808C', color: '#fff' }}>Save Changes</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={uploadDocOpen} onClose={() => setUploadDocOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ bgcolor: '#0E2033', color: '#fff', fontWeight: 800 }}>Upload Verification Document</DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Document Title" placeholder="e.g. Parish Recommendation" size="small" fullWidth />
+            <Button variant="outlined" component="label" startIcon={<UploadFile />} sx={{ py: 1.5, borderColor: '#CBD5E1' }}>
+              Choose File (PDF or JPG)
+              <input type="file" hidden />
+            </Button>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setUploadDocOpen(false)} sx={{ color: '#64748B' }}>Cancel</Button>
+          <Button variant="contained" onClick={() => setUploadDocOpen(false)} sx={{ bgcolor: '#12808C', color: '#fff' }}>Upload</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
 }

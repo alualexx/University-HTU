@@ -32,21 +32,9 @@ export default function FacultyStaffTab({ departments, facultyList: initialFacul
         borderRadius: 3,
     };
 
-    const promotionRequests = [
-        { name: "Dr. Ahmad Khalil", dept: "Computer Science", current: "Associate Professor", target: "Full Professor", years: 6, publications: 18, status: "pending" },
-        { name: "Dr. Sara Hassan", dept: "Engineering", current: "Assistant Professor", target: "Associate Professor", years: 4, publications: 9, status: "under_review" },
-    ];
-
-    const leaveRequests = [
-        { name: "Prof. Mohammed Ali", dept: "Business", type: "Medical Leave", from: "2026-06-15", to: "2026-06-30", status: "pending" },
-        { name: "Dr. Fatima Omar", dept: "Sciences", type: "Conference Leave", from: "2026-07-01", to: "2026-07-05", status: "approved" },
-        { name: "Dr. Khalid Nasser", dept: "Humanities", type: "Annual Leave", from: "2026-08-01", to: "2026-08-15", status: "pending" },
-    ];
-
-    const grievances = [
-        { id: "GR-001", type: "Workload Dispute", dept: "Engineering", date: "2026-05-20", status: "open" },
-        { id: "GR-002", type: "Promotion Appeal", dept: "Sciences", date: "2026-05-15", status: "under_review" },
-    ];
+    const promotionRequests = [];
+    const leaveRequests = [];
+    const grievances = [];
 
     const filtered = faculty.filter(f => {
         const ms = !search || f.name?.toLowerCase().includes(search.toLowerCase());
@@ -82,9 +70,9 @@ export default function FacultyStaffTab({ departments, facultyList: initialFacul
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                         {[
                             { label: "Total Faculty", value: faculty.length, color: "#6366f1" },
-                            { label: "Professors", value: Math.floor(faculty.length * 0.3), color: "#10b981" },
-                            { label: "On Leave", value: leaveRequests.filter(r => r.status === "approved").length, color: "#f59e0b" },
-                            { label: "PhD Holders", value: Math.floor(faculty.length * 0.72), color: "#8b5cf6" },
+                            { label: "Professors", value: faculty.filter(f => f.position?.toLowerCase().includes("professor")).length, color: "#10b981" },
+                            { label: "On Leave", value: faculty.filter(f => f.status === "on_leave").length, color: "#f59e0b" },
+                            { label: "PhD Holders", value: faculty.filter(f => f.qualification?.toLowerCase().includes("phd") || f.degree?.toLowerCase().includes("phd")).length, color: "#8b5cf6" },
                         ].map((s, i) => (
                             <Grid item xs={6} md={3} key={i}>
                                 <Card sx={{ ...glass }}>

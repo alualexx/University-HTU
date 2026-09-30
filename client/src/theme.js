@@ -1,79 +1,118 @@
 import { createTheme } from "@mui/material/styles";
 
-export const getThemeConfig = (mode) => ({
-  palette: {
-    mode,
-    primary: {
-      main: "#1976d2",
-      light: "#42a5f5",
-      dark: "#1565c0",
-    },
-    secondary: {
-      main: "#9c27b0",
-      light: "#ba68c8",
-      dark: "#7b1fa2",
-    },
-    background: {
-      default: mode === "light" ? "#f8faff" : "#0a1929",
-      paper: mode === "light" ? "#ffffff" : "#112233",
-    },
-    text: {
-      primary: mode === "light" ? "#1e293b" : "#f8fafc",
-      secondary: mode === "light" ? "#64748b" : "#94a3b8",
-    },
-    divider: mode === "light" ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)",
-  },
-  typography: {
-    fontFamily: [
-      "'Inter'",
-      "-apple-system",
-      "BlinkMacSystemFont",
-      "'Segoe UI'",
-      "Roboto",
-      "sans-serif",
-    ].join(","),
-    h1: { fontWeight: 800 },
-    h2: { fontWeight: 800 },
-    h3: { fontWeight: 700 },
-    h4: { fontWeight: 700 },
-    h5: { fontWeight: 600 },
-    h6: { fontWeight: 600 },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: "none",
-          fontWeight: 600,
-          borderRadius: 10,
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundImage: "none",
-          borderRadius: 16,
-          boxShadow: mode === "light"
-            ? "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)"
-            : "0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3)",
-        },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          backgroundColor: mode === "light" ? "#0d2b6e" : "#071a45",
-          color: "#ffffff",
-          borderRight: "none",
-        },
-      },
-    },
-  },
-});
+export const HTTU_COLORS = {
+  navy: "#0E2033",
+  navyLight: "#1A334E",
+  navyDark: "#081421",
+  gold: "#D9A621",
+  goldLight: "#E8BD4D",
+  goldDark: "#B88714",
+  teal: "#12808C",
+  tealLight: "#1AA5B5",
+  tealDark: "#0D6069",
+  canvas: "#F4F6F8",
+  canvasDark: "#07111D",
+  cardBorder: "rgba(226, 232, 240, 0.8)",
+  cardBorderDark: "rgba(255, 255, 255, 0.08)"
+};
 
-const theme = {}; // Dummy to avoid breakage if imported elsewhere during transition
-export default theme;
+export const getThemeConfig = (mode = "light") => {
+  const isLight = mode === "light";
+
+  return {
+    palette: {
+      mode,
+      primary: {
+        main: HTTU_COLORS.navy,
+        light: HTTU_COLORS.navyLight,
+        dark: HTTU_COLORS.navyDark,
+        contrastText: "#ffffff",
+      },
+      secondary: {
+        main: HTTU_COLORS.gold,
+        light: HTTU_COLORS.goldLight,
+        dark: HTTU_COLORS.goldDark,
+        contrastText: "#0E2033",
+      },
+      info: {
+        main: HTTU_COLORS.teal,
+        light: HTTU_COLORS.tealLight,
+        dark: HTTU_COLORS.tealDark,
+        contrastText: "#ffffff",
+      },
+      background: {
+        default: isLight ? HTTU_COLORS.canvas : HTTU_COLORS.canvasDark,
+        paper: isLight ? "#ffffff" : HTTU_COLORS.navy,
+      },
+      text: {
+        primary: isLight ? "#1A202C" : "#F7FAFC",
+        secondary: isLight ? "#4A5568" : "#A0AEC0",
+      },
+      divider: isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)",
+    },
+    typography: {
+      fontFamily: [
+        "'Inter'",
+        "'Noto Sans Ethiopic'",
+        "'Abyssinica SIL'",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "'Segoe UI'",
+        "Roboto",
+        "sans-serif",
+      ].join(","),
+      h1: { fontFamily: "'Outfit', sans-serif", fontWeight: 900 },
+      h2: { fontFamily: "'Outfit', sans-serif", fontWeight: 800 },
+      h3: { fontFamily: "'Outfit', sans-serif", fontWeight: 800 },
+      h4: { fontFamily: "'Outfit', sans-serif", fontWeight: 700 },
+      h5: { fontFamily: "'Outfit', sans-serif", fontWeight: 700 },
+      h6: { fontFamily: "'Outfit', sans-serif", fontWeight: 600 },
+      button: { fontWeight: 700, letterSpacing: "0.02em", textTransform: "none" },
+    },
+    shape: {
+      borderRadius: 10,
+    },
+    components: {
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            boxShadow: isLight 
+              ? "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)" 
+              : "0 4px 6px -1px rgba(0, 0, 0, 0.3)",
+            border: isLight ? `1px solid ${HTTU_COLORS.cardBorder}` : `1px solid ${HTTU_COLORS.cardBorderDark}`,
+          }
+        }
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            boxShadow: "none",
+            "&:hover": {
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            },
+          },
+          containedSecondary: {
+            color: "#0E2033",
+            fontWeight: 800,
+          }
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            backgroundColor: HTTU_COLORS.navy,
+            color: "#ffffff",
+          },
+        },
+      },
+    },
+  };
+};
+
+export const createCustomTheme = (mode, portalType) => {
+  return createTheme(getThemeConfig(mode, portalType));
+};
+
+export default createCustomTheme("light");
