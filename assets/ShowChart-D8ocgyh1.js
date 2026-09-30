@@ -1,0 +1,1 @@
+import{_ as e,rt as t}from"./Box-CYsIYiI5.js";var n=t(),r=e((0,n.jsx)(`path`,{d:`M9.01 14H2v2h7.01v3L13 15l-3.99-4zm5.98-1v-3H22V8h-7.01V5L11 9z`}),`CompareArrows`),i=e((0,n.jsx)(`path`,{d:`m3.5 18.49 6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z`}),`ShowChart`);export{r as n,i as t};
